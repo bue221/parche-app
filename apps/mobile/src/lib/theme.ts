@@ -1,0 +1,73 @@
+import { DarkTheme, DefaultTheme } from 'expo-router';
+
+export const THEME = {
+  light: {
+    background: '#ffffff',
+    foreground: '#000000',
+    card: '#ffffff',
+    cardForeground: '#000000',
+    popover: '#ffffff',
+    popoverForeground: '#000000',
+    primary: '#000000',
+    primaryForeground: '#ffffff',
+    secondary: '#333333',
+    secondaryForeground: '#ffffff',
+    muted: '#eeeeee',
+    mutedForeground: '#595959',
+    accent: '#eeeeee',
+    accentForeground: '#000000',
+    destructive: '#000000',
+    border: '#d9d9d9',
+    input: '#d9d9d9',
+    ring: '#000000',
+    confirm: '#7ffeb1',
+  },
+  dark: {
+    background: '#000000',
+    foreground: '#ffffff',
+    card: '#000000',
+    cardForeground: '#ffffff',
+    popover: '#000000',
+    popoverForeground: '#ffffff',
+    primary: '#ffffff',
+    primaryForeground: '#000000',
+    secondary: '#333333',
+    secondaryForeground: '#ffffff',
+    muted: '#333333',
+    mutedForeground: '#808080',
+    accent: '#333333',
+    accentForeground: '#ffffff',
+    destructive: '#ffffff',
+    border: '#333333',
+    input: '#333333',
+    ring: '#ffffff',
+    confirm: '#7ffeb1',
+  },
+} as const;
+
+export const NAV_THEME = {
+  light: {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: THEME.light.background,
+      border: THEME.light.border,
+      card: THEME.light.card,
+      notification: THEME.light.destructive,
+      primary: THEME.light.primary,
+      text: THEME.light.foreground,
+    },
+  },
+  dark: {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      background: THEME.dark.background,
+      border: THEME.dark.border,
+      card: THEME.dark.card,
+      notification: THEME.dark.destructive,
+      primary: THEME.dark.primary,
+      text: THEME.dark.foreground,
+    },
+  },
+};

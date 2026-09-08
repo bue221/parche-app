@@ -6,8 +6,7 @@ import { AnimatedIcon } from '@/components/animated-icon';
 import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, Radii, Spacing } from '@/constants/theme';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -34,8 +33,11 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
           <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+          <ThemedText type="display" style={styles.title}>
+            WELCOME{'\n'}TO THE{'\n'}PARCHE
+          </ThemedText>
+          <ThemedText type="small" themeColor="charcoal" style={styles.subtitle}>
+            Live events, loud type, no extra color.
           </ThemedText>
         </ThemedView>
 
@@ -50,12 +52,10 @@ export default function HomeScreen() {
           />
           <HintRow title="Dev tools" hint={getDevMenuHint()} />
           <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
+            title="Tokens"
+            hint={<ThemedText type="code">docs/ui/design.md</ThemedText>}
           />
         </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
     </ThemedView>
   );
@@ -80,10 +80,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
     paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    gap: Spacing.two,
   },
   title: {
     textAlign: 'center',
+  },
+  subtitle: {
+    textAlign: 'center',
+    maxWidth: 280,
   },
   code: {
     textTransform: 'uppercase',
@@ -93,6 +97,6 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    borderRadius: Radii.cards,
   },
 });
