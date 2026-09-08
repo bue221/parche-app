@@ -1,8 +1,3 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
@@ -11,16 +6,24 @@ export const Colors = {
   light: {
     text: '#000000',
     background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    backgroundElement: '#eeeeee',
+    backgroundSelected: '#d9d9d9',
+    textSecondary: '#595959',
+    textMuted: '#808080',
+    charcoal: '#333333',
+    border: '#d9d9d9',
+    confirm: '#7ffeb1',
   },
   dark: {
     text: '#ffffff',
     background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    backgroundElement: '#333333',
+    backgroundSelected: '#595959',
+    textSecondary: '#808080',
+    textMuted: '#808080',
+    charcoal: '#eeeeee',
+    border: '#333333',
+    confirm: '#7ffeb1',
   },
 } as const;
 
@@ -28,26 +31,25 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    sans: 'Inter',
+    display: 'Antonio',
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
-    sans: 'normal',
+    sans: 'Inter',
+    display: 'Antonio',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
+    sans: 'var(--font-favorit)',
+    display: 'var(--font-foggy)',
+    serif: 'var(--font-serif, Georgia, serif)',
+    rounded: 'var(--font-favorit)',
+    mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
   },
 });
 
@@ -59,7 +61,17 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+  section: 80,
+} as const;
+
+export const Radii = {
+  small: 4,
+  cards: 8,
+  images: 8,
+  navelements: 20,
+  buttons: 40,
+  tags: 100,
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const MaxContentWidth = 1200;
