@@ -16,6 +16,7 @@ type Memory struct {
 	members map[string]Member // eventID+"/"+userID
 	invites map[string]Invite // id
 	hashes  map[string]string // token_hash → id
+	tickets map[string]TicketType
 	order   []string
 }
 
@@ -25,6 +26,7 @@ func NewMemory() *Memory {
 		members: map[string]Member{},
 		invites: map[string]Invite{},
 		hashes:  map[string]string{},
+		tickets: map[string]TicketType{},
 	}
 }
 
@@ -235,6 +237,98 @@ func (m *Memory) AcceptInvite(_ context.Context, inviteID string, member Member,
 	m.invites[inviteID] = inv
 	m.members[member.EventID+"/"+member.UserID] = member
 	return nil
+}
+
+func (m *Memory) ListTicketTypes(_ context.Context, eventID string) ([]TicketType, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.listTicketTypesLocked(eventID), nil
+}
+
+func (m *Memory) PutTicketTypes(_ context.Context, eventID string, upsert []TicketType, archiveIDs, deleteIDs []string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now().UTC()
+	del := map[string]struct{}{}
+	for _, id := range deleteIDs {
+		del[id] = struct{}{}
+	}
+	arc := map[string]struct{}{}
+	for _, id := range archiveIDs {
+		arc[id] = struct{}{}
+	}
+	for id, t := range m.tickets {
+		if t.EventID != eventID {
+			continue
+		}
+		if _, ok := del[id]; ok {
+			if t.SoldCount > 0 || t.ReservedCount > 0 {
+				return auth.ErrConflict
+			}
+			delete(m.tickets, id)
+			continue
+		}
+		if _, ok := arc[id]; ok {
+			t.Status = TicketArchived
+			t.UpdatedAt = now
+			m.tickets[id] = t
+		}
+	}
+	for _, t := range upsert {
+		if t.EventID != eventID {
+			continue
+		}
+		if cur, ok := m.tickets[t.ID]; ok {
+			if t.Capacity < cur.SoldCount+cur.ReservedCount {
+				return auth.ErrConflict
+			}
+			t.SoldCount = cur.SoldCount
+			t.ReservedCount = cur.ReservedCount
+			t.CreatedAt = cur.CreatedAt
+			t.Currency = cur.Currency
+		} else if t.CreatedAt.IsZero() {
+			t.CreatedAt = now
+		}
+		t.UpdatedAt = now
+		m.tickets[t.ID] = t
+	}
+	return nil
+}
+
+// ForceTicketCounts is a test seam for the capacity invariant before F16 checkout.
+func (m *Memory) ForceTicketCounts(id string, sold, reserved int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.tickets[id]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	if sold+reserved > t.Capacity {
+		return auth.ErrConflict
+	}
+	t.SoldCount = sold
+	t.ReservedCount = reserved
+	m.tickets[id] = t
+	return nil
+}
+
+func (m *Memory) listTicketTypesLocked(eventID string) []TicketType {
+	var out []TicketType
+	for _, t := range m.tickets {
+		if t.EventID == eventID {
+			out = append(out, t)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].CreatedAt.Before(out[j].CreatedAt)
+		}
+		return out[i].ID < out[j].ID
+	})
+	if out == nil {
+		return []TicketType{}
+	}
+	return out
 }
 
 func cloneEvent(e Event) Event {

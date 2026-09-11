@@ -23,7 +23,7 @@ const (
 	maxGenreLen    = 32
 )
 
-// Service is F08 event lifecycle, public agenda, EventWrite, and F11 members.
+// Service is F08 event lifecycle, public agenda, EventWrite, F11 members, and F15 ticket types.
 type Service struct {
 	Store     Store
 	Tenancy   Tenancy

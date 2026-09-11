@@ -40,9 +40,9 @@ No se compra aquí.
 
 ## Checklist
 
-- [ ] Cupo no negativo
-- [ ] Pausar ventas
-- [ ] Público no ve draft types
+- [x] Cupo no negativo
+- [x] Pausar ventas
+- [x] Público no ve draft types
 
 ## Next step
 

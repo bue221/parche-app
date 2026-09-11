@@ -270,6 +270,121 @@ func (s *PG) AcceptInvite(ctx context.Context, inviteID string, member Member, a
 	return tx.Commit(ctx)
 }
 
+func (s *PG) ListTicketTypes(ctx context.Context, eventID string) ([]TicketType, error) {
+	rows, err := s.q.Query(ctx, ticketTypeSelect+` WHERE event_id = $1 ORDER BY created_at ASC, id ASC`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []TicketType
+	for rows.Next() {
+		t, err := scanTicketType(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	if out == nil {
+		out = []TicketType{}
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) PutTicketTypes(ctx context.Context, eventID string, upsert []TicketType, archiveIDs, deleteIDs []string) error {
+	if s.pool == nil {
+		return fmt.Errorf("postgres pool is nil")
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `SELECT id FROM ticket_types WHERE event_id = $1 FOR UPDATE`, eventID); err != nil {
+		return err
+	}
+	if len(deleteIDs) > 0 {
+		tag, err := tx.Exec(ctx, `
+			DELETE FROM ticket_types
+			WHERE event_id = $1 AND id = ANY($2::uuid[])
+				AND sold_count = 0 AND reserved_count = 0`, eventID, deleteIDs)
+		if err != nil {
+			return err
+		}
+		if int(tag.RowsAffected()) != len(deleteIDs) {
+			return auth.ErrConflict
+		}
+	}
+	if len(archiveIDs) > 0 {
+		_, err := tx.Exec(ctx, `
+			UPDATE ticket_types SET status = 'archived', updated_at = now()
+			WHERE event_id = $1 AND id = ANY($2::uuid[])`, eventID, archiveIDs)
+		if err != nil {
+			return err
+		}
+	}
+	for _, t := range upsert {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO ticket_types (
+				id, event_id, name, price_cents, currency, capacity,
+				sold_count, reserved_count, sales_starts_at, sales_ends_at, status
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+			ON CONFLICT (id) DO UPDATE SET
+				name = EXCLUDED.name,
+				price_cents = EXCLUDED.price_cents,
+				capacity = EXCLUDED.capacity,
+				sales_starts_at = EXCLUDED.sales_starts_at,
+				sales_ends_at = EXCLUDED.sales_ends_at,
+				status = EXCLUDED.status,
+				updated_at = now()
+			WHERE ticket_types.event_id = $2`,
+			t.ID, eventID, t.Name, t.PriceCents, t.Currency, t.Capacity,
+			t.SoldCount, t.ReservedCount, t.SalesStartsAt, t.SalesEndsAt, t.Status)
+		if err != nil {
+			if isCheckViolation(err) || isUniqueViolation(err) {
+				return auth.ErrConflict
+			}
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+const ticketTypeSelect = `
+	SELECT id, event_id, name, price_cents, currency, capacity, sold_count, reserved_count,
+		sales_starts_at, sales_ends_at, status, created_at, updated_at
+	FROM ticket_types`
+
+func scanTicketType(row rowScanner) (TicketType, error) {
+	var t TicketType
+	err := row.Scan(
+		&t.ID, &t.EventID, &t.Name, &t.PriceCents, &t.Currency, &t.Capacity,
+		&t.SoldCount, &t.ReservedCount, &t.SalesStartsAt, &t.SalesEndsAt, &t.Status,
+		&t.CreatedAt, &t.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return TicketType{}, auth.ErrNotFound
+	}
+	if err != nil {
+		return TicketType{}, err
+	}
+	t.CreatedAt = t.CreatedAt.UTC()
+	t.UpdatedAt = t.UpdatedAt.UTC()
+	if t.SalesStartsAt != nil {
+		v := t.SalesStartsAt.UTC()
+		t.SalesStartsAt = &v
+	}
+	if t.SalesEndsAt != nil {
+		v := t.SalesEndsAt.UTC()
+		t.SalesEndsAt = &v
+	}
+	return t, nil
+}
+
+func isCheckViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23514"
+}
+
 const inviteSelect = `
 	SELECT id, event_id, email, COALESCE(invited_user_id::text, ''), role, token_hash,
 		expires_at, accepted_at, invited_by

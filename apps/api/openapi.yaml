@@ -202,6 +202,74 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/ticket-types:
+    get:
+      summary: List ticket types for an event (F15)
+      operationId: listEventTicketTypes
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published events expose on_sale and sold_out. Event members see every status including draft and paused.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketTypeList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      summary: Replace the ticket type catalog (F15)
+      operationId: putEventTicketTypes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutTicketTypesRequest"
+            example:
+              items:
+                - name: Early
+                  price_cents: 50000
+                  capacity: 40
+                  status: on_sale
+                - name: Door
+                  price_cents: 80000
+                  capacity: 60
+                  status: draft
+      responses:
+        "200":
+          description: Upserted catalog. Types with sold_count>0 omitted from the list are archived, not deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketTypeList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
   /v1/events/{id}/members:
     get:
       summary: List event members (F11)
@@ -2078,6 +2146,87 @@ components:
         expires_at:
           type: string
           format: date-time
+    TicketType:
+      type: object
+      required: [id, event_id, name, price_cents, currency, capacity, sold_count, reserved_count, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        sold_count:
+          type: integer
+          minimum: 0
+        reserved_count:
+          type: integer
+          minimum: 0
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, on_sale, paused, sold_out, archived]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TicketTypeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketType"
+    PutTicketTypesRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketTypeInput"
+    TicketTypeInput:
+      type: object
+      required: [name, price_cents, capacity]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+          minimum: 0
+        capacity:
+          type: integer
+          minimum: 1
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, on_sale, paused, sold_out, archived]
     InviteEventMemberRequest:
       type: object
       required: [role]

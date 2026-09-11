@@ -204,12 +204,15 @@ type Store interface {
 	InviteByTokenHash(ctx context.Context, hash string) (Invite, error)
 	PendingInvite(ctx context.Context, eventID, email string) (Invite, error)
 	AcceptInvite(ctx context.Context, inviteID string, member Member, at time.Time) error
+	ListTicketTypes(ctx context.Context, eventID string) ([]TicketType, error)
+	PutTicketTypes(ctx context.Context, eventID string, upsert []TicketType, archiveIDs, deleteIDs []string) error
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
 type Tenancy interface {
 	Membership(ctx context.Context, tenantID, userID string) (role string, err error)
 	TenantsForUser(ctx context.Context, userID string) ([]auth.TenantView, error)
+	TenantByID(ctx context.Context, id string) (auth.Tenant, error)
 	UserByID(ctx context.Context, id string) (auth.User, error)
 	UserByEmail(ctx context.Context, email string) (auth.User, error)
 }
