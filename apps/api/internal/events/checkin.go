@@ -187,7 +187,11 @@ func (s *Service) DoorLive(ctx context.Context, userID, eventID string, includeG
 
 // ApplyTicketScan is the F19 worker: mark used on approved, always insert the scan log.
 func (s *Service) ApplyTicketScan(ctx context.Context, job TicketScanJob) error {
-	return PersistTicketScan(ctx, s.Store, job)
+	if err := PersistTicketScan(ctx, s.Store, job); err != nil {
+		return err
+	}
+	s.invalidateEventMetrics(ctx, job.EventID)
+	return nil
 }
 
 // PersistTicketScan writes the scan without requiring a full Service (worker path).

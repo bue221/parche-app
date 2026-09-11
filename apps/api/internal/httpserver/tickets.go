@@ -158,6 +158,73 @@ func (h eventHandler) doorLive(w http.ResponseWriter, r *http.Request) {
 	apierr.WriteJSON(w, http.StatusOK, out)
 }
 
+func (h eventHandler) eventMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	out, err := h.svc.EventMetrics(r.Context(), p.UserID, r.PathValue("id"))
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h eventHandler) eventMetricsOrders(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	page, details := ParsePage(r)
+	if len(details) > 0 {
+		apierr.Write(w, r, apierr.Validation, "", details)
+		return
+	}
+	items, err := h.svc.ListMetricsOrders(r.Context(), p.UserID, r.PathValue("id"), page.Cursor, page.Limit)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	if items == nil {
+		items = []events.MetricsOrder{}
+	}
+	apierr.WriteJSON(w, http.StatusOK, ListEnvelope[events.MetricsOrder]{
+		Items: items, NextCursor: events.NextMetricsOrderCursor(items, page.Limit),
+	})
+}
+
+func (h eventHandler) eventMetricsExport(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	body, err := h.svc.ExportEventTickets(r.Context(), p.UserID, r.PathValue("id"))
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="tickets.csv"`)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
+}
+
 func (h eventHandler) acceptTicketClaim(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil {
 		apierr.Write(w, r, apierr.Internal, "", nil)

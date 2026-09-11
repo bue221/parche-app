@@ -15,6 +15,7 @@ import (
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
+	"github.com/parche-app/backend/internal/redisx"
 	"github.com/parche-app/backend/internal/worker"
 )
 
@@ -61,11 +62,22 @@ func main() {
 		}
 		mediaSvc := media.NewService(media.NewPG(pool), store, nil)
 		eventStore := events.NewPG(pool)
+		var cache events.Cache
+		if rdb, rerr := redisx.Connect(ctx, cfg.RedisURL); rerr != nil {
+			log.Error("redis client", "err", rerr)
+		} else {
+			defer func() { _ = rdb.Close() }()
+			cache = events.RedisCache{Client: rdb}
+		}
 		expire := func(ctx context.Context) (int, error) {
 			return eventStore.ExpirePendingOrders(ctx, time.Now().UTC())
 		}
 		ticketUsed := func(ctx context.Context, job events.TicketScanJob) error {
-			return events.PersistTicketScan(ctx, eventStore, job)
+			if err := events.PersistTicketScan(ctx, eventStore, job); err != nil {
+				return err
+			}
+			events.InvalidateEventMetrics(ctx, cache, job.EventID)
+			return nil
 		}
 		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed}); err != nil {
 			log.Error("worker stopped", "err", err)

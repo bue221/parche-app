@@ -408,6 +408,156 @@ func (m *Memory) ListRecentScanLogs(_ context.Context, eventID string, limit int
 	return matching, nil
 }
 
+func (m *Memory) TicketStatusCounts(_ context.Context, eventID string) (valid, used, cancelled int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, t := range m.tix {
+		if t.EventID != eventID {
+			continue
+		}
+		switch t.Status {
+		case TicketValid:
+			valid++
+		case TicketUsed:
+			used++
+		case TicketCancelled:
+			cancelled++
+		}
+	}
+	return valid, used, cancelled, nil
+}
+
+func (m *Memory) ScannerScanCounts(_ context.Context, eventID string) ([]ScannerScanCount, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	by := map[string]*ScannerScanCount{}
+	order := make([]string, 0)
+	for _, row := range m.scanLogs {
+		if row.EventID != eventID {
+			continue
+		}
+		cur, ok := by[row.ScannerUserID]
+		if !ok {
+			cur = &ScannerScanCount{UserID: row.ScannerUserID}
+			by[row.ScannerUserID] = cur
+			order = append(order, row.ScannerUserID)
+		}
+		switch row.Result {
+		case ScanApproved:
+			cur.Approved++
+		case ScanDuplicate:
+			cur.Duplicate++
+		}
+	}
+	sort.Strings(order)
+	out := make([]ScannerScanCount, 0, len(order))
+	for _, id := range order {
+		out = append(out, *by[id])
+	}
+	return out, nil
+}
+
+func (m *Memory) HourlyApproved(_ context.Context, eventID string) ([]HourlyApproved, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	by := map[time.Time]int{}
+	for _, row := range m.scanLogs {
+		if row.EventID != eventID || row.Result != ScanApproved {
+			continue
+		}
+		hour := row.CreatedAt.UTC().Truncate(time.Hour)
+		by[hour]++
+	}
+	hours := make([]time.Time, 0, len(by))
+	for h := range by {
+		hours = append(hours, h)
+	}
+	sort.Slice(hours, func(i, j int) bool { return hours[i].Before(hours[j]) })
+	out := make([]HourlyApproved, 0, len(hours))
+	for _, h := range hours {
+		out = append(out, HourlyApproved{Hour: h, Approved: by[h]})
+	}
+	return out, nil
+}
+
+func (m *Memory) ListEventOrders(_ context.Context, eventID, cursor string, limit int) ([]MetricsOrderRow, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if limit < 1 {
+		limit = 20
+	}
+	curTS, curID, err := DecodeCursor(cursor)
+	if err != nil {
+		return nil, err
+	}
+	var matching []MetricsOrderRow
+	for _, o := range m.orders {
+		if o.EventID != eventID {
+			continue
+		}
+		row := MetricsOrderRow{
+			ID: o.ID, UserID: o.UserID, AmountCents: o.AmountCents,
+			Status: o.Status, CreatedAt: o.CreatedAt.UTC(),
+		}
+		if cursor != "" {
+			if row.CreatedAt.After(curTS) {
+				continue
+			}
+			if row.CreatedAt.Equal(curTS) && row.ID >= curID {
+				continue
+			}
+		}
+		matching = append(matching, row)
+	}
+	sort.Slice(matching, func(i, j int) bool {
+		if matching[i].CreatedAt.Equal(matching[j].CreatedAt) {
+			return matching[i].ID > matching[j].ID
+		}
+		return matching[i].CreatedAt.After(matching[j].CreatedAt)
+	})
+	if len(matching) > limit {
+		matching = matching[:limit]
+	}
+	if matching == nil {
+		matching = []MetricsOrderRow{}
+	}
+	return matching, nil
+}
+
+func (m *Memory) ListEventTicketExport(_ context.Context, eventID string) ([]TicketExportRow, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	type keyed struct {
+		row TicketExportRow
+		at  time.Time
+	}
+	var items []keyed
+	for _, t := range m.tix {
+		if t.EventID != eventID {
+			continue
+		}
+		name := t.TicketTypeID
+		if tt, ok := m.tickets[t.TicketTypeID]; ok {
+			name = tt.Name
+		}
+		items = append(items, keyed{
+			row: TicketExportRow{ID: t.ID, TypeName: name, Status: t.Status},
+			at:  t.CreatedAt,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].at.Equal(items[j].at) {
+			return items[i].row.ID < items[j].row.ID
+		}
+		return items[i].at.Before(items[j].at)
+	})
+	out := make([]TicketExportRow, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.row)
+	}
+	return out, nil
+}
+
 func (m *Memory) moveReservedToSoldLocked(orderID string, now time.Time) {
 	for id, qty := range m.qtyByTypeLocked(orderID) {
 		tt, ok := m.tickets[id]

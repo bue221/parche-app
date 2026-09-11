@@ -70,6 +70,9 @@ func registerEventRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/tickets/claims/{token}/accept", h.acceptTicketClaim)
 	mux.HandleFunc("POST /v1/events/{eventId}/check-in", h.checkIn)
 	mux.HandleFunc("GET /v1/events/{eventId}/door/live", h.doorLive)
+	mux.HandleFunc("GET /v1/events/{id}/metrics", h.eventMetrics)
+	mux.HandleFunc("GET /v1/events/{id}/metrics/orders", h.eventMetricsOrders)
+	mux.HandleFunc("GET /v1/events/{id}/metrics/export", h.eventMetricsExport)
 }
 
 type eventHandler struct {

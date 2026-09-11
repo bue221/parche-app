@@ -314,6 +314,11 @@ func (s *Service) ApplyWebhook(ctx context.Context, ev payments.Event, provider,
 	if err != nil {
 		return err
 	}
+	if applied {
+		if o, oerr := s.Store.OrderByID(ctx, ev.OrderID); oerr == nil {
+			s.invalidateEventMetrics(ctx, o.EventID)
+		}
+	}
 	if applied && ev.Status == "success" && s.Publisher != nil {
 		body, _ := json.Marshal(map[string]string{"order_id": ev.OrderID})
 		_ = s.Publisher.Publish(ctx, broker.SubjectPaymentConfirmed, body)

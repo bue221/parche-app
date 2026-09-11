@@ -1893,6 +1893,91 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/events/{id}/metrics:
+    get:
+      summary: Event sales and door metrics (F20)
+      operationId: eventMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Aggregates only. Includes revenue. Door role is 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMetrics"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/metrics/orders:
+    get:
+      summary: Event orders for metrics (F20)
+      operationId: eventMetricsOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated orders. Metrics role sees masked emails; owner sees full.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MetricsOrder"
+                  next_cursor:
+                    type: string
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/events/{id}/metrics/export:
+    get:
+      summary: Ticket CSV export (F20)
+      operationId: eventMetricsExport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: CSV of tickets (status, type). No QR. Owner and manager only.
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -2682,6 +2767,98 @@ components:
         guest_name:
           type: string
           description: Only when include=guest_name and caller has event.metrics.read
+    EventMetrics:
+      type: object
+      required: [by_type, gross_cents, currency, checkins, sold_valid_used, no_show_rate, by_scanner, hourly]
+      properties:
+        by_type:
+          type: array
+          items:
+            $ref: "#/components/schemas/TypeMetrics"
+        gross_cents:
+          type: integer
+        currency:
+          type: string
+        checkins:
+          type: integer
+        sold_valid_used:
+          $ref: "#/components/schemas/TicketStatusSplit"
+        no_show_rate:
+          type: number
+          format: double
+        by_scanner:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScannerMetrics"
+        hourly:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyApproved"
+    TypeMetrics:
+      type: object
+      required: [ticket_type_id, name, sold, reserved, capacity, gross_cents]
+      properties:
+        ticket_type_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sold:
+          type: integer
+        reserved:
+          type: integer
+        capacity:
+          type: integer
+        gross_cents:
+          type: integer
+    TicketStatusSplit:
+      type: object
+      required: [valid, used, cancelled]
+      properties:
+        valid:
+          type: integer
+        used:
+          type: integer
+        cancelled:
+          type: integer
+    ScannerMetrics:
+      type: object
+      required: [user_id, display_name, approved, duplicate]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        approved:
+          type: integer
+        duplicate:
+          type: integer
+    HourlyApproved:
+      type: object
+      required: [hour, approved]
+      properties:
+        hour:
+          type: string
+          format: date-time
+        approved:
+          type: integer
+    MetricsOrder:
+      type: object
+      required: [id, amount_cents, status, created_at, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        email:
+          type: string
     TransferTicketRequest:
       type: object
       description: Exactly one of to_email or to_user_id. Destination account receives the ticket immediately; unknown email gets a 48h ticket_claim.

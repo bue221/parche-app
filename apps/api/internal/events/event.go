@@ -226,6 +226,11 @@ type Store interface {
 	InsertScanLog(ctx context.Context, row TicketScanLog) error
 	DoorInventory(ctx context.Context, eventID string) (sold, capacity, used int, err error)
 	ListRecentScanLogs(ctx context.Context, eventID string, limit int) ([]TicketScanLog, error)
+	TicketStatusCounts(ctx context.Context, eventID string) (valid, used, cancelled int, err error)
+	ScannerScanCounts(ctx context.Context, eventID string) ([]ScannerScanCount, error)
+	HourlyApproved(ctx context.Context, eventID string) ([]HourlyApproved, error)
+	ListEventOrders(ctx context.Context, eventID, cursor string, limit int) ([]MetricsOrderRow, error)
+	ListEventTicketExport(ctx context.Context, eventID string) ([]TicketExportRow, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
@@ -250,7 +255,7 @@ type VenueLookup interface {
 	ByID(ctx context.Context, id string) (venues.Venue, error)
 }
 
-// Cache is Redis (or memory) for the public list, event ACL hashes, and F19 SETNX.
+// Cache is Redis (or memory) for the public list, event ACL hashes, F19 SETNX, and F20 metrics.
 type Cache interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	Set(ctx context.Context, key, val string, ttl time.Duration) error

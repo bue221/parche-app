@@ -47,10 +47,10 @@ TTL 10s Redis. Invalidar en webhook y en worker scan.
 
 ## Checklist
 
-- [ ] Door 403
-- [ ] Metrics 200 sin PII extra en el resumen
-- [ ] by_scanner cuadra con logs
-- [ ] Export CSV owner
+- [x] Door 403
+- [x] Metrics 200 sin PII extra en el resumen
+- [x] by_scanner cuadra con logs
+- [x] Export CSV owner
 
 ## Next step
 
