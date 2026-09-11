@@ -115,6 +115,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 			cache = events.NewMemoryCache()
 		}
 		eventSvc = events.NewService(events.NewPG(pool), sessions.Store, venueSvc, vpg, cache)
+		eventSvc.Mailer = mailer.Log{Logger: log}
+		eventSvc.AppOrigin = cfg.AppOrigin
+		eventSvc.Pepper = []byte(cfg.JWTRefreshSecret)
+		sessions.EventRoles = eventSvc
 	}
 	eventWrite := EventWrite(DenyEventWrite{})
 	if eventSvc != nil {

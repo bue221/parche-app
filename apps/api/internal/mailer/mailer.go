@@ -6,8 +6,11 @@ import (
 	"sync"
 )
 
-// Template IDs. SMTP delivery is F26; F05 only needs password_reset on this port.
-const TemplatePasswordReset = "password_reset"
+// Template IDs. SMTP delivery is F26; F05 uses password_reset and F11 uses event_invite.
+const (
+	TemplatePasswordReset = "password_reset"
+	TemplateEventInvite   = "event_invite"
+)
 
 // Message is the F26 Send contract. Vars must not include passwords.
 type Message struct {

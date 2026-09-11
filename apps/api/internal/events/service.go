@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/geo"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -22,15 +23,18 @@ const (
 	maxGenreLen    = 32
 )
 
-// Service is F08 event lifecycle, public agenda, and EventWrite for uploads.
+// Service is F08 event lifecycle, public agenda, EventWrite, and F11 members.
 type Service struct {
-	Store   Store
-	Tenancy Tenancy
-	Venues  Venues
-	Lookup  VenueLookup
-	Cache   Cache
-	Media   Media
-	Now     func() time.Time
+	Store     Store
+	Tenancy   Tenancy
+	Venues    Venues
+	Lookup    VenueLookup
+	Cache     Cache
+	Media     Media
+	Mailer    mailer.Sender
+	AppOrigin string
+	Pepper    []byte
+	Now       func() time.Time
 }
 
 func NewService(store Store, tenancy Tenancy, v Venues, lookup VenueLookup, cache Cache) *Service {
@@ -321,9 +325,9 @@ func (s *Service) CachedPublicJSON(ctx context.Context, query string, miss func(
 	return body, nil
 }
 
-// Authorize implements httpserver.EventWrite for F03 uploads (owner/manager until F11 expands roles).
+// Authorize implements httpserver.EventWrite via event.write (owner and manager).
 func (s *Service) Authorize(ctx context.Context, userID, eventID string) (string, error) {
-	e, err := s.requireWrite(ctx, userID, eventID)
+	e, err := s.requirePerm(ctx, userID, eventID, PermWrite)
 	if err != nil {
 		return "", err
 	}
@@ -574,25 +578,11 @@ func (s *Service) memberRole(ctx context.Context, eventID, userID string) (strin
 }
 
 func (s *Service) requireWrite(ctx context.Context, userID, id string) (Event, error) {
-	e, err := s.Store.ByID(ctx, id)
-	if err != nil {
-		return Event{}, err
-	}
-	role, err := s.memberRole(ctx, id, userID)
-	if err != nil {
-		if e.Status == StatusPublished || e.Status == StatusCancelled {
-			return Event{}, auth.ErrForbidden
-		}
-		return Event{}, auth.ErrNotFound
-	}
-	if role != RoleOwner && role != RoleManager {
-		return Event{}, auth.ErrForbidden
-	}
-	return e, nil
+	return s.requirePerm(ctx, userID, id, PermWrite)
 }
 
 func (s *Service) requirePublish(ctx context.Context, userID, id string) (Event, error) {
-	return s.requireWrite(ctx, userID, id)
+	return s.requirePerm(ctx, userID, id, PermPublish)
 }
 
 func (s *Service) invalidateList(ctx context.Context) {

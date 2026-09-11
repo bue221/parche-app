@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -156,6 +157,142 @@ func (s *PG) Member(ctx context.Context, eventID, userID string) (Member, error)
 		return Member{}, err
 	}
 	return m, nil
+}
+
+func (s *PG) ListMembers(ctx context.Context, eventID string) ([]Member, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT event_id, user_id, role, status
+		FROM event_members WHERE event_id = $1
+		ORDER BY user_id`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Member
+	for rows.Next() {
+		var m Member
+		if err := rows.Scan(&m.EventID, &m.UserID, &m.Role, &m.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) ListActiveByUser(ctx context.Context, userID string) ([]Member, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT event_id, user_id, role, status
+		FROM event_members WHERE user_id = $1 AND status = 'active'
+		ORDER BY event_id`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Member
+	for rows.Next() {
+		var m Member
+		if err := rows.Scan(&m.EventID, &m.UserID, &m.Role, &m.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) UpsertMember(ctx context.Context, m Member) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO event_members (event_id, user_id, role, status)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (event_id, user_id) DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status`,
+		m.EventID, m.UserID, m.Role, m.Status)
+	return err
+}
+
+func (s *PG) ActiveOwnerCount(ctx context.Context, eventID string) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `
+		SELECT COUNT(*) FROM event_members
+		WHERE event_id = $1 AND role = 'owner' AND status = 'active'`, eventID).Scan(&n)
+	return n, err
+}
+
+func (s *PG) CreateInvite(ctx context.Context, in Invite) error {
+	var invited any
+	if in.InvitedUserID != "" {
+		invited = in.InvitedUserID
+	}
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO event_invites (
+			id, event_id, email, invited_user_id, role, token_hash, expires_at, invited_by
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		in.ID, in.EventID, in.Email, invited, in.Role, in.TokenHash, in.ExpiresAt, in.InvitedBy)
+	if isUniqueViolation(err) {
+		return auth.ErrConflict
+	}
+	return err
+}
+
+func (s *PG) InviteByTokenHash(ctx context.Context, hash string) (Invite, error) {
+	return scanInvite(s.q.QueryRow(ctx, inviteSelect+` WHERE token_hash = $1`, hash))
+}
+
+func (s *PG) PendingInvite(ctx context.Context, eventID, email string) (Invite, error) {
+	return scanInvite(s.q.QueryRow(ctx, inviteSelect+`
+		WHERE event_id = $1 AND email = $2 AND accepted_at IS NULL`, eventID, email))
+}
+
+func (s *PG) AcceptInvite(ctx context.Context, inviteID string, member Member, at time.Time) error {
+	if s.pool == nil {
+		return fmt.Errorf("postgres pool is nil")
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	tag, err := tx.Exec(ctx, `
+		UPDATE event_invites SET accepted_at = $2
+		WHERE id = $1 AND accepted_at IS NULL AND expires_at > $2`, inviteID, at)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return auth.ErrGone
+	}
+	_, err = tx.Exec(ctx, `
+		INSERT INTO event_members (event_id, user_id, role, status)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (event_id, user_id) DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status`,
+		member.EventID, member.UserID, member.Role, member.Status)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+const inviteSelect = `
+	SELECT id, event_id, email, COALESCE(invited_user_id::text, ''), role, token_hash,
+		expires_at, accepted_at, invited_by
+	FROM event_invites`
+
+func scanInvite(row rowScanner) (Invite, error) {
+	var in Invite
+	err := row.Scan(
+		&in.ID, &in.EventID, &in.Email, &in.InvitedUserID, &in.Role, &in.TokenHash,
+		&in.ExpiresAt, &in.AcceptedAt, &in.InvitedBy,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Invite{}, auth.ErrNotFound
+	}
+	if err != nil {
+		return Invite{}, err
+	}
+	in.ExpiresAt = in.ExpiresAt.UTC()
+	if in.AcceptedAt != nil {
+		t := in.AcceptedAt.UTC()
+		in.AcceptedAt = &t
+	}
+	return in, nil
 }
 
 const eventSelect = `

@@ -18,13 +18,19 @@ type Hasher interface {
 
 // Service is register/login/refresh/logout, password recovery, and /v1/me.
 type Service struct {
-	Store     Store
-	Tokens    *Tokens
-	Hasher    Hasher
-	Mailer    mailer.Sender
-	AppOrigin string
-	Log       *slog.Logger
-	dummy     string
+	Store      Store
+	Tokens     *Tokens
+	Hasher     Hasher
+	Mailer     mailer.Sender
+	AppOrigin  string
+	EventRoles EventMembershipLister
+	Log        *slog.Logger
+	dummy      string
+}
+
+// EventMembershipLister is GET /v1/me memberships (F11). events.Service implements it.
+type EventMembershipLister interface {
+	ListEventMemberships(ctx context.Context, userID string) ([]EventMembership, error)
 }
 
 // NewService prepares a dummy password hash so missing-user login takes a similar path.
@@ -88,7 +94,7 @@ type PublicUser struct {
 	Profiles    []string `json:"profiles"`
 }
 
-// Me is GET /v1/me. Memberships stay empty until F11.
+// Me is GET /v1/me. Memberships are active event roles (F11).
 type Me struct {
 	PublicUser
 	Tenant      *TenantView       `json:"tenant,omitempty"`
@@ -390,11 +396,21 @@ func (s *Service) Me(ctx context.Context, userID string) (Me, error) {
 		first := tenants[0]
 		tenant = &first
 	}
+	memberships := []EventMembership{}
+	if s.EventRoles != nil {
+		memberships, err = s.EventRoles.ListEventMemberships(ctx, user.ID)
+		if err != nil {
+			return Me{}, err
+		}
+		if memberships == nil {
+			memberships = []EventMembership{}
+		}
+	}
 	return Me{
 		PublicUser:  toPublic(user, profiles),
 		Tenant:      tenant,
 		Tenants:     tenants,
-		Memberships: []EventMembership{},
+		Memberships: memberships,
 	}, nil
 }
 

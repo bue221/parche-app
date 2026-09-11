@@ -85,10 +85,10 @@ F26 template `event_invite` con deep link token.
 
 ## Checklist
 
-- [ ] Dos doors en el mismo evento
-- [ ] Revoke → scan 403 con access aún válido
-- [ ] Metrics no escanea; door no ve F20 ingresos
-- [ ] Tests de matriz de permisos
+- [x] Dos doors en el mismo evento
+- [x] Revoke → scan 403 con access aún válido
+- [x] Metrics no escanea; door no ve F20 ingresos
+- [x] Tests de matriz de permisos
 
 ## Next step
 

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-	version: 0.8.0
+  version: 0.9.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -202,6 +202,191 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/members:
+    get:
+      summary: List event members (F11)
+      operationId: listEventMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: user_id, display_name, role, status. Requires event.members.manage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Invite a member by email or user_id (F11)
+      operationId: inviteEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteEventMemberRequest"
+      responses:
+        "201":
+          description: Pending invite. role cannot be owner. Unknown emails stay pending until accept.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventInvite"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/members/{userId}:
+    patch:
+      summary: Change an event member role (F11)
+      operationId: patchEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchEventMemberRequest"
+      responses:
+        "200":
+          description: Updated member. Cannot promote to owner or demote the last owner.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMember"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+    delete:
+      summary: Revoke an event member (F11)
+      operationId: revokeEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: status=revoked. Invalidates Redis ACL. Cannot revoke the last owner.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/transfer-ownership:
+    post:
+      summary: Transfer event ownership (F11)
+      operationId: transferEventOwnership
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferOwnershipRequest"
+      responses:
+        "204":
+          description: Target becomes owner; caller becomes manager.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/invites/{token}/accept:
+    post:
+      summary: Accept an event invite (F11)
+      operationId: acceptEventInvite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member is active. Email must match the invite.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          $ref: "#/components/responses/Gone"
   /v1/events/{id}/assets:
     post:
       summary: Confirm an uploaded flyer or gallery image (F09)
@@ -671,6 +856,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/memberships:
+    get:
+      summary: Active event memberships (F11)
+      operationId: listMyMemberships
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: event_id, role, status=active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMembershipList"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1419,6 +1621,83 @@ components:
                 type: string
               status:
                 type: string
+    EventMembershipList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [event_id, role, status]
+            properties:
+              event_id:
+                type: string
+                format: uuid
+              role:
+                type: string
+              status:
+                type: string
+    EventMember:
+      type: object
+      required: [user_id, display_name, role, status]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, door, metrics]
+        status:
+          type: string
+          enum: [active, revoked]
+    EventMemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMember"
+    EventInvite:
+      type: object
+      required: [id, expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+    InviteEventMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        email:
+          type: string
+          format: email
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [manager, door, metrics]
+    PatchEventMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [manager, door, metrics]
+    TransferOwnershipRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
     SessionList:
       type: object
       required: [items]

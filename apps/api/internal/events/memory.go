@@ -14,11 +14,18 @@ type Memory struct {
 	mu      sync.Mutex
 	byID    map[string]Event
 	members map[string]Member // eventID+"/"+userID
+	invites map[string]Invite // id
+	hashes  map[string]string // token_hash → id
 	order   []string
 }
 
 func NewMemory() *Memory {
-	return &Memory{byID: map[string]Event{}, members: map[string]Member{}}
+	return &Memory{
+		byID:    map[string]Event{},
+		members: map[string]Member{},
+		invites: map[string]Invite{},
+		hashes:  map[string]string{},
+	}
 }
 
 func (m *Memory) Create(_ context.Context, e Event, ownerUserID string) error {
@@ -126,6 +133,108 @@ func (m *Memory) Member(_ context.Context, eventID, userID string) (Member, erro
 		return Member{}, auth.ErrNotFound
 	}
 	return mem, nil
+}
+
+func (m *Memory) ListMembers(_ context.Context, eventID string) ([]Member, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Member
+	for _, mem := range m.members {
+		if mem.EventID == eventID {
+			out = append(out, mem)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].UserID < out[j].UserID })
+	return out, nil
+}
+
+func (m *Memory) ListActiveByUser(_ context.Context, userID string) ([]Member, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Member
+	for _, mem := range m.members {
+		if mem.UserID == userID && mem.Status == MemberActive {
+			out = append(out, mem)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].EventID < out[j].EventID })
+	return out, nil
+}
+
+func (m *Memory) UpsertMember(_ context.Context, mem Member) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.members[mem.EventID+"/"+mem.UserID] = mem
+	return nil
+}
+
+func (m *Memory) ActiveOwnerCount(_ context.Context, eventID string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, mem := range m.members {
+		if mem.EventID == eventID && mem.Role == RoleOwner && mem.Status == MemberActive {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (m *Memory) CreateInvite(_ context.Context, in Invite) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, cur := range m.invites {
+		if cur.EventID == in.EventID && cur.Email == in.Email && cur.AcceptedAt == nil {
+			return auth.ErrConflict
+		}
+		if cur.TokenHash == in.TokenHash {
+			return auth.ErrConflict
+		}
+	}
+	m.invites[in.ID] = in
+	m.hashes[in.TokenHash] = in.ID
+	return nil
+}
+
+func (m *Memory) InviteByTokenHash(_ context.Context, hash string) (Invite, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id, ok := m.hashes[hash]
+	if !ok {
+		return Invite{}, auth.ErrNotFound
+	}
+	inv, ok := m.invites[id]
+	if !ok {
+		return Invite{}, auth.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (m *Memory) PendingInvite(_ context.Context, eventID, email string) (Invite, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, inv := range m.invites {
+		if inv.EventID == eventID && inv.Email == email && inv.AcceptedAt == nil {
+			return inv, nil
+		}
+	}
+	return Invite{}, auth.ErrNotFound
+}
+
+func (m *Memory) AcceptInvite(_ context.Context, inviteID string, member Member, at time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	inv, ok := m.invites[inviteID]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	if inv.AcceptedAt != nil {
+		return auth.ErrGone
+	}
+	inv.AcceptedAt = &at
+	m.invites[inviteID] = inv
+	m.members[member.EventID+"/"+member.UserID] = member
+	return nil
 }
 
 func cloneEvent(e Event) Event {

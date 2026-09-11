@@ -53,6 +53,13 @@ func registerEventRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("PATCH /v1/events/{id}", h.patchEvent)
 	mux.HandleFunc("POST /v1/events/{id}/submit", h.submitEvent)
 	mux.HandleFunc("POST /v1/events/{id}/cancel", h.cancelEvent)
+	mux.HandleFunc("GET /v1/events/{id}/members", h.listMembers)
+	mux.HandleFunc("POST /v1/events/{id}/members", h.inviteMember)
+	mux.HandleFunc("PATCH /v1/events/{id}/members/{userId}", h.patchMember)
+	mux.HandleFunc("DELETE /v1/events/{id}/members/{userId}", h.revokeMember)
+	mux.HandleFunc("POST /v1/events/{id}/transfer-ownership", h.transferOwnership)
+	mux.HandleFunc("POST /v1/invites/{token}/accept", h.acceptInvite)
+	mux.HandleFunc("GET /v1/me/memberships", h.listMemberships)
 	mux.HandleFunc("GET /v1/tenants/{id}/events", h.listTenantEvents)
 }
 

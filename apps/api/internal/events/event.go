@@ -137,7 +137,7 @@ type ListFilter struct {
 	Now      time.Time
 }
 
-// Member is an event-scoped role (F11 expands this).
+// Member is an event-scoped role. Status is active or revoked (pending lives on Invite).
 type Member struct {
 	EventID string
 	UserID  string
@@ -145,19 +145,63 @@ type Member struct {
 	Status  string
 }
 
-// Store persists events and the creating owner row.
+// MemberView is GET /v1/events/{id}/members.
+type MemberView struct {
+	UserID      string `json:"user_id"`
+	DisplayName string `json:"display_name"`
+	Role        string `json:"role"`
+	Status      string `json:"status"`
+}
+
+// Invite is a pending email invite (7 days). TokenHash is never the mail value.
+type Invite struct {
+	ID            string
+	EventID       string
+	Email         string
+	InvitedUserID string
+	Role          string
+	TokenHash     string
+	ExpiresAt     time.Time
+	AcceptedAt    *time.Time
+	InvitedBy     string
+}
+
+// InviteCreated is POST /v1/events/{id}/members (201).
+type InviteCreated struct {
+	ID        string    `json:"id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// InviteInput is POST /v1/events/{id}/members. Exactly one of Email or UserID.
+type InviteInput struct {
+	Email  string
+	UserID string
+	Role   string
+}
+
+// Store persists events, members, and pending invites.
 type Store interface {
 	Create(ctx context.Context, e Event, ownerUserID string) error
 	ByID(ctx context.Context, id string) (Event, error)
 	Update(ctx context.Context, e Event) error
 	List(ctx context.Context, f ListFilter) ([]Event, error)
 	Member(ctx context.Context, eventID, userID string) (Member, error)
+	ListMembers(ctx context.Context, eventID string) ([]Member, error)
+	ListActiveByUser(ctx context.Context, userID string) ([]Member, error)
+	UpsertMember(ctx context.Context, m Member) error
+	ActiveOwnerCount(ctx context.Context, eventID string) (int, error)
+	CreateInvite(ctx context.Context, in Invite) error
+	InviteByTokenHash(ctx context.Context, hash string) (Invite, error)
+	PendingInvite(ctx context.Context, eventID, email string) (Invite, error)
+	AcceptInvite(ctx context.Context, inviteID string, member Member, at time.Time) error
 }
 
-// Tenancy is F06 membership. Store implementations satisfy it.
+// Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
 type Tenancy interface {
 	Membership(ctx context.Context, tenantID, userID string) (role string, err error)
 	TenantsForUser(ctx context.Context, userID string) ([]auth.TenantView, error)
+	UserByID(ctx context.Context, id string) (auth.User, error)
+	UserByEmail(ctx context.Context, email string) (auth.User, error)
 }
 
 // Venues creates inline pins and counts published uses (F07).
@@ -172,11 +216,14 @@ type VenueLookup interface {
 	ByID(ctx context.Context, id string) (venues.Venue, error)
 }
 
-// Cache is Redis (or memory) for the public list. Prefix events:list:.
+// Cache is Redis (or memory) for the public list and event ACL hashes.
 type Cache interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	Set(ctx context.Context, key, val string, ttl time.Duration) error
 	DeletePrefix(ctx context.Context, prefix string) error
+	HashGet(ctx context.Context, key, field string) (string, bool, error)
+	HashSet(ctx context.Context, key, field, val string, ttl time.Duration) error
+	Delete(ctx context.Context, keys ...string) error
 }
 
 // Media is F09 flyers/gallery and F10 tracks. Wired after construction to avoid an import cycle.

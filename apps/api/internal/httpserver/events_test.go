@@ -16,6 +16,7 @@ import (
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/venues"
@@ -203,6 +204,10 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	vmem := venues.NewMemory()
 	vsvc := venues.NewService(vmem, store)
 	esvc := events.NewService(events.NewMemory(), store, vsvc, vmem, events.NewMemoryCache())
+	esvc.Pepper = tokens.RefreshPepper
+	esvc.AppOrigin = "http://localhost:3000"
+	esvc.Mailer = &mailer.Memory{}
+	svc.EventRoles = esvc
 	obj, err := objectstore.NewFS(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
