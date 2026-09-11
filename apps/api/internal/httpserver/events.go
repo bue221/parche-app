@@ -2,10 +2,12 @@ package httpserver
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/parche-app/backend/internal/apierr"
+	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/geo"
 )
@@ -303,6 +305,19 @@ func parsePin(w http.ResponseWriter, r *http.Request, pin *eventPinBody) (*event
 }
 
 func writeEventErr(w http.ResponseWriter, r *http.Request, err error) {
+	var inv auth.Invalid
+	if errors.As(err, &inv) {
+		for _, f := range inv.Fields {
+			if f.Name == "sales_window" {
+				details := make([]apierr.Detail, 0, len(inv.Fields))
+				for _, x := range inv.Fields {
+					details = append(details, apierr.Detail{Field: x.Name, Issue: x.Issue})
+				}
+				apierr.Write(w, r, apierr.Validation, "La ventana de venta está cerrada", details)
+				return
+			}
+		}
+	}
 	writeAuthErr(w, r, err)
 }
 

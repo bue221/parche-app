@@ -31,14 +31,17 @@ type Config struct {
 	ObjectStorePath          string
 	ObjectStorePublicBaseURL string
 
-	PaymentWebhookSecret string
-	SMTPHost             string
-	SMTPPort             string
-	SMTPUser             string
-	SMTPPassword         string
-	EmailFrom            string
-	AppOrigin            string
-	CORSOrigins          []string
+	PaymentWebhookSecret   string
+	SMTPHost               string
+	SMTPPort               string
+	SMTPUser               string
+	SMTPPassword           string
+	EmailFrom              string
+	AppOrigin              string
+	CORSOrigins            []string
+	AppEnv                 string
+	PaymentProvider        string
+	PaymentCheckoutBaseURL string
 }
 
 // Load reads and validates required environment variables.
@@ -71,6 +74,9 @@ func Load() (Config, error) {
 		EmailFrom:                os.Getenv("EMAIL_FROM"),
 		AppOrigin:                getenv("APP_ORIGIN", "http://localhost:3000"),
 		CORSOrigins:              splitCSV(os.Getenv("CORS_ORIGINS")),
+		AppEnv:                   getenv("APP_ENV", ""),
+		PaymentProvider:          getenv("PAYMENT_PROVIDER", "fake"),
+		PaymentCheckoutBaseURL:   os.Getenv("PAYMENT_CHECKOUT_BASE_URL"),
 	}
 
 	if err := cfg.Validate(); err != nil {

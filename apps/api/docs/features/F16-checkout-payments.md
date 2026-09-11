@@ -85,10 +85,10 @@ Dispara webhook interno. No existe en prod.
 
 ## Checklist
 
-- [ ] Reserva se libera a los 15 min
-- [ ] Webhook duplicado no duplica tickets
-- [ ] Fake provider en compose
-- [ ] Driver S3-less: adapter pagos env
+- [x] Reserva se libera a los 15 min
+- [x] Webhook duplicado no duplica tickets
+- [x] Fake provider en compose
+- [x] Driver S3-less: adapter pagos env
 
 ## Next step
 

@@ -5,10 +5,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/parche-app/backend/internal/applog"
 	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
+	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/httpserver"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
@@ -58,7 +60,11 @@ func main() {
 			os.Exit(1)
 		}
 		mediaSvc := media.NewService(media.NewPG(pool), store, nil)
-		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process}); err != nil {
+		eventStore := events.NewPG(pool)
+		expire := func(ctx context.Context) (int, error) {
+			return eventStore.ExpirePendingOrders(ctx, time.Now().UTC())
+		}
+		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire}); err != nil {
 			log.Error("worker stopped", "err", err)
 			os.Exit(1)
 		}

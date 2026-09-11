@@ -20,6 +20,7 @@ import (
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
+	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -222,18 +223,22 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	asvc.Catalog = esvc
 	asvc.Avatars = msvc
 	esvc.Lineup = asvc
+	esvc.Payments = payments.Fake{}
 	msvc.Artists = asvc
 	msvc.Users = svc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
-		Store:   obj,
-		Access:  access,
-		Events:  esvc,
-		Catalog: esvc,
-		Auth:    svc,
-		Venues:  vsvc,
-		Media:   msvc,
-		Artists: asvc,
+		Store:         obj,
+		Access:        access,
+		Events:        esvc,
+		Catalog:       esvc,
+		Auth:          svc,
+		Venues:        vsvc,
+		Media:         msvc,
+		Artists:       asvc,
+		Payments:      payments.Fake{},
+		WebhookSecret: "test-webhook-secret",
+		AppEnv:        "dev",
 	})
 	return mux, esvc
 }

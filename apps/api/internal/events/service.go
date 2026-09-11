@@ -12,6 +12,7 @@ import (
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/geo"
 	"github.com/parche-app/backend/internal/mailer"
+	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -35,6 +36,8 @@ type Service struct {
 	Mailer    mailer.Sender
 	AppOrigin string
 	Pepper    []byte
+	Payments  payments.Provider
+	Publisher Queue
 	Now       func() time.Time
 }
 

@@ -270,6 +270,124 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/orders:
+    post:
+      summary: Create a checkout order (F16)
+      operationId: createEventOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IdempotencyKeyRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+            example:
+              items:
+                - ticket_type_id: "0199a0c0-0000-7000-8000-000000000010"
+                  quantity: 2
+      responses:
+        "201":
+          description: Pending order with a payment checkout URL. Replay of the same Idempotency-Key returns the original order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutCreated"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/orders/{id}:
+    get:
+      summary: Get order status and items (F16)
+      operationId: getOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Buyer or event.metrics.read. No payment instrument data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderView"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/payments/webhook:
+    post:
+      summary: Payment provider webhook (F16)
+      operationId: paymentWebhook
+      security: []
+      parameters:
+        - name: X-Payment-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: t=<unix>,v1=<hmac-sha256 hex> over "{unix}.{raw body}"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentWebhook"
+            example:
+              provider_event_id: evt_01
+              order_id: "0199a0c0-0000-7000-8000-000000000020"
+              status: success
+      responses:
+        "200":
+          description: Accepted. Duplicate provider_event_id is a no-op.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/dev/payments/simulate:
+    post:
+      summary: Dev-only fake payment (APP_ENV=dev)
+      operationId: simulatePayment
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id]
+              properties:
+                order_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [success, failed]
+      responses:
+        "200":
+          description: Signed webhook applied
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/events/{id}/members:
     get:
       summary: List event members (F11)
@@ -1637,6 +1755,14 @@ components:
       required: false
       schema:
         type: string
+    IdempotencyKeyRequired:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
     MinLat:
       name: min_lat
       in: query
@@ -2227,6 +2353,98 @@ components:
         status:
           type: string
           enum: [draft, on_sale, paused, sold_out, archived]
+    CreateOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [ticket_type_id, quantity]
+            properties:
+              ticket_type_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 1
+    CheckoutCreated:
+      type: object
+      required: [order_id, status, checkout_url, expires_at]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, paid, failed, expired]
+        checkout_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    OrderView:
+      type: object
+      required: [id, event_id, status, amount_cents, currency, items, tickets]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, paid, failed, expired]
+        amount_cents:
+          type: integer
+        currency:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+            required: [ticket_type_id, quantity, unit_price_cents]
+            properties:
+              ticket_type_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              unit_price_cents:
+                type: integer
+        tickets:
+          type: array
+          items:
+            type: object
+            required: [id, ticket_type_id, status]
+            properties:
+              id:
+                type: string
+                format: uuid
+              ticket_type_id:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [reserved, valid, used, transferred, cancelled]
+    PaymentWebhook:
+      type: object
+      required: [provider_event_id, order_id, status]
+      properties:
+        provider_event_id:
+          type: string
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, failed]
     InviteEventMemberRequest:
       type: object
       required: [role]

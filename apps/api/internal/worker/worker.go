@@ -17,6 +17,7 @@ const streamName = "PARCHE"
 // Handlers are feature processors. Nil handlers ACK after logging (idle).
 type Handlers struct {
 	MediaProcess func(ctx context.Context, assetID string) error
+	ExpireOrders func(ctx context.Context) (int, error)
 }
 
 // Run subscribes to product subjects and idles until ctx is cancelled.
@@ -48,6 +49,10 @@ func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger, h Hand
 		}
 		subs = append(subs, sub)
 		log.Info("worker subscribed", "subject", subject, "durable", durable)
+	}
+
+	if h.ExpireOrders != nil {
+		go expireLoop(ctx, log, h.ExpireOrders)
 	}
 
 	log.Info("worker idle")
@@ -102,6 +107,30 @@ func dispatch(ctx context.Context, h Handlers, msg *nats.Msg) error {
 		return h.MediaProcess(ctx, body.AssetID)
 	default:
 		return nil
+	}
+}
+
+func expireLoop(ctx context.Context, log *slog.Logger, expire func(context.Context) (int, error)) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	run := func() {
+		n, err := expire(ctx)
+		if err != nil {
+			log.Error("order.expire failed", "err", err)
+			return
+		}
+		if n > 0 {
+			log.Info("order.expire", "released", n)
+		}
+	}
+	run()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
 	}
 }
 

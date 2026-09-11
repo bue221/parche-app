@@ -206,6 +206,13 @@ type Store interface {
 	AcceptInvite(ctx context.Context, inviteID string, member Member, at time.Time) error
 	ListTicketTypes(ctx context.Context, eventID string) ([]TicketType, error)
 	PutTicketTypes(ctx context.Context, eventID string, upsert []TicketType, archiveIDs, deleteIDs []string) error
+	CreateReservedOrder(ctx context.Context, o Order, items []OrderItem, tickets []Ticket) error
+	OrderByID(ctx context.Context, id string) (Order, error)
+	OrderByIdempotency(ctx context.Context, userID, eventID, key string) (Order, error)
+	ListOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
+	ListTicketsByOrder(ctx context.Context, orderID string) ([]Ticket, error)
+	ApplyPayment(ctx context.Context, orderID string, tx PaymentTx, success bool) (applied bool, err error)
+	ExpirePendingOrders(ctx context.Context, now time.Time) (int, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
@@ -215,6 +222,7 @@ type Tenancy interface {
 	TenantByID(ctx context.Context, id string) (auth.Tenant, error)
 	UserByID(ctx context.Context, id string) (auth.User, error)
 	UserByEmail(ctx context.Context, email string) (auth.User, error)
+	Profiles(ctx context.Context, userID string) ([]string, error)
 }
 
 // Venues creates inline pins and counts published uses (F07).
@@ -255,6 +263,11 @@ type EventMedia struct {
 // Lineup loads billed artists for GET event detail (F12).
 type Lineup interface {
 	EventLineup(ctx context.Context, eventID string) ([]LineupSlot, error)
+}
+
+// Queue publishes broker subjects. Optional until a worker is connected.
+type Queue interface {
+	Publish(ctx context.Context, subject string, payload []byte) error
 }
 
 // FlyerBinder is implemented by Service for media.Confirm (F09).

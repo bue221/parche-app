@@ -19,6 +19,7 @@ import (
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
+	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
 	"github.com/parche-app/backend/internal/redisx"
@@ -27,14 +28,17 @@ import (
 
 // Routes are product handlers that sit on the F02 mux. Optional until later features wire them.
 type Routes struct {
-	Store   objectstore.Store
-	Access  Access
-	Events  EventWrite
-	Catalog *events.Service
-	Auth    *auth.Service
-	Venues  *venues.Service
-	Media   *media.Service
-	Artists *artists.Service
+	Store         objectstore.Store
+	Access        Access
+	Events        EventWrite
+	Catalog       *events.Service
+	Auth          *auth.Service
+	Venues        *venues.Service
+	Media         *media.Service
+	Artists       *artists.Service
+	Payments      payments.Provider
+	WebhookSecret string
+	AppEnv        string
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -53,6 +57,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerAssetRoutes(mux, routes)
 	registerTrackRoutes(mux, routes)
 	registerArtistRoutes(mux, routes)
+	registerOrderRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -122,6 +127,11 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		eventSvc.AppOrigin = cfg.AppOrigin
 		eventSvc.Pepper = []byte(cfg.JWTRefreshSecret)
 		sessions.EventRoles = eventSvc
+		if pay, err := payments.New(cfg); err != nil {
+			log.Error("payment provider", "err", err)
+		} else {
+			eventSvc.Payments = pay
+		}
 	}
 	var artistSvc *artists.Service
 	if sessions != nil {
@@ -151,6 +161,9 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 				log.Error("broker publisher", "err", err)
 			} else {
 				mediaSvc.Publisher = broker.Publisher{JS: js}
+				if eventSvc != nil {
+					eventSvc.Publisher = broker.Publisher{JS: js}
+				}
 				go func() {
 					<-ctx.Done()
 					nc.Close()
@@ -158,19 +171,26 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 			}
 		}
 	}
+	var pay payments.Provider
+	if eventSvc != nil {
+		pay = eventSvc.Payments
+	}
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
 		objectstore.Checker{Store: store},
 	}, nil, Routes{
-		Store:   store,
-		Access:  access,
-		Events:  eventWrite,
-		Catalog: eventSvc,
-		Auth:    sessions,
-		Venues:  venueSvc,
-		Media:   mediaSvc,
-		Artists: artistSvc,
+		Store:         store,
+		Access:        access,
+		Events:        eventWrite,
+		Catalog:       eventSvc,
+		Auth:          sessions,
+		Venues:        venueSvc,
+		Media:         mediaSvc,
+		Artists:       artistSvc,
+		Payments:      pay,
+		WebhookSecret: cfg.PaymentWebhookSecret,
+		AppEnv:        cfg.AppEnv,
 	})
 
 	srv := &http.Server{
