@@ -76,11 +76,11 @@ Panic → 500 `INTERNAL` + log con stack.
 
 ## Checklist
 
-- [ ] Toda ruta `/v1` usa el envelope
-- [ ] 401 vs 403 vs 404 documentados y testeados
-- [ ] Rate limit en login y check-in
-- [ ] CORS no es `*`
-- [ ] OpenAPI en el repo
+- [x] Toda ruta `/v1` usa el envelope
+- [x] 401 vs 403 vs 404 documentados y testeados
+- [x] Rate limit en login y check-in
+- [x] CORS no es `*`
+- [x] OpenAPI en el repo
 
 ## Next step
 

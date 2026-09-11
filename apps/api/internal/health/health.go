@@ -8,19 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/parche-app/backend/internal/apierr"
 )
 
 // Checker is a named dependency ping used by /ready.
 type Checker interface {
 	Name() string
 	Ping(ctx context.Context) error
-}
-
-type errorBody struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	RequestID string `json:"request_id"`
 }
 
 type statusBody struct {
@@ -38,7 +32,7 @@ func Health() http.HandlerFunc {
 // Internal causes are logged; the client only sees a short Spanish message.
 func Ready(log *slog.Logger, checkers ...Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reqID := requestID(r)
+		reqID := apierr.RequestIDFrom(r)
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
 
@@ -49,23 +43,12 @@ func Ready(log *slog.Logger, checkers ...Checker) http.HandlerFunc {
 					"checker", c.Name(),
 					"err", err,
 				)
-				writeJSON(w, http.StatusServiceUnavailable, errorBody{
-					Code:      "NOT_READY",
-					Message:   "El servicio no está listo",
-					RequestID: reqID,
-				})
+				apierr.Write(w, r, apierr.NotReady, "", nil)
 				return
 			}
 		}
 		writeJSON(w, http.StatusOK, statusBody{Status: "ready"})
 	}
-}
-
-func requestID(r *http.Request) string {
-	if id := r.Header.Get("X-Request-Id"); id != "" {
-		return id
-	}
-	return uuid.NewString()
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

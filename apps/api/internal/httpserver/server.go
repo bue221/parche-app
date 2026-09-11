@@ -14,15 +14,23 @@ import (
 	"github.com/parche-app/backend/internal/health"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
+	"github.com/parche-app/backend/internal/ratelimit"
 	"github.com/parche-app/backend/internal/redisx"
 )
 
-// NewMux registers process health routes. Product routes under /v1 arrive in F02.
-func NewMux(log *applog.Logger, checkers ...health.Checker) http.Handler {
+// NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
+func NewMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers ...health.Checker) http.Handler {
+	return newMux(log, cfg, limiter, checkers, nil)
+}
+
+func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers []health.Checker, extra func(*http.ServeMux)) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", health.Health())
 	mux.Handle("GET /ready", health.Ready(log, checkers...))
-	return mux
+	if extra != nil {
+		extra(mux)
+	}
+	return wrap(&v1Mux{inner: mux}, log, cfg, limiter)
 }
 
 // Run connects dependencies, applies migrations, and serves HTTP until ctx is done.
@@ -53,7 +61,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		log.Error("object store", "err", err)
 	}
 
-	handler := NewMux(log,
+	handler := NewMux(log, cfg, ratelimit.New(rdb),
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
 		objectstore.Checker{Store: store},

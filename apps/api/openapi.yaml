@@ -1,0 +1,263 @@
+openapi: 3.0.3
+info:
+  title: Parche API
+  version: 0.2.0
+  description: >
+    Product HTTP contract. All product routes live under /v1, speak JSON,
+    echo X-Request-Id, and fail with the Error envelope. Update this file
+    in the same change as each new Go route.
+servers:
+  - url: http://localhost:8080
+    description: Local Compose
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Process is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+  /ready:
+    get:
+      summary: Dependency readiness
+      operationId: getReady
+      security: []
+      responses:
+        "200":
+          description: Postgres, Redis, and object store respond
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ready
+        "503":
+          $ref: "#/components/responses/NotReady"
+  /v1/events:
+    get:
+      summary: Public event list (F08)
+      operationId: listEvents
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+              example:
+                items: []
+                next_cursor: null
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/auth/login:
+    post:
+      summary: Login (F04)
+      operationId: login
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Session tokens (implemented in F04)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/events/{eventId}/check-in:
+    post:
+      summary: Door check-in (F19)
+      operationId: checkIn
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Scan result (implemented in F19)
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - GONE
+            - RATE_LIMITED
+            - NOT_READY
+            - INTERNAL
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+      example:
+        code: FORBIDDEN
+        message: No tienes permiso de puerta en este evento
+        request_id: "0199a0c0-0000-7000-8000-000000000001"
+    ErrorDetail:
+      type: object
+      required: [field, issue]
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+      example:
+        field: ends_at
+        issue: order
+    EventList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+        next_cursor:
+          type: string
+          nullable: true
+  responses:
+    Error:
+      description: Standard product error
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            notFound:
+              value:
+                code: NOT_FOUND
+                message: No encontrado
+                request_id: "0199a0c0-0000-7000-8000-000000000001"
+            validation:
+              value:
+                code: VALIDATION_ERROR
+                message: La fecha de fin debe ser posterior al inicio
+                request_id: "0199a0c0-0000-7000-8000-000000000001"
+                details:
+                  - field: ends_at
+                    issue: order
+    Unauthorized:
+      description: Missing, expired, or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: UNAUTHORIZED
+            message: No autenticado
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    Forbidden:
+      description: Authenticated but insufficient permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: FORBIDDEN
+            message: No tienes permiso
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    NotReady:
+      description: A runtime dependency failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: NOT_READY
+            message: El servicio no está listo
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: RATE_LIMITED
+            message: Demasiadas solicitudes
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+security:
+  - bearerAuth: []

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/parche-app/backend/internal/apierr"
 )
 
 type fakeChecker struct {
@@ -47,11 +49,11 @@ func TestReadyNotReady(t *testing.T) {
 	if rr.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d", rr.Code)
 	}
-	var body errorBody
+	var body apierr.Body
 	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Code != "NOT_READY" {
+	if body.Code != apierr.NotReady {
 		t.Fatalf("code = %q", body.Code)
 	}
 	if body.RequestID != "req-1" {
