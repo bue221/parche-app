@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.5.0
+  version: 0.6.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -211,6 +211,19 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/profiles/artist:
+    post:
+      summary: Add artist platform profile (F06)
+      operationId: addArtistProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Idempotent; does not create the public artist document (F12)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/me/sessions:
     get:
       summary: List refresh families (F04)
@@ -236,6 +249,181 @@ paths:
           description: All sessions revoked
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /v1/tenants:
+    post:
+      summary: Create a colectivo (F06)
+      operationId: createTenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+            example:
+              name: Pez Alado
+      responses:
+        "201":
+          description: Tenant plus owner membership for the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/tenants/{id}:
+    get:
+      summary: Get a tenant the caller belongs to (F06)
+      operationId: getTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update tenant name or currency (owner) (F06)
+      operationId: patchTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchTenantRequest"
+      responses:
+        "200":
+          description: Updated tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/members:
+    get:
+      summary: List tenant members (owner) (F06)
+      operationId: listTenantMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Members of the colectivo (not event_members)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Invite staff by user_id or email (owner) (F06)
+      operationId: addTenantMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTenantMemberRequest"
+      responses:
+        "201":
+          description: Immediate staff membership when the user already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMember"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/members/{userId}:
+    delete:
+      summary: Remove a tenant member (owner) (F06)
+      operationId: removeTenantMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Member removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)
@@ -456,7 +644,7 @@ components:
           $ref: "#/components/schemas/PublicUser"
     Me:
       type: object
-      required: [id, email, display_name, profiles, memberships]
+      required: [id, email, display_name, profiles, tenants, memberships]
       properties:
         id:
           type: string
@@ -470,15 +658,13 @@ components:
           items:
             type: string
         tenant:
-          type: object
+          $ref: "#/components/schemas/TenantView"
           nullable: true
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            role:
-              type: string
+          description: First tenant membership; prefer tenants[]
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantView"
         memberships:
           type: array
           items:
@@ -510,6 +696,79 @@ components:
                 type: string
               current:
                 type: boolean
+    TenantView:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff]
+    Tenant:
+      type: object
+      required: [id, slug, name, currency, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+          example: COP
+        status:
+          type: string
+          enum: [active]
+    CreateTenantRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    PatchTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        currency:
+          type: string
+    AddTenantMemberRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    TenantMember:
+      type: object
+      required: [user_id, email, display_name, role]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff]
+    TenantMemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantMember"
     UploadRequest:
       type: object
       required: [kind, content_type, byte_size]

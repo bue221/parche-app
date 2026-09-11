@@ -149,6 +149,9 @@ func TestPromoterGetsTenantStub(t *testing.T) {
 	if me.Tenant == nil || me.Tenant.Name != "Pez Alado" || me.Tenant.Role != TenantOwner {
 		t.Fatalf("tenant=%+v", me.Tenant)
 	}
+	if len(me.Tenants) != 1 || me.Tenants[0].ID != me.Tenant.ID {
+		t.Fatalf("tenants=%+v", me.Tenants)
+	}
 	if len(me.Profiles) != 2 {
 		t.Fatalf("profiles=%v", me.Profiles)
 	}

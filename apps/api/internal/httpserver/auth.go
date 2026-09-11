@@ -63,8 +63,15 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/auth/password/forgot", h.forgot)
 	mux.HandleFunc("POST /v1/auth/password/reset", h.reset)
 	mux.HandleFunc("GET /v1/me", h.me)
+	mux.HandleFunc("POST /v1/me/profiles/artist", h.addArtist)
 	mux.HandleFunc("GET /v1/me/sessions", h.sessions)
 	mux.HandleFunc("DELETE /v1/me/sessions", h.logoutAll)
+	mux.HandleFunc("POST /v1/tenants", h.createTenant)
+	mux.HandleFunc("GET /v1/tenants/{id}", h.getTenant)
+	mux.HandleFunc("PATCH /v1/tenants/{id}", h.patchTenant)
+	mux.HandleFunc("GET /v1/tenants/{id}/members", h.listMembers)
+	mux.HandleFunc("POST /v1/tenants/{id}/members", h.addMember)
+	mux.HandleFunc("DELETE /v1/tenants/{id}/members/{userId}", h.removeMember)
 }
 
 type authHandler struct {
@@ -287,6 +294,12 @@ func writeAuthErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, auth.ErrEmailTaken):
 		apierr.Write(w, r, apierr.Conflict, "Ese correo ya tiene cuenta", nil)
+	case errors.Is(err, auth.ErrLastOwner):
+		apierr.Write(w, r, apierr.Conflict, "El colectivo debe tener al menos un owner", nil)
+	case errors.Is(err, auth.ErrConflict):
+		apierr.Write(w, r, apierr.Conflict, "", nil)
+	case errors.Is(err, auth.ErrNotFound):
+		apierr.Write(w, r, apierr.NotFound, "", nil)
 	case errors.Is(err, auth.ErrGone):
 		apierr.Write(w, r, apierr.Gone, "", nil)
 	case errors.Is(err, auth.ErrForbidden):

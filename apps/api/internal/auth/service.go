@@ -92,6 +92,7 @@ type PublicUser struct {
 type Me struct {
 	PublicUser
 	Tenant      *TenantView       `json:"tenant,omitempty"`
+	Tenants     []TenantView      `json:"tenants"`
 	Memberships []EventMembership `json:"memberships"`
 }
 
@@ -151,21 +152,11 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (Session, erro
 	}
 	if profile == ProfilePromoter {
 		acc.Profiles = []string{ProfileAttendee, ProfilePromoter}
-		tid, err := newID()
+		t, err := newTenant(display)
 		if err != nil {
 			return Session{}, err
 		}
-		suffix := strings.ReplaceAll(tid, "-", "")
-		if len(suffix) > 8 {
-			suffix = suffix[:8]
-		}
-		acc.Tenant = &Tenant{
-			ID:       tid,
-			Slug:     slugify(display, suffix),
-			Name:     display,
-			Currency: "COP",
-			Status:   StatusActive,
-		}
+		acc.Tenant = &t
 		acc.Role = TenantOwner
 	}
 	if err := s.Store.CreateAccount(ctx, acc); err != nil {
@@ -387,13 +378,22 @@ func (s *Service) Me(ctx context.Context, userID string) (Me, error) {
 	if err != nil {
 		return Me{}, err
 	}
-	tenant, err := s.Store.TenantForUser(ctx, user.ID)
+	tenants, err := s.Store.TenantsForUser(ctx, user.ID)
 	if err != nil {
 		return Me{}, err
+	}
+	if tenants == nil {
+		tenants = []TenantView{}
+	}
+	var tenant *TenantView
+	if len(tenants) > 0 {
+		first := tenants[0]
+		tenant = &first
 	}
 	return Me{
 		PublicUser:  toPublic(user, profiles),
 		Tenant:      tenant,
+		Tenants:     tenants,
 		Memberships: []EventMembership{},
 	}, nil
 }

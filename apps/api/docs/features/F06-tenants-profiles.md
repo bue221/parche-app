@@ -77,11 +77,11 @@ Cubierto en [F27](F27-platform-admin.md). Aquí: middleware `RequireProfile("pla
 
 ## Checklist
 
-- [ ] Promoter register deja tenant usable
-- [ ] Attendee no crea eventos
-- [ ] Artist profile no da métricas
-- [ ] N members de tenant
-- [ ] platform_admin no se autoasigna
+- [x] Promoter register deja tenant usable
+- [x] Attendee no crea eventos
+- [x] Artist profile no da métricas
+- [x] N members de tenant
+- [x] platform_admin no se autoasigna
 
 ## Next step
 

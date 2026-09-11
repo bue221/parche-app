@@ -6,11 +6,15 @@ import (
 )
 
 const (
-	StatusActive    = "active"
-	StatusDisabled  = "disabled"
-	ProfileAttendee = "attendee"
-	ProfilePromoter = "promoter"
-	TenantOwner     = "owner"
+	StatusActive          = "active"
+	StatusDisabled        = "disabled"
+	ProfileAttendee       = "attendee"
+	ProfilePromoter       = "promoter"
+	ProfileArtist         = "artist"
+	ProfilePlatformAdmin  = "platform_admin"
+	TenantOwner           = "owner"
+	TenantStaff           = "staff"
+	DefaultTenantCurrency = "COP"
 )
 
 // User is the persisted account. PasswordHash must never be serialized to clients.
@@ -46,20 +50,28 @@ type RefreshRow struct {
 	CreatedAt  time.Time
 }
 
-// Tenant is a promoter colectivo stub (F06).
+// Tenant is a promoter colectivo.
 type Tenant struct {
-	ID       string
-	Slug     string
-	Name     string
-	Currency string
-	Status   string
+	ID       string `json:"id"`
+	Slug     string `json:"slug"`
+	Name     string `json:"name"`
+	Currency string `json:"currency"`
+	Status   string `json:"status"`
 }
 
 // TenantView is the public tenant slice on GET /v1/me.
 type TenantView struct {
-	ID   string
-	Name string
-	Role string
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+// TenantMemberView is one row of GET /v1/tenants/{id}/members.
+type TenantMemberView struct {
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	DisplayName string `json:"display_name"`
+	Role        string `json:"role"`
 }
 
 // SessionView is one refresh family for GET /v1/me/sessions.
@@ -83,7 +95,17 @@ type Store interface {
 	UserByEmail(ctx context.Context, email string) (User, error)
 	UserByID(ctx context.Context, id string) (User, error)
 	Profiles(ctx context.Context, userID string) ([]string, error)
+	InsertProfile(ctx context.Context, userID, profile string) error
 	TenantForUser(ctx context.Context, userID string) (*TenantView, error)
+	TenantsForUser(ctx context.Context, userID string) ([]TenantView, error)
+	CreateTenant(ctx context.Context, t Tenant, ownerUserID string) error
+	TenantByID(ctx context.Context, id string) (Tenant, error)
+	Membership(ctx context.Context, tenantID, userID string) (role string, err error)
+	UpdateTenant(ctx context.Context, id, name, currency string) error
+	ListMembers(ctx context.Context, tenantID string) ([]TenantMemberView, error)
+	AddMember(ctx context.Context, tenantID, userID, role string) error
+	OwnerCount(ctx context.Context, tenantID string) (int, error)
+	RemoveMember(ctx context.Context, tenantID, userID string) error
 
 	InsertRefresh(ctx context.Context, row RefreshRow) error
 	RefreshByHash(ctx context.Context, hash string) (RefreshRow, error)

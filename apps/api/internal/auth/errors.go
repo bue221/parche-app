@@ -9,6 +9,8 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrGone         = errors.New("gone")
 	ErrEmailTaken   = errors.New("email taken")
+	ErrConflict     = errors.New("conflict")
+	ErrLastOwner    = errors.New("last owner")
 	ErrValidation   = errors.New("validation")
 )
 

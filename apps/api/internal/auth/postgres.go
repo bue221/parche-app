@@ -129,21 +129,153 @@ func (s *PG) Profiles(ctx context.Context, userID string) ([]string, error) {
 }
 
 func (s *PG) TenantForUser(ctx context.Context, userID string) (*TenantView, error) {
-	var v TenantView
-	err := s.q.QueryRow(ctx, `
+	list, err := s.TenantsForUser(ctx, userID)
+	if err != nil || len(list) == 0 {
+		return nil, err
+	}
+	v := list[0]
+	return &v, nil
+}
+
+func (s *PG) TenantsForUser(ctx context.Context, userID string) ([]TenantView, error) {
+	rows, err := s.q.Query(ctx, `
 		SELECT t.id, t.name, m.role
 		FROM tenant_members m
 		JOIN tenants t ON t.id = m.tenant_id
 		WHERE m.user_id = $1
-		ORDER BY m.created_at
-		LIMIT 1`, userID).Scan(&v.ID, &v.Name, &v.Role)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
+		ORDER BY m.created_at`, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &v, nil
+	defer rows.Close()
+	out := []TenantView{}
+	for rows.Next() {
+		var v TenantView
+		if err := rows.Scan(&v.ID, &v.Name, &v.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) InsertProfile(ctx context.Context, userID, profile string) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO user_profiles (user_id, profile) VALUES ($1, $2)
+		ON CONFLICT (user_id, profile) DO NOTHING`, userID, profile)
+	return err
+}
+
+func (s *PG) CreateTenant(ctx context.Context, t Tenant, ownerUserID string) error {
+	run := func(st Store) error {
+		pg, ok := st.(*PG)
+		if !ok {
+			return fmt.Errorf("auth store type")
+		}
+		if _, err := pg.q.Exec(ctx, `
+			INSERT INTO tenants (id, slug, name, currency, status)
+			VALUES ($1, $2, $3, $4, $5)`, t.ID, t.Slug, t.Name, t.Currency, t.Status); err != nil {
+			return mapUniqueConflict(err)
+		}
+		_, err := pg.q.Exec(ctx, `
+			INSERT INTO tenant_members (tenant_id, user_id, role) VALUES ($1, $2, $3)`,
+			t.ID, ownerUserID, TenantOwner)
+		return err
+	}
+	if s.forUpdate {
+		return run(s)
+	}
+	return s.InTx(ctx, run)
+}
+
+func (s *PG) TenantByID(ctx context.Context, id string) (Tenant, error) {
+	var t Tenant
+	err := s.q.QueryRow(ctx, `
+		SELECT id, slug, name, currency, status FROM tenants WHERE id = $1`, id).
+		Scan(&t.ID, &t.Slug, &t.Name, &t.Currency, &t.Status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Tenant{}, ErrNotFound
+	}
+	if err != nil {
+		return Tenant{}, err
+	}
+	return t, nil
+}
+
+func (s *PG) Membership(ctx context.Context, tenantID, userID string) (string, error) {
+	var role string
+	err := s.q.QueryRow(ctx, `
+		SELECT role FROM tenant_members WHERE tenant_id = $1 AND user_id = $2`, tenantID, userID).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return role, nil
+}
+
+func (s *PG) UpdateTenant(ctx context.Context, id, name, currency string) error {
+	tag, err := s.q.Exec(ctx, `
+		UPDATE tenants SET name = $2, currency = $3 WHERE id = $1`, id, name, currency)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) ListMembers(ctx context.Context, tenantID string) ([]TenantMemberView, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT m.user_id, u.email, u.display_name, m.role
+		FROM tenant_members m
+		JOIN users u ON u.id = m.user_id
+		WHERE m.tenant_id = $1
+		ORDER BY m.created_at`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []TenantMemberView{}
+	for rows.Next() {
+		var v TenantMemberView
+		if err := rows.Scan(&v.UserID, &v.Email, &v.DisplayName, &v.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) AddMember(ctx context.Context, tenantID, userID, role string) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO tenant_members (tenant_id, user_id, role) VALUES ($1, $2, $3)`,
+		tenantID, userID, role)
+	if err != nil {
+		return mapUniqueConflict(err)
+	}
+	return nil
+}
+
+func (s *PG) OwnerCount(ctx context.Context, tenantID string) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `
+		SELECT COUNT(*) FROM tenant_members WHERE tenant_id = $1 AND role = $2`, tenantID, TenantOwner).Scan(&n)
+	return n, err
+}
+
+func (s *PG) RemoveMember(ctx context.Context, tenantID, userID string) error {
+	tag, err := s.q.Exec(ctx, `
+		DELETE FROM tenant_members WHERE tenant_id = $1 AND user_id = $2`, tenantID, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *PG) InsertRefresh(ctx context.Context, row RefreshRow) error {
@@ -268,6 +400,14 @@ func mapUniqueEmail(err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		return ErrEmailTaken
+	}
+	return err
+}
+
+func mapUniqueConflict(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return ErrConflict
 	}
 	return err
 }

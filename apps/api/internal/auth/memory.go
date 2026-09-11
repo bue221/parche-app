@@ -23,9 +23,10 @@ type Memory struct {
 }
 
 type member struct {
-	TenantID string
-	UserID   string
-	Role     string
+	TenantID  string
+	UserID    string
+	Role      string
+	CreatedAt time.Time
 }
 
 // NewMemory returns an empty session store.
@@ -84,7 +85,7 @@ func (m *Memory) CreateAccount(_ context.Context, acc Account) error {
 		if role == "" {
 			role = TenantOwner
 		}
-		m.members = append(m.members, member{TenantID: acc.Tenant.ID, UserID: acc.User.ID, Role: role})
+		m.members = append(m.members, member{TenantID: acc.Tenant.ID, UserID: acc.User.ID, Role: role, CreatedAt: acc.User.CreatedAt})
 	}
 	return nil
 }
@@ -117,9 +118,19 @@ func (m *Memory) Profiles(_ context.Context, userID string) ([]string, error) {
 	return out, nil
 }
 
-func (m *Memory) TenantForUser(_ context.Context, userID string) (*TenantView, error) {
+func (m *Memory) TenantForUser(ctx context.Context, userID string) (*TenantView, error) {
+	list, err := m.TenantsForUser(ctx, userID)
+	if err != nil || len(list) == 0 {
+		return nil, err
+	}
+	v := list[0]
+	return &v, nil
+}
+
+func (m *Memory) TenantsForUser(_ context.Context, userID string) ([]TenantView, error) {
 	m.lock()
 	defer m.unlock()
+	var out []TenantView
 	for _, mem := range m.members {
 		if mem.UserID != userID {
 			continue
@@ -128,9 +139,160 @@ func (m *Memory) TenantForUser(_ context.Context, userID string) (*TenantView, e
 		if !ok {
 			continue
 		}
-		return &TenantView{ID: t.ID, Name: t.Name, Role: mem.Role}, nil
+		out = append(out, TenantView{ID: t.ID, Name: t.Name, Role: mem.Role})
 	}
-	return nil, nil
+	if out == nil {
+		out = []TenantView{}
+	}
+	return out, nil
+}
+
+func (m *Memory) InsertProfile(_ context.Context, userID, profile string) error {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.users[userID]; !ok {
+		return ErrNotFound
+	}
+	for _, p := range m.profiles[userID] {
+		if p == profile {
+			return nil
+		}
+	}
+	m.profiles[userID] = append(m.profiles[userID], profile)
+	return nil
+}
+
+func (m *Memory) CreateTenant(_ context.Context, t Tenant, ownerUserID string) error {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.users[ownerUserID]; !ok {
+		return ErrNotFound
+	}
+	for _, existing := range m.tenants {
+		if existing.Slug == t.Slug {
+			return ErrConflict
+		}
+	}
+	m.tenants[t.ID] = t
+	m.members = append(m.members, member{TenantID: t.ID, UserID: ownerUserID, Role: TenantOwner, CreatedAt: time.Now().UTC()})
+	return nil
+}
+
+func (m *Memory) TenantByID(_ context.Context, id string) (Tenant, error) {
+	m.lock()
+	defer m.unlock()
+	t, ok := m.tenants[id]
+	if !ok {
+		return Tenant{}, ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *Memory) Membership(_ context.Context, tenantID, userID string) (string, error) {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.tenants[tenantID]; !ok {
+		return "", ErrNotFound
+	}
+	for _, mem := range m.members {
+		if mem.TenantID == tenantID && mem.UserID == userID {
+			return mem.Role, nil
+		}
+	}
+	return "", ErrNotFound
+}
+
+func (m *Memory) UpdateTenant(_ context.Context, id, name, currency string) error {
+	m.lock()
+	defer m.unlock()
+	t, ok := m.tenants[id]
+	if !ok {
+		return ErrNotFound
+	}
+	t.Name = name
+	t.Currency = currency
+	m.tenants[id] = t
+	return nil
+}
+
+func (m *Memory) ListMembers(_ context.Context, tenantID string) ([]TenantMemberView, error) {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.tenants[tenantID]; !ok {
+		return nil, ErrNotFound
+	}
+	var out []TenantMemberView
+	for _, mem := range m.members {
+		if mem.TenantID != tenantID {
+			continue
+		}
+		u, ok := m.users[mem.UserID]
+		if !ok {
+			continue
+		}
+		out = append(out, TenantMemberView{
+			UserID:      mem.UserID,
+			Email:       u.Email,
+			DisplayName: u.DisplayName,
+			Role:        mem.Role,
+		})
+	}
+	if out == nil {
+		out = []TenantMemberView{}
+	}
+	return out, nil
+}
+
+func (m *Memory) AddMember(_ context.Context, tenantID, userID, role string) error {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.tenants[tenantID]; !ok {
+		return ErrNotFound
+	}
+	if _, ok := m.users[userID]; !ok {
+		return ErrNotFound
+	}
+	for _, mem := range m.members {
+		if mem.TenantID == tenantID && mem.UserID == userID {
+			return ErrConflict
+		}
+	}
+	m.members = append(m.members, member{TenantID: tenantID, UserID: userID, Role: role, CreatedAt: time.Now().UTC()})
+	return nil
+}
+
+func (m *Memory) OwnerCount(_ context.Context, tenantID string) (int, error) {
+	m.lock()
+	defer m.unlock()
+	if _, ok := m.tenants[tenantID]; !ok {
+		return 0, ErrNotFound
+	}
+	n := 0
+	for _, mem := range m.members {
+		if mem.TenantID == tenantID && mem.Role == TenantOwner {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (m *Memory) RemoveMember(_ context.Context, tenantID, userID string) error {
+	m.lock()
+	defer m.unlock()
+	kept := make([]member, 0, len(m.members))
+	found := false
+	for _, mem := range m.members {
+		if mem.TenantID == tenantID && mem.UserID == userID {
+			found = true
+			continue
+		}
+		kept = append(kept, mem)
+	}
+	if !found {
+		return ErrNotFound
+	}
+	m.members = kept
+	return nil
 }
 
 func (m *Memory) InsertRefresh(_ context.Context, row RefreshRow) error {

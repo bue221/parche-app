@@ -203,7 +203,7 @@ func TestAuthLogoutAndSessions(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("me=%d %s", rr.Code, rr.Body.String())
 	}
-	if !strings.Contains(rr.Body.String(), `"tenant"`) {
+	if !strings.Contains(rr.Body.String(), `"tenants"`) {
 		t.Fatalf("promoter me=%s", rr.Body.String())
 	}
 

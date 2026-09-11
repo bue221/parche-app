@@ -17,7 +17,8 @@ var (
 
 // Principal is the authenticated caller, taken from the access JWT.
 type Principal struct {
-	UserID string
+	UserID   string
+	Profiles []string
 }
 
 // Access authenticates product requests via the access JWT.
@@ -60,7 +61,7 @@ func (j JWTAccess) Peek(r *http.Request) (Principal, error) {
 	if err != nil {
 		return Principal{}, errUnauthorized
 	}
-	return Principal{UserID: claims.Subject}, nil
+	return Principal{UserID: claims.Subject, Profiles: claims.Profiles}, nil
 }
 
 func (j JWTAccess) Authenticate(r *http.Request) (Principal, error) {
@@ -72,7 +73,7 @@ func (j JWTAccess) Authenticate(r *http.Request) (Principal, error) {
 	if err != nil {
 		return Principal{}, errUnauthorized
 	}
-	p := Principal{UserID: claims.Subject}
+	p := Principal{UserID: claims.Subject, Profiles: claims.Profiles}
 	if j.Lookup == nil {
 		return p, nil
 	}
@@ -89,7 +90,7 @@ func (j JWTAccess) Authenticate(r *http.Request) (Principal, error) {
 	if ident.Epoch != claims.Epoch {
 		return Principal{}, errUnauthorized
 	}
-	return p, nil
+	return Principal{UserID: claims.Subject, Profiles: claims.Profiles}, nil
 }
 
 func writeAccessError(w http.ResponseWriter, r *http.Request, err error) {
@@ -101,6 +102,40 @@ func writeAccessError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		apierr.Write(w, r, apierr.Internal, "", nil)
 	}
+}
+
+// RequireProfile authenticates then checks a platform profile in the database (JWT profiles can be stale).
+func RequireProfile(access Access, lookup func(context.Context, string) ([]string, error), profile string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p, err := access.Authenticate(r)
+		if err != nil {
+			writeAccessError(w, r, err)
+			return
+		}
+		if lookup == nil {
+			apierr.Write(w, r, apierr.Forbidden, "", nil)
+			return
+		}
+		got, err := lookup(r.Context(), p.UserID)
+		if err != nil {
+			writeAccessError(w, r, err)
+			return
+		}
+		if !containsProfile(got, profile) {
+			apierr.Write(w, r, apierr.Forbidden, "", nil)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(WithUserID(r.Context(), p.UserID)))
+	}
+}
+
+func containsProfile(profiles []string, want string) bool {
+	for _, p := range profiles {
+		if p == want {
+			return true
+		}
+	}
+	return false
 }
 
 // DenyEventWrite forbids event-scoped uploads until membership (F11) exists.
