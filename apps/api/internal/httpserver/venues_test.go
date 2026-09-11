@@ -126,10 +126,9 @@ func TestPublicVenueAfterPublishedUse(t *testing.T) {
 	}
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
-		Access:  access,
-		Auth:    svc,
-		Venues:  vsvc,
-		MapPins: venues.EmptyPins{},
+		Access: access,
+		Auth:   svc,
+		Venues: vsvc,
 	})
 
 	rr := httptest.NewRecorder()
@@ -166,50 +165,6 @@ func TestPublicVenueAfterPublishedUse(t *testing.T) {
 	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/venues?q=video&min_lat=4.5&min_lng=-74.2&max_lat=4.8&max_lng=-74.0", nil))
 	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), created.ID) {
 		t.Fatalf("public list=%d %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestEventsBBoxFiltersPublishedPins(t *testing.T) {
-	store := auth.NewMemory()
-	pins := &venues.MemoryPins{Items: []venues.MapPin{
-		{ID: "b", Title: "Norte", Lat: 4.75, Lng: -74.05, VenueID: "v1"},
-		{ID: "a", Title: "Sur", Lat: 4.50, Lng: -74.10, VenueID: "v2"},
-		{ID: "bad", Title: "No pin", Lat: 91, Lng: 0},
-	}}
-	tokens := testTokens()
-	svc, err := auth.NewService(store, tokens, auth.FastArgon2(), testLogger())
-	if err != nil {
-		t.Fatal(err)
-	}
-	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
-	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
-		Access:  access,
-		Auth:    svc,
-		Venues:  venues.NewService(venues.NewMemory(), store),
-		MapPins: pins,
-	})
-
-	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/events?min_lat=4.7&min_lng=-74.1&max_lat=4.8&max_lng=-74.0", nil))
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status=%d %s", rr.Code, rr.Body.String())
-	}
-	var page ListEnvelope[venues.MapPin]
-	if err := json.Unmarshal(rr.Body.Bytes(), &page); err != nil {
-		t.Fatal(err)
-	}
-	if len(page.Items) != 1 || page.Items[0].Title != "Norte" {
-		t.Fatalf("items=%+v", page.Items)
-	}
-	if page.Items[0].Lat == 0 || page.Items[0].Lng == 0 {
-		t.Fatal("published pin must include lat/lng")
-	}
-
-	rr = httptest.NewRecorder()
-	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/events", nil))
-	_ = json.Unmarshal(rr.Body.Bytes(), &page)
-	if len(page.Items) != 2 {
-		t.Fatalf("unfiltered (drop invalid coords) got %d", len(page.Items))
 	}
 }
 

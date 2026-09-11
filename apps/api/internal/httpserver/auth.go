@@ -285,10 +285,14 @@ func writeAuthErr(w http.ResponseWriter, r *http.Request, err error) {
 	var inv auth.Invalid
 	if errors.As(err, &inv) {
 		details := make([]apierr.Detail, 0, len(inv.Fields))
+		msg := ""
 		for _, f := range inv.Fields {
 			details = append(details, apierr.Detail{Field: f.Name, Issue: f.Issue})
+			if f.Name == "ends_at" && f.Issue == "order" {
+				msg = "La fecha de fin debe ser posterior al inicio"
+			}
 		}
-		apierr.Write(w, r, apierr.Validation, "", details)
+		apierr.Write(w, r, apierr.Validation, msg, details)
 		return
 	}
 	switch {

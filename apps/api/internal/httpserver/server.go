@@ -12,6 +12,7 @@ import (
 	"github.com/parche-app/backend/internal/applog"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/config"
+	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/health"
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/objectstore"
@@ -26,9 +27,9 @@ type Routes struct {
 	Store   objectstore.Store
 	Access  Access
 	Events  EventWrite
+	Catalog *events.Service
 	Auth    *auth.Service
 	Venues  *venues.Service
-	MapPins venues.MapPins
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -43,6 +44,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerUploadRoutes(mux, routes)
 	registerAuthRoutes(mux, routes)
 	registerVenueRoutes(mux, routes)
+	registerEventRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -98,6 +100,21 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if sessions != nil {
 		venueSvc = venues.NewService(venues.NewPG(pool), sessions.Store)
 	}
+	var eventSvc *events.Service
+	if sessions != nil && venueSvc != nil {
+		vpg := venues.NewPG(pool)
+		var cache events.Cache
+		if rdb != nil {
+			cache = events.RedisCache{Client: rdb}
+		} else {
+			cache = events.NewMemoryCache()
+		}
+		eventSvc = events.NewService(events.NewPG(pool), sessions.Store, venueSvc, vpg, cache)
+	}
+	eventWrite := EventWrite(DenyEventWrite{})
+	if eventSvc != nil {
+		eventWrite = eventSvc
+	}
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
@@ -105,10 +122,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	}, nil, Routes{
 		Store:   store,
 		Access:  access,
-		Events:  DenyEventWrite{},
+		Events:  eventWrite,
+		Catalog: eventSvc,
 		Auth:    sessions,
 		Venues:  venueSvc,
-		MapPins: venues.EmptyPins{},
 	})
 
 	srv := &http.Server{

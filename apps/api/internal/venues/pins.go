@@ -18,7 +18,7 @@ type MapPin struct {
 	AddressText string  `json:"address_text,omitempty"`
 }
 
-// MapPins lists published pins. Production is empty until F08 stores events.
+// MapPins lists published pins. F08 GET /v1/events reads the events catalog instead.
 type MapPins interface {
 	PublishedPins(ctx context.Context) ([]MapPin, error)
 }

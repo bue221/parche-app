@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.7.0
+	version: 0.8.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -68,6 +68,166 @@ paths:
           $ref: "#/components/responses/RateLimited"
         default:
           $ref: "#/components/responses/Error"
+    post:
+      summary: Create an event draft (F08)
+      operationId: createEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Draft event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/events/{id}:
+    get:
+      summary: Event detail (F08)
+      operationId: getEvent
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published and cancelled are public; drafts only for event members (404 otherwise)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      summary: Update an event (F08)
+      operationId: patchEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchEventRequest"
+      responses:
+        "200":
+          description: Updated event. Date or venue change on published returns pending_review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/submit:
+    post:
+      summary: Send draft or rejected event to review (F08)
+      operationId: submitEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status is pending_review. Requires a venue pin. Flyer is F09.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/cancel:
+    post:
+      summary: Cancel a published event (F08)
+      operationId: cancelEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status is cancelled. Detail remains public; agenda listing drops it.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/events:
+    get:
+      summary: Tenant event list, all statuses (F08)
+      operationId: listTenantEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of the colectivo's events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAdminList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/venues:
     get:
       summary: List venues (F07)
@@ -738,6 +898,153 @@ components:
           format: uuid
         address_text:
           type: string
+        slug:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [published]
+        genres:
+          type: array
+          items:
+            type: string
+    Event:
+      type: object
+      required: [id, tenant_id, title, slug, starts_at, ends_at, venue_id, status, lat, lng]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, pending_review, published, rejected, cancelled, archived]
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        lat:
+          type: number
+        lng:
+          type: number
+        address_text:
+          type: string
+        venue_name:
+          type: string
+        flyer_asset_id:
+          type: string
+          format: uuid
+    EventAdminList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateEventRequest:
+      type: object
+      required: [tenant_id, title, starts_at, ends_at]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+          description: Exactly one of venue_id or pin
+        pin:
+          $ref: "#/components/schemas/EventPin"
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+    PatchEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+        pin:
+          $ref: "#/components/schemas/EventPin"
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+    EventPin:
+      type: object
+      required: [lat, lng]
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
     Venue:
       type: object
       required: [id, tenant_id, name, address_text, lat, lng, source]
@@ -1096,6 +1403,16 @@ components:
           example:
             code: FORBIDDEN
             message: No tienes permiso
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    NotFound:
+      description: Missing resource, or hidden draft
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: NOT_FOUND
+            message: No encontrado
             request_id: "0199a0c0-0000-7000-8000-000000000001"
     Gone:
       description: Reset, invite, or QR token expired or already used

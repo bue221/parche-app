@@ -31,7 +31,7 @@ type peeker interface {
 	Peek(*http.Request) (Principal, error)
 }
 
-// EventWrite authorizes event media uploads. F08/F11 replace DenyEventWrite.
+// EventWrite authorizes event media uploads. F08 Catalog (owner/manager) implements this until F11 expands roles.
 type EventWrite interface {
 	Authorize(ctx context.Context, userID, eventID string) (tenantID string, err error)
 }

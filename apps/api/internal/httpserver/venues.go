@@ -32,12 +32,7 @@ func registerVenueRoutes(mux *http.ServeMux, routes Routes) {
 	if access == nil {
 		access = RejectAccess{}
 	}
-	pins := routes.MapPins
-	if pins == nil {
-		pins = venues.EmptyPins{}
-	}
-	h := venueHandler{svc: routes.Venues, access: access, pins: pins}
-	mux.HandleFunc("GET /v1/events", h.listEvents)
+	h := venueHandler{svc: routes.Venues, access: access}
 	mux.HandleFunc("GET /v1/venues", h.listVenues)
 	mux.HandleFunc("POST /v1/venues", h.createVenue)
 	mux.HandleFunc("GET /v1/venues/{id}", h.getVenue)
@@ -47,7 +42,6 @@ func registerVenueRoutes(mux *http.ServeMux, routes Routes) {
 type venueHandler struct {
 	svc    *venues.Service
 	access Access
-	pins   venues.MapPins
 }
 
 func (h venueHandler) createVenue(w http.ResponseWriter, r *http.Request) {
@@ -177,32 +171,6 @@ func (h venueHandler) listVenues(w http.ResponseWriter, r *http.Request) {
 		next = &id
 	}
 	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": pub, "next_cursor": next})
-}
-
-func (h venueHandler) listEvents(w http.ResponseWriter, r *http.Request) {
-	page, details := ParsePage(r)
-	if len(details) > 0 {
-		apierr.Write(w, r, apierr.Validation, "", details)
-		return
-	}
-	bbox, err := geo.ParseBBox(
-		r.URL.Query().Get("min_lat"),
-		r.URL.Query().Get("min_lng"),
-		r.URL.Query().Get("max_lat"),
-		r.URL.Query().Get("max_lng"),
-	)
-	if err != nil {
-		writeAuthErr(w, r, err)
-		return
-	}
-	all, err := h.pins.PublishedPins(r.Context())
-	if err != nil {
-		apierr.Write(w, r, apierr.Internal, "", nil)
-		return
-	}
-	visible := venues.VisiblePins(all, bbox)
-	items, next := venues.PagePins(visible, page.Cursor, page.Limit)
-	apierr.WriteJSON(w, http.StatusOK, ListEnvelope[venues.MapPin]{Items: items, NextCursor: next})
 }
 
 func (h venueHandler) optionalUser(w http.ResponseWriter, r *http.Request) (string, bool) {

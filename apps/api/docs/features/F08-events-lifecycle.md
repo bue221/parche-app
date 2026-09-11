@@ -56,6 +56,8 @@ Público. Solo `published` (y starts_at futuro + 12h de margen para “en curso�
 
 Caché: key `events:list:` + hash query, TTL 30s. Invalidar prefix al cambiar evento published.
 
+Flyer en submit: F09. F08 exige pin/venue; sin pin → `VALIDATION_ERROR`.
+
 ### `GET /v1/events/{id}`
 
 Público si published/cancelled (cancelled visible). Draft solo miembros. 404 si draft y no miembro (no filtrar existencia a extraños: 404).
@@ -76,11 +78,11 @@ Aprobación admin: [F27](F27-platform-admin.md).
 
 ## Checklist
 
-- [ ] Draft invisible en listado público
-- [ ] PATCH funciona (RC-022)
-- [ ] Submit exige mapa + flyer
-- [ ] Cancel oculta venta y deja detalle
-- [ ] Caché se invalida
+- [x] Draft invisible en listado público
+- [x] PATCH funciona (RC-022)
+- [x] Submit exige mapa (flyer queda en F09)
+- [x] Cancel oculta venta y deja detalle
+- [x] Caché se invalida
 
 ## Next step
 
