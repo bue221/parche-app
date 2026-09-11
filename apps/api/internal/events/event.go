@@ -212,7 +212,14 @@ type Store interface {
 	ListOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	ListTicketsByOrder(ctx context.Context, orderID string) ([]Ticket, error)
 	ListTicketsByUser(ctx context.Context, userID string) ([]Ticket, error)
+	TicketByID(ctx context.Context, id string) (Ticket, error)
 	SetTicketJTI(ctx context.Context, ticketID, jti string) error
+	TransferValidTicket(ctx context.Context, ticketID, fromUserID, toUserID, newJTI string, now time.Time) (Ticket, error)
+	CreateTicketClaim(ctx context.Context, in TicketClaim) error
+	TicketClaimByTokenHash(ctx context.Context, hash string) (TicketClaim, error)
+	PendingTicketClaim(ctx context.Context, ticketID string) (TicketClaim, error)
+	DeleteExpiredTicketClaims(ctx context.Context, ticketID string, now time.Time) error
+	AcceptTicketClaim(ctx context.Context, claimID, toUserID, newJTI string, now time.Time) (Ticket, error)
 	ApplyPayment(ctx context.Context, orderID string, tx PaymentTx, success bool) (applied bool, err error)
 	ExpirePendingOrders(ctx context.Context, now time.Time) (int, error)
 }

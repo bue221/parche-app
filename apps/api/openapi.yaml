@@ -1112,6 +1112,67 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "429":
           $ref: "#/components/responses/Error"
+  /v1/tickets/{id}/transfer:
+    post:
+      summary: Transfer a valid ticket to another user (F18)
+      operationId: transferTicket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferTicketRequest"
+            example:
+              to_email: dest@example.com
+      responses:
+        "204":
+          description: Immediate cesión when the destination has an account; otherwise a 48h ticket_claim email. Rotates jti and denylists the previous QR in Redis.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tickets/claims/{token}/accept:
+    post:
+      summary: Accept a pending ticket claim (F18)
+      operationId: acceptTicketClaim
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Caller now owns the ticket. qr_token is a new JWS (new jti). Email must match the claim.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyTicket"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Gone"
   /v1/me/avatar:
     post:
       summary: Confirm a user avatar upload (F14)
@@ -2508,6 +2569,16 @@ components:
         qr_token:
           type: string
           description: Compact JWS (tid, eid, jti, iat, exp). Never log.
+    TransferTicketRequest:
+      type: object
+      description: Exactly one of to_email or to_user_id. Destination account receives the ticket immediately; unknown email gets a 48h ticket_claim.
+      properties:
+        to_email:
+          type: string
+          format: email
+        to_user_id:
+          type: string
+          format: uuid
     PaymentWebhook:
       type: object
       required: [provider_event_id, order_id, status]

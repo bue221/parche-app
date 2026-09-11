@@ -11,30 +11,34 @@ import (
 
 // Memory is an in-process Store for tests.
 type Memory struct {
-	mu       sync.Mutex
-	byID     map[string]Event
-	members  map[string]Member // eventID+"/"+userID
-	invites  map[string]Invite // id
-	hashes   map[string]string // token_hash → id
-	tickets  map[string]TicketType
-	orders   map[string]Order
-	oitems   map[string][]OrderItem
-	tix      map[string]Ticket
-	payments map[string]PaymentTx // provider_event_id
-	order    []string
+	mu          sync.Mutex
+	byID        map[string]Event
+	members     map[string]Member // eventID+"/"+userID
+	invites     map[string]Invite // id
+	hashes      map[string]string // token_hash → id
+	tickets     map[string]TicketType
+	orders      map[string]Order
+	oitems      map[string][]OrderItem
+	tix         map[string]Ticket
+	payments    map[string]PaymentTx // provider_event_id
+	claims      map[string]TicketClaim
+	claimHashes map[string]string // token_hash → id
+	order       []string
 }
 
 func NewMemory() *Memory {
 	return &Memory{
-		byID:     map[string]Event{},
-		members:  map[string]Member{},
-		invites:  map[string]Invite{},
-		hashes:   map[string]string{},
-		tickets:  map[string]TicketType{},
-		orders:   map[string]Order{},
-		oitems:   map[string][]OrderItem{},
-		tix:      map[string]Ticket{},
-		payments: map[string]PaymentTx{},
+		byID:        map[string]Event{},
+		members:     map[string]Member{},
+		invites:     map[string]Invite{},
+		hashes:      map[string]string{},
+		tickets:     map[string]TicketType{},
+		orders:      map[string]Order{},
+		oitems:      map[string][]OrderItem{},
+		tix:         map[string]Ticket{},
+		payments:    map[string]PaymentTx{},
+		claims:      map[string]TicketClaim{},
+		claimHashes: map[string]string{},
 	}
 }
 

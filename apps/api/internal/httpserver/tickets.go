@@ -84,3 +84,49 @@ func (h eventHandler) listMyTickets(w http.ResponseWriter, r *http.Request) {
 	}
 	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
 }
+
+type transferTicketBody struct {
+	ToEmail  string `json:"to_email"`
+	ToUserID string `json:"to_user_id"`
+}
+
+func (h eventHandler) transferTicket(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	var req transferTicketBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.svc.TransferTicket(r.Context(), p.UserID, r.PathValue("id"), events.TransferInput{
+		Email: req.ToEmail, UserID: req.ToUserID,
+	}); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h eventHandler) acceptTicketClaim(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	item, err := h.svc.AcceptTicketClaim(r.Context(), p.UserID, r.PathValue("token"))
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, item)
+}

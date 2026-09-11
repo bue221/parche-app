@@ -6,11 +6,12 @@ import (
 	"sync"
 )
 
-// Template IDs. SMTP delivery is F26; F05 uses password_reset, F14 email_change, F11 event_invite.
+// Template IDs. SMTP delivery is F26; F05 uses password_reset, F14 email_change, F11 event_invite, F18 ticket_claim.
 const (
 	TemplatePasswordReset = "password_reset"
 	TemplateEventInvite   = "event_invite"
 	TemplateEmailChange   = "email_change"
+	TemplateTicketClaim   = "ticket_claim"
 )
 
 // Message is the F26 Send contract. Vars must not include passwords.
@@ -62,6 +63,25 @@ func (m *Memory) Send(_ context.Context, msg Message) error {
 	}
 	m.Msgs = append(m.Msgs, cp)
 	return nil
+}
+
+// All returns a copy of queued messages.
+func (m *Memory) All() []Message {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]Message, len(m.Msgs))
+	copy(out, m.Msgs)
+	for i, msg := range out {
+		if msg.Vars == nil {
+			continue
+		}
+		cp := make(map[string]string, len(msg.Vars))
+		for k, v := range msg.Vars {
+			cp[k] = v
+		}
+		out[i].Vars = cp
+	}
+	return out
 }
 
 // Last returns the most recent message.

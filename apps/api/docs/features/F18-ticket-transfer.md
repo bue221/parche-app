@@ -38,10 +38,10 @@ Límite: 3 transfers por ticket (columna `transfer_count`) anti-scalping liviano
 
 ## Checklist
 
-- [ ] QR viejo → F19 `invalid` (firma ok pero jti denylist)
-- [ ] Destino ve el ticket en /me/tickets
-- [ ] Emails enviados
-- [ ] Máx 3 cesiones
+- [x] QR viejo → F19 `invalid` (firma ok pero jti denylist `ticket:jti:{old}` hasta exp)
+- [x] Destino ve el ticket en /me/tickets
+- [x] Emails enviados
+- [x] Máx 3 cesiones
 
 ## Next step
 

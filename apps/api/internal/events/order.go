@@ -68,15 +68,16 @@ type OrderItem struct {
 
 // Ticket is one admission row. JTI is assigned when the ticket becomes valid (F17).
 type Ticket struct {
-	ID           string
-	OrderID      string
-	TicketTypeID string
-	EventID      string
-	UserID       string
-	Status       string
-	JTI          string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            string
+	OrderID       string
+	TicketTypeID  string
+	EventID       string
+	UserID        string
+	Status        string
+	JTI           string
+	TransferCount int
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // PaymentTx is a webhook row. provider_event_id is unique so duplicates are skipped.

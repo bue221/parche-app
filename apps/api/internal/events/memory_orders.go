@@ -194,6 +194,126 @@ func (m *Memory) SetTicketJTI(_ context.Context, ticketID, jti string) error {
 	return nil
 }
 
+func (m *Memory) TicketByID(_ context.Context, id string) (Ticket, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.tix[id]
+	if !ok {
+		return Ticket{}, auth.ErrNotFound
+	}
+	return t, nil
+}
+
+func (m *Memory) TransferValidTicket(_ context.Context, ticketID, fromUserID, toUserID, newJTI string, now time.Time) (Ticket, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.transferValidLocked(ticketID, fromUserID, toUserID, newJTI, now)
+}
+
+func (m *Memory) transferValidLocked(ticketID, fromUserID, toUserID, newJTI string, now time.Time) (Ticket, error) {
+	t, ok := m.tix[ticketID]
+	if !ok {
+		return Ticket{}, auth.ErrNotFound
+	}
+	if t.UserID != fromUserID {
+		return Ticket{}, auth.ErrForbidden
+	}
+	if t.Status != TicketValid {
+		return Ticket{}, auth.ErrConflict
+	}
+	if t.TransferCount >= maxTicketTransfers {
+		return Ticket{}, auth.ErrConflict
+	}
+	t.UserID = toUserID
+	t.JTI = newJTI
+	t.TransferCount++
+	t.UpdatedAt = now
+	m.tix[ticketID] = t
+	return t, nil
+}
+
+func (m *Memory) CreateTicketClaim(_ context.Context, in TicketClaim) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := in.CreatedAt
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	m.deleteExpiredClaimsLocked(in.TicketID, now)
+	for _, cur := range m.claims {
+		if cur.TicketID == in.TicketID && cur.AcceptedAt == nil {
+			return auth.ErrConflict
+		}
+		if cur.TokenHash == in.TokenHash {
+			return auth.ErrConflict
+		}
+	}
+	m.claims[in.ID] = in
+	m.claimHashes[in.TokenHash] = in.ID
+	return nil
+}
+
+func (m *Memory) TicketClaimByTokenHash(_ context.Context, hash string) (TicketClaim, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id, ok := m.claimHashes[hash]
+	if !ok {
+		return TicketClaim{}, auth.ErrNotFound
+	}
+	c, ok := m.claims[id]
+	if !ok {
+		return TicketClaim{}, auth.ErrNotFound
+	}
+	return c, nil
+}
+
+func (m *Memory) PendingTicketClaim(_ context.Context, ticketID string) (TicketClaim, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, c := range m.claims {
+		if c.TicketID == ticketID && c.AcceptedAt == nil {
+			return c, nil
+		}
+	}
+	return TicketClaim{}, auth.ErrNotFound
+}
+
+func (m *Memory) DeleteExpiredTicketClaims(_ context.Context, ticketID string, now time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.deleteExpiredClaimsLocked(ticketID, now)
+	return nil
+}
+
+func (m *Memory) deleteExpiredClaimsLocked(ticketID string, now time.Time) {
+	for id, c := range m.claims {
+		if c.TicketID != ticketID || c.AcceptedAt != nil || c.ExpiresAt.After(now) {
+			continue
+		}
+		delete(m.claimHashes, c.TokenHash)
+		delete(m.claims, id)
+	}
+}
+
+func (m *Memory) AcceptTicketClaim(_ context.Context, claimID, toUserID, newJTI string, now time.Time) (Ticket, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	c, ok := m.claims[claimID]
+	if !ok {
+		return Ticket{}, auth.ErrNotFound
+	}
+	if c.AcceptedAt != nil || !c.ExpiresAt.After(now) {
+		return Ticket{}, auth.ErrGone
+	}
+	moved, err := m.transferValidLocked(c.TicketID, c.FromUserID, toUserID, newJTI, now)
+	if err != nil {
+		return Ticket{}, err
+	}
+	c.AcceptedAt = &now
+	m.claims[claimID] = c
+	return moved, nil
+}
+
 func (m *Memory) qtyByTypeLocked(orderID string) map[string]int {
 	out := map[string]int{}
 	for _, it := range m.oitems[orderID] {

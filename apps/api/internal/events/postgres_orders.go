@@ -382,7 +382,7 @@ const orderSelect = `
 	FROM orders`
 
 const ticketSelect = `
-	SELECT id, order_id, ticket_type_id, event_id, user_id, status, jti, created_at, updated_at
+	SELECT id, order_id, ticket_type_id, event_id, user_id, status, jti, transfer_count, created_at, updated_at
 	FROM tickets`
 
 func scanOrder(row rowScanner) (Order, error) {
@@ -406,7 +406,7 @@ func scanOrder(row rowScanner) (Order, error) {
 func scanTicket(row rowScanner) (Ticket, error) {
 	var t Ticket
 	var jti *string
-	err := row.Scan(&t.ID, &t.OrderID, &t.TicketTypeID, &t.EventID, &t.UserID, &t.Status, &jti, &t.CreatedAt, &t.UpdatedAt)
+	err := row.Scan(&t.ID, &t.OrderID, &t.TicketTypeID, &t.EventID, &t.UserID, &t.Status, &jti, &t.TransferCount, &t.CreatedAt, &t.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Ticket{}, auth.ErrNotFound
 	}
