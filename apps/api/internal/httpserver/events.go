@@ -65,6 +65,7 @@ func registerEventRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("GET /v1/tenants/{id}/events", h.listTenantEvents)
 	mux.HandleFunc("GET /v1/events/{id}/ticket-types", h.listTicketTypes)
 	mux.HandleFunc("PUT /v1/events/{id}/ticket-types", h.putTicketTypes)
+	mux.HandleFunc("GET /v1/me/tickets", h.listMyTickets)
 }
 
 type eventHandler struct {

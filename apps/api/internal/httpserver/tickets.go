@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/events"
@@ -58,4 +59,28 @@ func (h eventHandler) putTicketTypes(w http.ResponseWriter, r *http.Request) {
 		out = []events.TicketType{}
 	}
 	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": out})
+}
+
+func (h eventHandler) listMyTickets(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	upcoming := strings.EqualFold(strings.TrimSpace(q.Get("upcoming")), "true")
+	status := strings.TrimSpace(q.Get("status"))
+	items, err := h.svc.ListMyTickets(r.Context(), p.UserID, status, upcoming)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	if items == nil {
+		items = []events.MyTicket{}
+	}
+	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
 }

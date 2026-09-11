@@ -23,6 +23,7 @@ import (
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
 	"github.com/parche-app/backend/internal/redisx"
+	"github.com/parche-app/backend/internal/ticketsign"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -126,6 +127,11 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		eventSvc.Mailer = mailer.Log{Logger: log}
 		eventSvc.AppOrigin = cfg.AppOrigin
 		eventSvc.Pepper = []byte(cfg.JWTRefreshSecret)
+		if keys, err := ticketsign.Parse(cfg.TicketSigningKey, cfg.TicketSigningKeys); err != nil {
+			log.Error("ticket signing keys", "err", err)
+		} else {
+			eventSvc.Tickets = keys
+		}
 		sessions.EventRoles = eventSvc
 		if pay, err := payments.New(cfg); err != nil {
 			log.Error("payment provider", "err", err)

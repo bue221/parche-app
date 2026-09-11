@@ -1,11 +1,14 @@
 package config
 
 import (
+	"crypto/hmac"
 	"fmt"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/parche-app/backend/internal/ticketsign"
 )
 
 // Config is process configuration loaded from the environment.
@@ -17,9 +20,10 @@ type Config struct {
 	BrokerURL   string
 	LogLevel    string
 
-	JWTAccessSecret  string
-	JWTRefreshSecret string
-	TicketSigningKey string
+	JWTAccessSecret   string
+	JWTRefreshSecret  string
+	TicketSigningKey  string
+	TicketSigningKeys string
 
 	ObjectStoreDriver        string
 	ObjectStoreEndpoint      string
@@ -57,6 +61,7 @@ func Load() (Config, error) {
 		JWTAccessSecret:          os.Getenv("JWT_ACCESS_SECRET"),
 		JWTRefreshSecret:         os.Getenv("JWT_REFRESH_SECRET"),
 		TicketSigningKey:         os.Getenv("TICKET_SIGNING_KEY"),
+		TicketSigningKeys:        os.Getenv("TICKET_SIGNING_KEYS"),
 		ObjectStoreDriver:        getenv("OBJECT_STORE_DRIVER", "fs"),
 		ObjectStoreEndpoint:      os.Getenv("OBJECT_STORE_ENDPOINT"),
 		ObjectStoreBucket:        getenv("OBJECT_STORE_BUCKET", "parche"),
@@ -99,6 +104,13 @@ func (c Config) Validate() error {
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required env: %s", strings.Join(missing, ", "))
+	}
+	keys, err := ticketsign.Parse(c.TicketSigningKey, c.TicketSigningKeys)
+	if err != nil {
+		return fmt.Errorf("ticket signing keys: %w", err)
+	}
+	if hmac.Equal(keys.ActiveSecret(), []byte(c.JWTAccessSecret)) {
+		return fmt.Errorf("TICKET_SIGNING_KEY must differ from JWT_ACCESS_SECRET")
 	}
 	return nil
 }

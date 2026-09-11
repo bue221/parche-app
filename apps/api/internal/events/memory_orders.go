@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/parche-app/backend/internal/auth"
@@ -147,9 +148,50 @@ func (m *Memory) shiftTicketsLocked(orderID, from, to string, now time.Time) {
 		if t.OrderID == orderID && t.Status == from {
 			t.Status = to
 			t.UpdatedAt = now
+			if to == TicketValid && t.JTI == "" {
+				if jti, err := newID(); err == nil {
+					t.JTI = jti
+				}
+			}
 			m.tix[id] = t
 		}
 	}
+}
+
+func (m *Memory) ListTicketsByUser(_ context.Context, userID string) ([]Ticket, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Ticket
+	for _, t := range m.tix {
+		if t.UserID == userID {
+			out = append(out, t)
+		}
+	}
+	if out == nil {
+		out = []Ticket{}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].CreatedAt.After(out[j].CreatedAt)
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+
+func (m *Memory) SetTicketJTI(_ context.Context, ticketID, jti string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.tix[ticketID]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	if t.JTI != "" {
+		return nil
+	}
+	t.JTI = jti
+	m.tix[ticketID] = t
+	return nil
 }
 
 func (m *Memory) qtyByTypeLocked(orderID string) map[string]int {

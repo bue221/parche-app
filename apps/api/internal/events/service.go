@@ -13,6 +13,7 @@ import (
 	"github.com/parche-app/backend/internal/geo"
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/payments"
+	"github.com/parche-app/backend/internal/ticketsign"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -37,6 +38,7 @@ type Service struct {
 	AppOrigin string
 	Pepper    []byte
 	Payments  payments.Provider
+	Tickets   ticketsign.Keys
 	Publisher Queue
 	Now       func() time.Time
 }

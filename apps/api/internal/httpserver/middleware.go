@@ -137,6 +137,8 @@ const (
 	checkInWindow        = time.Second
 	publicListLimit      = 60
 	publicListWindow     = time.Minute
+	meTicketsLimit       = 60
+	meTicketsWindow      = time.Minute
 )
 
 func rateLimit(next http.Handler, limiter ratelimit.Limiter) http.Handler {
@@ -180,6 +182,12 @@ func limitSpec(r *http.Request) (key string, limit int, window time.Duration, ap
 			user = ip
 		}
 		return "rl:checkin:" + user, checkInLimit, checkInWindow, true
+	case r.Method == http.MethodGet && path == "/v1/me/tickets":
+		user := userIDFromRequest(r)
+		if user == "" {
+			user = ip
+		}
+		return "rl:tickets:" + user, meTicketsLimit, meTicketsWindow, true
 	case r.Method == http.MethodGet && isPublicListPath(path):
 		return "rl:list:" + ip, publicListLimit, publicListWindow, true
 	default:

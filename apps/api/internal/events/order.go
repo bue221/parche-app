@@ -66,7 +66,7 @@ type OrderItem struct {
 	UnitPriceCents int    `json:"unit_price_cents"`
 }
 
-// Ticket is one admission row. QR tokens are F17.
+// Ticket is one admission row. JTI is assigned when the ticket becomes valid (F17).
 type Ticket struct {
 	ID           string
 	OrderID      string
@@ -74,6 +74,7 @@ type Ticket struct {
 	EventID      string
 	UserID       string
 	Status       string
+	JTI          string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

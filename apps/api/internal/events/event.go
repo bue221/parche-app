@@ -211,6 +211,8 @@ type Store interface {
 	OrderByIdempotency(ctx context.Context, userID, eventID, key string) (Order, error)
 	ListOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	ListTicketsByOrder(ctx context.Context, orderID string) ([]Ticket, error)
+	ListTicketsByUser(ctx context.Context, userID string) ([]Ticket, error)
+	SetTicketJTI(ctx context.Context, ticketID, jti string) error
 	ApplyPayment(ctx context.Context, orderID string, tx PaymentTx, success bool) (applied bool, err error)
 	ExpirePendingOrders(ctx context.Context, now time.Time) (int, error)
 }

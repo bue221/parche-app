@@ -21,6 +21,7 @@ import (
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/payments"
+	"github.com/parche-app/backend/internal/ticketsign"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -224,6 +225,11 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	asvc.Avatars = msvc
 	esvc.Lineup = asvc
 	esvc.Payments = payments.Fake{}
+	keys, err := ticketsign.Parse("ticket-signing-key-32-bytes-min!!", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	esvc.Tickets = keys
 	msvc.Artists = asvc
 	msvc.Users = svc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}

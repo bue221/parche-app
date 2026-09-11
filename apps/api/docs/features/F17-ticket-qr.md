@@ -52,10 +52,10 @@ Re-emisión: si el cliente pierde el token, el GET **vuelve a firmar el mismo jt
 
 ## Checklist
 
-- [ ] Key ≠ JWT_ACCESS
-- [ ] exp cubre el evento
-- [ ] GET me/tickets del dueño
-- [ ] kid rotativo documentado en env `TICKET_SIGNING_KEYS` json
+- [x] Key ≠ JWT_ACCESS
+- [x] exp cubre el evento
+- [x] GET me/tickets del dueño
+- [x] kid rotativo documentado en env `TICKET_SIGNING_KEYS` json
 
 ## Next step
 

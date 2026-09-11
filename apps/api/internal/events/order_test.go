@@ -8,6 +8,7 @@ import (
 
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/payments"
+	"github.com/parche-app/backend/internal/ticketsign"
 )
 
 func TestCreateOrderReservesAndWebhookSells(t *testing.T) {
@@ -230,6 +231,11 @@ func checkoutFixture(t *testing.T) (context.Context, *Service, string, string, s
 		t.Fatalf("types=%v %v", types, err)
 	}
 	buy := mustUser(t, s.Tenancy.(*auth.Memory), "buyer@example.com", auth.ProfileAttendee)
+	keys, err := ticketsign.Parse("ticket-signing-key-32-bytes-min!!", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Tickets = keys
 	return c, s, buy, eid, types[0].ID
 }
 

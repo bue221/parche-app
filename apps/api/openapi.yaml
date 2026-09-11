@@ -1070,6 +1070,48 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/tickets:
+    get:
+      summary: List the caller's tickets with QR JWS (F17)
+      operationId: listMyTickets
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: upcoming
+          in: query
+          schema:
+            type: boolean
+          description: When true, omit used tickets and events that have already ended
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [valid, used]
+          description: Default valid. used lists scanned tickets (not included in upcoming)
+      responses:
+        "200":
+          description: Owner-only wallet. qr_token is a JWS signed with TICKET_SIGNING_KEY, not the ticket UUID. Re-GET re-signs the same jti.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyTickets"
+              example:
+                items:
+                  - ticket_id: "0199a0c0-0000-7000-8000-000000000030"
+                    event:
+                      id: "0199a0c0-0000-7000-8000-000000000001"
+                      title: Norte
+                      starts_at: "2026-09-12T01:00:00Z"
+                    status: valid
+                    qr_token: eyJhbGciOiJIUzI1NiIsImtpZCI6InYxIiwidHlwIjoiSldUIn0.eyJ0aWQiOiIuLi4ifQ.sig
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/Error"
   /v1/me/avatar:
     post:
       summary: Confirm a user avatar upload (F14)
@@ -2433,6 +2475,39 @@ components:
               status:
                 type: string
                 enum: [reserved, valid, used, transferred, cancelled]
+    MyTickets:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyTicket"
+    MyTicket:
+      type: object
+      required: [ticket_id, event, status, qr_token]
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+        event:
+          type: object
+          required: [id, title, starts_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+            starts_at:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [valid, used]
+        qr_token:
+          type: string
+          description: Compact JWS (tid, eid, jti, iat, exp). Never log.
     PaymentWebhook:
       type: object
       required: [provider_event_id, order_id, status]

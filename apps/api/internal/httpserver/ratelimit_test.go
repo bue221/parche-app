@@ -119,6 +119,27 @@ func TestRateLimitPublicList(t *testing.T) {
 	}
 }
 
+func TestRateLimitMeTickets(t *testing.T) {
+	limiter := ratelimit.NewMemory()
+	mux := newMux(testLogger(), configCORS(), limiter, nil, nil, Routes{})
+	for i := 0; i < 60; i++ {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/me/tickets", nil)
+		req = req.WithContext(WithUserID(req.Context(), "attendee-1"))
+		mux.ServeHTTP(rr, req)
+		if rr.Code == http.StatusTooManyRequests {
+			t.Fatalf("hit %d limited early status=%d", i+1, rr.Code)
+		}
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/me/tickets", nil)
+	req = req.WithContext(WithUserID(req.Context(), "attendee-1"))
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusTooManyRequests {
+		t.Fatalf("status=%d", rr.Code)
+	}
+}
+
 func configCORS() config.Config {
 	return config.Config{CORSOrigins: []string{"http://localhost:3000"}}
 }

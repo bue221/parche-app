@@ -105,6 +105,73 @@ func (s *PG) ListOrderItems(ctx context.Context, orderID string) ([]OrderItem, e
 	return out, rows.Err()
 }
 
+func (s *PG) ListTicketsByUser(ctx context.Context, userID string) ([]Ticket, error) {
+	rows, err := s.q.Query(ctx, ticketSelect+` WHERE user_id = $1 ORDER BY created_at DESC, id`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Ticket
+	for rows.Next() {
+		t, err := scanTicket(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	if out == nil {
+		out = []Ticket{}
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) SetTicketJTI(ctx context.Context, ticketID, jti string) error {
+	tag, err := s.q.Exec(ctx, `
+		UPDATE tickets SET jti = $2
+		WHERE id = $1 AND jti IS NULL`, ticketID, jti)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil
+		}
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		var exists bool
+		if err := s.q.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tickets WHERE id = $1)`, ticketID).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return auth.ErrNotFound
+		}
+	}
+	return nil
+}
+
+func assignTicketJTIsTx(ctx context.Context, tx pgx.Tx, orderID string) error {
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM tickets WHERE order_id = $1 AND status = $2 AND jti IS NULL`,
+		orderID, TicketValid)
+	if err != nil {
+		return err
+	}
+	ids, err := collectIDs(rows)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		jti, err := newID()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE tickets SET jti = $2, updated_at = now() WHERE id = $1 AND jti IS NULL`,
+			id, jti); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *PG) ListTicketsByOrder(ctx context.Context, orderID string) ([]Ticket, error) {
 	rows, err := s.q.Query(ctx, ticketSelect+` WHERE order_id = $1 ORDER BY created_at, id`, orderID)
 	if err != nil {
@@ -183,6 +250,9 @@ func (s *PG) ApplyPayment(ctx context.Context, orderID string, ptx PaymentTx, su
 	}
 	if success {
 		if err := moveReservedToSoldTx(ctx, tx, orderID); err != nil {
+			return false, err
+		}
+		if err := assignTicketJTIsTx(ctx, tx, orderID); err != nil {
 			return false, err
 		}
 	} else if err := releaseReservedTx(ctx, tx, orderID); err != nil {
@@ -312,7 +382,7 @@ const orderSelect = `
 	FROM orders`
 
 const ticketSelect = `
-	SELECT id, order_id, ticket_type_id, event_id, user_id, status, created_at, updated_at
+	SELECT id, order_id, ticket_type_id, event_id, user_id, status, jti, created_at, updated_at
 	FROM tickets`
 
 func scanOrder(row rowScanner) (Order, error) {
@@ -335,12 +405,16 @@ func scanOrder(row rowScanner) (Order, error) {
 
 func scanTicket(row rowScanner) (Ticket, error) {
 	var t Ticket
-	err := row.Scan(&t.ID, &t.OrderID, &t.TicketTypeID, &t.EventID, &t.UserID, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+	var jti *string
+	err := row.Scan(&t.ID, &t.OrderID, &t.TicketTypeID, &t.EventID, &t.UserID, &t.Status, &jti, &t.CreatedAt, &t.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Ticket{}, auth.ErrNotFound
 	}
 	if err != nil {
 		return Ticket{}, err
+	}
+	if jti != nil {
+		t.JTI = *jti
 	}
 	t.CreatedAt = t.CreatedAt.UTC()
 	t.UpdatedAt = t.UpdatedAt.UTC()

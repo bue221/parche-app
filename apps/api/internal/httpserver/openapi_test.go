@@ -50,6 +50,7 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"/v1/events/{id}/orders",
 		"/v1/orders/{id}",
 		"/v1/payments/webhook",
+		"/v1/me/tickets",
 		"/v1/dev/payments/simulate",
 		"/v1/artists/{id}",
 		"/v1/artists/{id}/events",
