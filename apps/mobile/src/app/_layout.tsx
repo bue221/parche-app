@@ -4,6 +4,8 @@ import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { DeepLinkListener } from '@/components/deep-link-listener';
+import { SessionLifecycle } from '@/components/session-lifecycle';
 import { ThemeRoot } from '@/components/theme-root';
 import { useResolvedColorScheme } from '@/hooks/use-theme';
 import { NAV_THEME } from '@/lib/theme';
@@ -27,6 +29,8 @@ export default function TabLayout() {
     <ThemeProvider value={NAV_THEME[scheme]}>
       <ThemeRoot>
         <AnimatedSplashOverlay />
+        <SessionLifecycle />
+        <DeepLinkListener />
         <AppTabs />
       </ThemeRoot>
     </ThemeProvider>
