@@ -77,11 +77,11 @@ Decisión de broker: **NATS JetStream** por defecto (menos piezas, subjects `tic
 
 ## Checklist
 
-- [ ] `docker compose up` deja api escuchando en 8080
-- [ ] `/health` 200 con postgres caído; `/ready` 503
-- [ ] Worker arranca y se suscribe aunque la cola esté vacía
-- [ ] `.env.example` cubre la tabla de variables
-- [ ] Postgres y MinIO tienen volumen; restart no borra datos de dev
+- [x] `docker compose up` deja api escuchando en 8080
+- [x] `/health` 200 con postgres caído; `/ready` 503
+- [x] Worker arranca y se suscribe aunque la cola esté vacía
+- [x] `.env.example` cubre la tabla de variables
+- [x] Postgres y MinIO tienen volumen; restart no borra datos de dev
 - [ ] CI puede correr compose (o postgres de servicio) y migraciones
 
 ## Next step

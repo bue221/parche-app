@@ -1,0 +1,119 @@
+# Dev stack. Host publishes only the API (8080).
+# Usage: cp .env.example .env && docker compose up --build
+name: parche
+
+x-app-env: &app-env
+  DATABASE_URL: ${DATABASE_URL:-postgres://parche:parche@postgres:5432/parche?sslmode=disable}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  BROKER_URL: ${BROKER_URL:-nats://broker:4222}
+  HTTP_ADDR: ${HTTP_ADDR:-:8080}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-dev-only}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-dev-only}
+  TICKET_SIGNING_KEY: ${TICKET_SIGNING_KEY:-change-me-ticket-dev-only}
+  OBJECT_STORE_DRIVER: ${OBJECT_STORE_DRIVER:-minio}
+  OBJECT_STORE_ENDPOINT: ${OBJECT_STORE_ENDPOINT:-minio:9000}
+  OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-parche}
+  OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-parcheminio}
+  OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-parcheminio}
+  OBJECT_STORE_REGION: ${OBJECT_STORE_REGION:-us-east-1}
+  OBJECT_STORE_USE_SSL: ${OBJECT_STORE_USE_SSL:-false}
+  OBJECT_STORE_PATH: ${OBJECT_STORE_PATH:-./data/media}
+  PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-change-me-webhook-dev-only}
+  SMTP_HOST: ${SMTP_HOST:-mailhog}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-parche@localhost}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  api:
+    build: .
+    command: ["serve"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      SERVICE: api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["worker"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      SERVICE: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: parche
+      POSTGRES_PASSWORD: parche
+      POSTGRES_DB: parche
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parche -d parche"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  broker:
+    image: nats:2-alpine
+    command: ["-js", "-m", "8222"]
+    volumes:
+      - nats_data:/data
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: parcheminio
+      MINIO_ROOT_PASSWORD: parcheminio
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
+  minio_data:
