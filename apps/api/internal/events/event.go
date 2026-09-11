@@ -53,6 +53,17 @@ type Event struct {
 	Lng         float64 `json:"lng"`
 	AddressText string  `json:"address_text,omitempty"`
 	VenueName   string  `json:"venue_name,omitempty"`
+
+	Flyer   *Image  `json:"flyer,omitempty"`
+	Gallery []Image `json:"gallery,omitempty"`
+}
+
+// Image is a public flyer or gallery item (F09). URLs are CDN/public, never object keys.
+type Image struct {
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`
+	PublicURL string `json:"public_url"`
+	ThumbURL  string `json:"thumb_url,omitempty"`
 }
 
 // PublicItem is GET /v1/events: published pins plus agenda fields.
@@ -68,6 +79,7 @@ type PublicItem struct {
 	VenueID     string    `json:"venue_id,omitempty"`
 	AddressText string    `json:"address_text,omitempty"`
 	Genres      []string  `json:"genres"`
+	Flyer       *Image    `json:"flyer,omitempty"`
 }
 
 // PinInput creates a venue when the client drops a map pin instead of venue_id.
@@ -154,4 +166,23 @@ type Cache interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	Set(ctx context.Context, key, val string, ttl time.Duration) error
 	DeletePrefix(ctx context.Context, prefix string) error
+}
+
+// Media is F09 flyers and gallery. Wired after construction to avoid an import cycle.
+type Media interface {
+	UsableFlyer(ctx context.Context, eventID, assetID string) error
+	EventImages(ctx context.Context, eventIDs ...string) (map[string]EventMedia, error)
+}
+
+// EventMedia is the public image payload for one event.
+type EventMedia struct {
+	Flyer   *Image
+	Gallery []Image
+}
+
+// FlyerBinder is implemented by Service for media.Confirm (F09).
+type FlyerBinder interface {
+	BindFlyer(ctx context.Context, eventID, assetID string) (previousAssetID, status string, err error)
+	ClearFlyerIf(ctx context.Context, eventID, assetID string) error
+	EventStatus(ctx context.Context, eventID string) (status, flyerAssetID string, err error)
 }

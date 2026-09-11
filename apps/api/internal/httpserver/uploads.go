@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/parche-app/backend/internal/apierr"
+	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 )
 
@@ -39,7 +40,7 @@ func registerUploadRoutes(mux *http.ServeMux, routes Routes) {
 	if events == nil {
 		events = DenyEventWrite{}
 	}
-	h := uploadHandler{store: routes.Store, access: access, events: events}
+	h := uploadHandler{store: routes.Store, access: access, events: events, media: routes.Media}
 	mux.HandleFunc("POST /v1/uploads", h.create)
 	mux.HandleFunc("PUT /v1/uploads/direct", h.directPut)
 	mux.HandleFunc("GET /v1/uploads/direct", h.directGet)
@@ -49,6 +50,7 @@ type uploadHandler struct {
 	store  objectstore.Store
 	access Access
 	events EventWrite
+	media  *media.Service
 }
 
 func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +115,23 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		apierr.Write(w, r, apierr.Internal, "", nil)
 		return
+	}
+	if h.media != nil {
+		intent := media.Intent{
+			Key:         key,
+			UserID:      principal.UserID,
+			Kind:        kind,
+			ContentType: contentType,
+			ByteSize:    req.ByteSize,
+			ExpiresAt:   grant.ExpiresAt.Add(10 * time.Minute),
+		}
+		if kind != objectstore.KindAvatar {
+			intent.EventID = eventID
+		}
+		if err := h.media.SaveIntent(r.Context(), intent); err != nil {
+			apierr.Write(w, r, apierr.Internal, "", nil)
+			return
+		}
 	}
 	grant.URL = absoluteUploadURL(r, grant.URL)
 	apierr.WriteJSON(w, http.StatusOK, uploadResponse{Key: key, Upload: grant})

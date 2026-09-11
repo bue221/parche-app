@@ -79,6 +79,14 @@ func TestLifecycleDraftHiddenSubmitPublishCancelAndPatch(t *testing.T) {
 		t.Fatalf("submit without pin=%v", err)
 	}
 
+	if err := svc.Submit(ctx, owner, draft.ID); !errors.Is(err, auth.ErrValidation) {
+		t.Fatalf("submit without flyer=%v", err)
+	}
+	draft.FlyerAssetID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+	if err := svc.Store.Update(ctx, draft); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := svc.Submit(ctx, owner, draft.ID); err != nil {
 		t.Fatal(err)
 	}

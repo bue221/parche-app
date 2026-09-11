@@ -10,6 +10,9 @@ import (
 	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
 	"github.com/parche-app/backend/internal/httpserver"
+	"github.com/parche-app/backend/internal/media"
+	"github.com/parche-app/backend/internal/objectstore"
+	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/worker"
 )
 
@@ -43,7 +46,19 @@ func main() {
 			os.Exit(1)
 		}
 		defer nc.Close()
-		if err := worker.Run(ctx, js, log); err != nil {
+		pool, err := postgres.Connect(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Error("postgres connect failed", "err", err)
+			os.Exit(1)
+		}
+		defer pool.Close()
+		store, err := objectstore.New(cfg)
+		if err != nil {
+			log.Error("object store", "err", err)
+			os.Exit(1)
+		}
+		mediaSvc := media.NewService(media.NewPG(pool), store, nil)
+		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process}); err != nil {
 			log.Error("worker stopped", "err", err)
 			os.Exit(1)
 		}

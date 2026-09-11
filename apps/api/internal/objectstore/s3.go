@@ -3,6 +3,7 @@ package objectstore
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -77,6 +78,47 @@ func (s *s3Store) Delete(ctx context.Context, key string) error {
 		return err
 	}
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
+}
+
+func (s *s3Store) Head(ctx context.Context, key string) (Info, error) {
+	if err := validObjectKey(key); err != nil {
+		return Info{}, err
+	}
+	st, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).StatusCode == http.StatusNotFound {
+			return Info{}, ErrNotFound
+		}
+		return Info{}, err
+	}
+	ct := st.ContentType
+	if ct == "" {
+		ct = MIMEFromKey(key)
+	}
+	return Info{Size: st.Size, ContentType: ct}, nil
+}
+
+func (s *s3Store) Get(ctx context.Context, key string) (io.ReadCloser, Info, error) {
+	info, err := s.Head(ctx, key)
+	if err != nil {
+		return nil, Info{}, err
+	}
+	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, Info{}, err
+	}
+	return obj, info, nil
+}
+
+func (s *s3Store) Put(ctx context.Context, key, contentType string, r io.Reader, size int64) error {
+	if err := validObjectKey(key); err != nil {
+		return err
+	}
+	if contentType == "" {
+		contentType = MIMEFromKey(key)
+	}
+	_, err := s.client.PutObject(ctx, s.bucket, key, r, size, minio.PutObjectOptions{ContentType: contentType})
+	return err
 }
 
 func (s *s3Store) PutPresign(ctx context.Context, key, contentType string, maxBytes int64, ttl time.Duration) (Presign, error) {

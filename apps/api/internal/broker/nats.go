@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -23,6 +24,19 @@ func Subjects() []string {
 		SubjectEmailSend,
 		SubjectMediaProcess,
 	}
+}
+
+// Publisher publishes JetStream messages. media.Service uses this port.
+type Publisher struct {
+	JS nats.JetStreamContext
+}
+
+func (p Publisher) Publish(_ context.Context, subject string, payload []byte) error {
+	if p.JS == nil {
+		return fmt.Errorf("jetstream is nil")
+	}
+	_, err := p.JS.Publish(subject, payload)
+	return err
 }
 
 // Connect opens NATS and JetStream.

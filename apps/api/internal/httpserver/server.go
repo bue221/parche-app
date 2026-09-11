@@ -11,10 +11,12 @@ import (
 
 	"github.com/parche-app/backend/internal/applog"
 	"github.com/parche-app/backend/internal/auth"
+	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/health"
 	"github.com/parche-app/backend/internal/mailer"
+	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
@@ -30,6 +32,7 @@ type Routes struct {
 	Catalog *events.Service
 	Auth    *auth.Service
 	Venues  *venues.Service
+	Media   *media.Service
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -45,6 +48,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerAuthRoutes(mux, routes)
 	registerVenueRoutes(mux, routes)
 	registerEventRoutes(mux, routes)
+	registerAssetRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -115,6 +119,22 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if eventSvc != nil {
 		eventWrite = eventSvc
 	}
+	var mediaSvc *media.Service
+	if store != nil && eventSvc != nil {
+		mediaSvc = media.NewService(media.NewPG(pool), store, eventSvc)
+		eventSvc.Media = mediaSvc
+		if cfg.BrokerURL != "" {
+			if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
+				log.Error("broker publisher", "err", err)
+			} else {
+				mediaSvc.Publisher = broker.Publisher{JS: js}
+				go func() {
+					<-ctx.Done()
+					nc.Close()
+				}()
+			}
+		}
+	}
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
@@ -126,6 +146,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Catalog: eventSvc,
 		Auth:    sessions,
 		Venues:  venueSvc,
+		Media:   mediaSvc,
 	})
 
 	srv := &http.Server{

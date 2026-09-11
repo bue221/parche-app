@@ -29,6 +29,7 @@ type Service struct {
 	Venues  Venues
 	Lookup  VenueLookup
 	Cache   Cache
+	Media   Media
 	Now     func() time.Time
 }
 
@@ -109,7 +110,7 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Event, error) {
 	}
 	switch e.Status {
 	case StatusPublished, StatusCancelled:
-		return s.attachVenue(ctx, userID, e), nil
+		return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
 	}
 	if userID == "" {
 		return Event{}, auth.ErrNotFound
@@ -117,7 +118,7 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Event, error) {
 	if _, err := s.memberRole(ctx, id, userID); err != nil {
 		return Event{}, auth.ErrNotFound
 	}
-	return s.attachVenue(ctx, userID, e), nil
+	return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
 }
 
 func (s *Service) Patch(ctx context.Context, userID, id string, in PatchInput) (Event, error) {
@@ -206,6 +207,9 @@ func (s *Service) Submit(ctx context.Context, userID, id string) error {
 	if err := s.requirePin(ctx, userID, e); err != nil {
 		return err
 	}
+	if err := s.requireFlyer(ctx, e); err != nil {
+		return err
+	}
 	if strings.TrimSpace(e.Title) == "" {
 		return auth.Invalid{Fields: []auth.Field{{Name: "title", Issue: "required"}}}
 	}
@@ -226,6 +230,9 @@ func (s *Service) Publish(ctx context.Context, id string) (Event, error) {
 		return Event{}, auth.ErrConflict
 	}
 	if err := s.requirePin(ctx, e.CreatedBy, e); err != nil {
+		return Event{}, err
+	}
+	if err := s.requireFlyer(ctx, e); err != nil {
 		return Event{}, err
 	}
 	e.Status = StatusPublished
@@ -323,6 +330,61 @@ func (s *Service) Authorize(ctx context.Context, userID, eventID string) (string
 	return e.TenantID, nil
 }
 
+func (s *Service) requireFlyer(ctx context.Context, e Event) error {
+	if strings.TrimSpace(e.FlyerAssetID) == "" {
+		return auth.Invalid{Fields: []auth.Field{{Name: "flyer", Issue: "required"}}}
+	}
+	if s.Media == nil {
+		return nil
+	}
+	if err := s.Media.UsableFlyer(ctx, e.ID, e.FlyerAssetID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) BindFlyer(ctx context.Context, eventID, assetID string) (string, string, error) {
+	e, err := s.Store.ByID(ctx, eventID)
+	if err != nil {
+		return "", "", err
+	}
+	prev := e.FlyerAssetID
+	e.FlyerAssetID = assetID
+	if err := s.Store.Update(ctx, e); err != nil {
+		return "", "", err
+	}
+	if e.Status == StatusPublished {
+		s.invalidateList(ctx)
+	}
+	return prev, e.Status, nil
+}
+
+func (s *Service) ClearFlyerIf(ctx context.Context, eventID, assetID string) error {
+	e, err := s.Store.ByID(ctx, eventID)
+	if err != nil {
+		return err
+	}
+	if e.FlyerAssetID != assetID {
+		return nil
+	}
+	e.FlyerAssetID = ""
+	if err := s.Store.Update(ctx, e); err != nil {
+		return err
+	}
+	if e.Status == StatusPublished {
+		s.invalidateList(ctx)
+	}
+	return nil
+}
+
+func (s *Service) EventStatus(ctx context.Context, eventID string) (string, string, error) {
+	e, err := s.Store.ByID(ctx, eventID)
+	if err != nil {
+		return "", "", err
+	}
+	return e.Status, e.FlyerAssetID, nil
+}
+
 func (s *Service) requirePin(ctx context.Context, userID string, e Event) error {
 	if strings.TrimSpace(e.VenueID) == "" {
 		return auth.Invalid{Fields: []auth.Field{{Name: "venue_id", Issue: "required"}}}
@@ -340,16 +402,33 @@ func (s *Service) loaded(ctx context.Context, userID, id string) (Event, error) 
 	if err != nil {
 		return Event{}, err
 	}
-	return s.attachVenue(ctx, userID, e), nil
+	return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
 }
 
 func (s *Service) attachAll(ctx context.Context, userID string, items []Event) []Event {
 	if items == nil {
 		return []Event{}
 	}
+	ids := make([]string, 0, len(items))
+	for _, e := range items {
+		ids = append(ids, e.ID)
+	}
+	var images map[string]EventMedia
+	if s.Media != nil {
+		images, _ = s.Media.EventImages(ctx, ids...)
+	}
 	out := make([]Event, 0, len(items))
 	for _, e := range items {
-		out = append(out, s.attachVenue(ctx, userID, e))
+		e = s.attachVenue(ctx, userID, e)
+		if images != nil {
+			em := images[e.ID]
+			e.Flyer = em.Flyer
+			e.Gallery = em.Gallery
+			if e.Gallery == nil {
+				e.Gallery = []Image{}
+			}
+		}
+		out = append(out, e)
 	}
 	return out
 }
@@ -362,6 +441,23 @@ func (s *Service) attachVenue(ctx context.Context, userID string, e Event) Event
 	e.Lat, e.Lng = v.Lat, v.Lng
 	e.AddressText = v.AddressText
 	e.VenueName = v.Name
+	return e
+}
+
+func (s *Service) attachImages(ctx context.Context, e Event) Event {
+	if s.Media == nil {
+		return e
+	}
+	got, err := s.Media.EventImages(ctx, e.ID)
+	if err != nil {
+		return e
+	}
+	em := got[e.ID]
+	e.Flyer = em.Flyer
+	e.Gallery = em.Gallery
+	if e.Gallery == nil {
+		e.Gallery = []Image{}
+	}
 	return e
 }
 
@@ -569,6 +665,7 @@ func ToPublic(e Event) PublicItem {
 		VenueID:     e.VenueID,
 		AddressText: e.AddressText,
 		Genres:      g,
+		Flyer:       e.Flyer,
 	}
 }
 

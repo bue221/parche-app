@@ -112,6 +112,28 @@ func extension(kind, contentType string) (string, error) {
 	}
 }
 
+// MIMEFromKey infers a content type from the object extension when Head has none.
+func MIMEFromKey(key string) string {
+	switch strings.ToLower(path.Ext(key)) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".webp":
+		return "image/webp"
+	case ".mp3":
+		return "audio/mpeg"
+	case ".ogg":
+		return "audio/ogg"
+	case ".wav":
+		return "audio/wav"
+	case ".m4a":
+		return "audio/mp4"
+	default:
+		return "application/octet-stream"
+	}
+}
+
 func validObjectKey(key string) error {
 	if key == "" || strings.Contains(key, "..") || strings.HasPrefix(key, "/") || strings.Contains(key, "\\") {
 		return fmt.Errorf("invalid object key")

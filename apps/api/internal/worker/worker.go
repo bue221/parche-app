@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -13,9 +14,14 @@ import (
 
 const streamName = "PARCHE"
 
+// Handlers are feature processors. Nil handlers ACK after logging (idle).
+type Handlers struct {
+	MediaProcess func(ctx context.Context, assetID string) error
+}
+
 // Run subscribes to product subjects and idles until ctx is cancelled.
 // ACK only after the handler returns nil (later features persist then ACK).
-func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger) error {
+func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger, h Handlers) error {
 	if _, err := js.AddStream(&nats.StreamConfig{
 		Name:      streamName,
 		Subjects:  append(broker.Subjects(), broker.SubjectDLQ),
@@ -29,7 +35,7 @@ func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger) error 
 	for _, subject := range broker.Subjects() {
 		durable := durableName(subject)
 		sub, err := js.Subscribe(subject, func(msg *nats.Msg) {
-			handle(ctx, log, msg)
+			handle(ctx, log, h, msg)
 		},
 			nats.Durable(durable),
 			nats.ManualAck(),
@@ -53,7 +59,7 @@ func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger) error 
 	return nil
 }
 
-func handle(ctx context.Context, log *slog.Logger, msg *nats.Msg) {
+func handle(ctx context.Context, log *slog.Logger, h Handlers, msg *nats.Msg) {
 	if ctx.Err() != nil {
 		_ = msg.Nak()
 		return
@@ -68,8 +74,34 @@ func handle(ctx context.Context, log *slog.Logger, msg *nats.Msg) {
 		"msg_id", msgID,
 		"request_id", msg.Header.Get("X-Request-Id"),
 	)
+	if err := dispatch(ctx, h, msg); err != nil {
+		log.Error("worker handler failed", "subject", msg.Subject, "err", err)
+		_ = msg.Nak()
+		return
+	}
 	if err := msg.Ack(); err != nil {
 		log.Error("worker ack failed", "subject", msg.Subject, "err", err)
+	}
+}
+
+func dispatch(ctx context.Context, h Handlers, msg *nats.Msg) error {
+	switch msg.Subject {
+	case broker.SubjectMediaProcess:
+		if h.MediaProcess == nil {
+			return nil
+		}
+		var body struct {
+			AssetID string `json:"asset_id"`
+		}
+		if err := json.Unmarshal(msg.Data, &body); err != nil {
+			return err
+		}
+		if strings.TrimSpace(body.AssetID) == "" {
+			return nil
+		}
+		return h.MediaProcess(ctx, body.AssetID)
+	default:
+		return nil
 	}
 }
 

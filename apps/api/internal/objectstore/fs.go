@@ -104,6 +104,62 @@ func (s *fsStore) Delete(_ context.Context, key string) error {
 	return err
 }
 
+func (s *fsStore) Head(_ context.Context, key string) (Info, error) {
+	full, err := s.resolve(key)
+	if err != nil {
+		return Info{}, err
+	}
+	fi, err := os.Stat(full)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Info{}, ErrNotFound
+		}
+		return Info{}, err
+	}
+	return Info{Size: fi.Size(), ContentType: MIMEFromKey(key)}, nil
+}
+
+func (s *fsStore) Get(_ context.Context, key string) (io.ReadCloser, Info, error) {
+	info, err := s.Head(context.Background(), key)
+	if err != nil {
+		return nil, Info{}, err
+	}
+	full, err := s.resolve(key)
+	if err != nil {
+		return nil, Info{}, err
+	}
+	f, err := os.Open(full)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, Info{}, ErrNotFound
+		}
+		return nil, Info{}, err
+	}
+	return f, info, nil
+}
+
+func (s *fsStore) Put(_ context.Context, key, contentType string, r io.Reader, size int64) error {
+	_ = contentType
+	full, err := s.resolve(key)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		return err
+	}
+	f, err := os.Create(full)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	var src io.Reader = r
+	if size > 0 {
+		src = io.LimitReader(r, size)
+	}
+	_, err = io.Copy(f, src)
+	return err
+}
+
 func (s *fsStore) PutPresign(_ context.Context, key, contentType string, maxBytes int64, ttl time.Duration) (Presign, error) {
 	if err := validObjectKey(key); err != nil {
 		return Presign{}, err

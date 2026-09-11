@@ -167,7 +167,7 @@ paths:
             format: uuid
       responses:
         "204":
-          description: Status is pending_review. Requires a venue pin. Flyer is F09.
+          description: Status is pending_review. Requires a venue pin and a usable flyer.
         "400":
           $ref: "#/components/responses/Error"
         "401":
@@ -194,6 +194,75 @@ paths:
       responses:
         "204":
           description: Status is cancelled. Detail remains public; agenda listing drops it.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/assets:
+    post:
+      summary: Confirm an uploaded flyer or gallery image (F09)
+      operationId: confirmEventAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEventAssetRequest"
+            example:
+              key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/flyer/0199a0c0-0000-7000-8000-000000000030.webp
+              kind: flyer
+      responses:
+        "201":
+          description: Asset metadata with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/assets/{assetId}:
+    delete:
+      summary: Delete an event image (F09)
+      operationId: deleteEventAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Object and thumbs removed (best-effort). Cannot delete the only flyer of a pending or published event.
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -913,6 +982,8 @@ components:
           type: array
           items:
             type: string
+        flyer:
+          $ref: "#/components/schemas/EventImage"
     Event:
       type: object
       required: [id, tenant_id, title, slug, starts_at, ends_at, venue_id, status, lat, lng]
@@ -967,6 +1038,12 @@ components:
         flyer_asset_id:
           type: string
           format: uuid
+        flyer:
+          $ref: "#/components/schemas/EventImage"
+        gallery:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventImage"
     EventAdminList:
       type: object
       required: [items]
@@ -1337,6 +1414,29 @@ components:
           type: string
           format: uuid
           nullable: true
+    ConfirmEventAssetRequest:
+      type: object
+      required: [key, kind]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [flyer, gallery]
+    EventImage:
+      type: object
+      required: [id, kind, public_url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [flyer, gallery]
+        public_url:
+          type: string
+        thumb_url:
+          type: string
     UploadResponse:
       type: object
       required: [key, upload]

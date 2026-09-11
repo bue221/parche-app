@@ -34,6 +34,7 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"/v1/me/sessions",
 		"/v1/tenants",
 		"/v1/venues",
+		"/v1/events/{id}/assets",
 		"/v1/events/{id}/submit",
 		"/v1/events/{id}/cancel",
 		"min_lat",

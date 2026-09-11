@@ -66,10 +66,10 @@ Ya en F03.
 
 ## Checklist
 
-- [ ] Flyer aparece en GET público
-- [ ] Thumb se genera
-- [ ] EXIF GPS no se sirve
-- [ ] Delete no deja huérfanos en MinIO (best-effort + job)
+- [x] Flyer aparece en GET público
+- [x] Thumb se genera
+- [x] EXIF GPS no se sirve
+- [x] Delete no deja huérfanos en MinIO (best-effort + job)
 
 ## Next step
 

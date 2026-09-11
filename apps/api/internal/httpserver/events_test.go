@@ -1,9 +1,13 @@
 package httpserver
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +15,8 @@ import (
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
+	"github.com/parche-app/backend/internal/media"
+	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -93,6 +99,17 @@ func TestEventsLifecycleHTTP(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("owner get=%d %s", rr.Code, rr.Body.String())
 	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/events/"+id+"/submit", nil)
+	req.Header.Set("Authorization", "Bearer "+promoter.AccessToken)
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusBadRequest, apierr.Validation)
+	if !strings.Contains(rr.Body.String(), "flyer") {
+		t.Fatalf("submit without flyer: %s", rr.Body.String())
+	}
+
+	attachFlyer(t, mux, promoter.AccessToken, id)
 
 	rr = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/v1/events/"+id+"/submit", nil)
@@ -185,13 +202,66 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	vmem := venues.NewMemory()
 	vsvc := venues.NewService(vmem, store)
 	esvc := events.NewService(events.NewMemory(), store, vsvc, vmem, events.NewMemoryCache())
+	obj, err := objectstore.NewFS(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	msvc := media.NewService(media.NewMemory(), obj, esvc)
+	esvc.Media = msvc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
+		Store:   obj,
 		Access:  access,
 		Events:  esvc,
 		Catalog: esvc,
 		Auth:    svc,
 		Venues:  vsvc,
+		Media:   msvc,
 	})
 	return mux, esvc
+}
+
+func attachFlyer(t *testing.T, mux http.Handler, accessToken, eventID string) {
+	t.Helper()
+	png := tinyPNG(t)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/uploads", strings.NewReader(`{"kind":"flyer","content_type":"image/png","byte_size":`+strconv.Itoa(len(png))+`,"event_id":"`+eventID+`"}`))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Host = "api.parche.test"
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("uploads=%d %s", rr.Code, rr.Body.String())
+	}
+	var up uploadResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &up); err != nil {
+		t.Fatal(err)
+	}
+	putReq, err := http.NewRequest(http.MethodPut, up.Upload.URL, bytes.NewReader(png))
+	if err != nil {
+		t.Fatal(err)
+	}
+	putReq.Header.Set("Content-Type", "image/png")
+	putRR := httptest.NewRecorder()
+	mux.ServeHTTP(putRR, putReq)
+	if putRR.Code != http.StatusNoContent {
+		t.Fatalf("put=%d %s", putRR.Code, putRR.Body.String())
+	}
+	body := `{"key":"` + up.Key + `","kind":"flyer"}`
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/events/"+eventID+"/assets", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("confirm flyer=%d %s", rr.Code, rr.Body.String())
+	}
+}
+
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

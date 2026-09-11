@@ -80,7 +80,7 @@ Aprobación admin: [F27](F27-platform-admin.md).
 
 - [x] Draft invisible en listado público
 - [x] PATCH funciona (RC-022)
-- [x] Submit exige mapa (flyer queda en F09)
+- [x] Submit exige mapa y flyer (F09)
 - [x] Cancel oculta venta y deja detalle
 - [x] Caché se invalida
 

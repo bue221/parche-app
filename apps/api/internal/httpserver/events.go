@@ -302,6 +302,10 @@ func publicEvent(e events.Event) map[string]any {
 	if genres == nil {
 		genres = []string{}
 	}
+	gallery := e.Gallery
+	if gallery == nil {
+		gallery = []events.Image{}
+	}
 	out := map[string]any{
 		"id":           e.ID,
 		"tenant_id":    e.TenantID,
@@ -320,12 +324,16 @@ func publicEvent(e events.Event) map[string]any {
 		"lng":          e.Lng,
 		"address_text": e.AddressText,
 		"venue_name":   e.VenueName,
+		"gallery":      gallery,
 	}
 	if e.AgePolicy != "" {
 		out["age_policy"] = e.AgePolicy
 	}
 	if e.FlyerAssetID != "" {
 		out["flyer_asset_id"] = e.FlyerAssetID
+	}
+	if e.Flyer != nil {
+		out["flyer"] = e.Flyer
 	}
 	return out
 }

@@ -105,6 +105,19 @@ func TestFSPutPresignThenExists(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("exists=%v err=%v", ok, err)
 	}
+	info, err := store.Head(context.Background(), key)
+	if err != nil || info.Size != int64(len(body)) || info.ContentType != "image/webp" {
+		t.Fatalf("head=%+v err=%v", info, err)
+	}
+	rc, _, err := store.Get(context.Background(), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _ := io.ReadAll(rc)
+	_ = rc.Close()
+	if string(got) != string(body) {
+		t.Fatalf("get=%q", got)
+	}
 	if err := store.Delete(context.Background(), key); err != nil {
 		t.Fatal(err)
 	}
