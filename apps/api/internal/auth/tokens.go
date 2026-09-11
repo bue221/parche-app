@@ -21,7 +21,9 @@ const (
 	AccessTTL = 10 * time.Minute
 	// RefreshTTL is the rotating refresh lifetime.
 	RefreshTTL = 14 * 24 * time.Hour
-	leeway     = 30 * time.Second
+	// PasswordResetTTL is the one-use mail token lifetime (F05).
+	PasswordResetTTL = 30 * time.Minute
+	leeway           = 30 * time.Second
 )
 
 // Tokens issues access JWTs (HS256) and hashes opaque refresh values.
@@ -39,6 +41,7 @@ type AccessClaims struct {
 	Subject  string
 	JWTID    string
 	Profiles []string
+	Epoch    int
 }
 
 func (t *Tokens) now() time.Time {
@@ -62,8 +65,8 @@ func (t *Tokens) refreshTTL() time.Duration {
 	return RefreshTTL
 }
 
-// IssueAccess returns a compact HS256 JWT and its expiry.
-func (t *Tokens) IssueAccess(userID string, profiles []string) (token string, exp time.Time, err error) {
+// IssueAccess returns a compact HS256 JWT and its expiry. epoch is users.session_epoch.
+func (t *Tokens) IssueAccess(userID string, profiles []string, epoch int) (token string, exp time.Time, err error) {
 	if t == nil || len(t.AccessSecret) == 0 {
 		return "", time.Time{}, fmt.Errorf("jwt access secret missing")
 	}
@@ -74,11 +77,12 @@ func (t *Tokens) IssueAccess(userID string, profiles []string) (token string, ex
 		return "", time.Time{}, err
 	}
 	claims := map[string]any{
-		"sub": userID,
-		"iss": Issuer,
-		"jti": jti,
-		"iat": now.Unix(),
-		"exp": exp.Unix(),
+		"sub":   userID,
+		"iss":   Issuer,
+		"jti":   jti,
+		"iat":   now.Unix(),
+		"exp":   exp.Unix(),
+		"epoch": epoch,
 	}
 	if len(profiles) > 0 {
 		claims["profiles"] = profiles
@@ -176,6 +180,7 @@ func parseHS256(secret []byte, token string, now time.Time) (AccessClaims, error
 		Iss      string   `json:"iss"`
 		Jti      string   `json:"jti"`
 		Exp      int64    `json:"exp"`
+		Epoch    int      `json:"epoch"`
 		Profiles []string `json:"profiles"`
 	}
 	if json.Unmarshal(payload, &c) != nil {
@@ -187,7 +192,7 @@ func parseHS256(secret []byte, token string, now time.Time) (AccessClaims, error
 	if now.Add(-leeway).Unix() >= c.Exp {
 		return AccessClaims{}, ErrUnauthorized
 	}
-	return AccessClaims{Subject: c.Sub, JWTID: c.Jti, Profiles: c.Profiles}, nil
+	return AccessClaims{Subject: c.Sub, JWTID: c.Jti, Profiles: c.Profiles, Epoch: c.Epoch}, nil
 }
 
 func b64(b []byte) string {

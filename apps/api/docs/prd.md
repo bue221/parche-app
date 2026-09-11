@@ -180,7 +180,7 @@ Una sola base. `tenant_id` indexado. No un esquema por tenant.
 
 | Entidad | Responsabilidad |
 |---------|-----------------|
-| `users` | Cuenta; estado |
+| `users` | Cuenta; estado; `session_epoch` para invalidar access |
 | `user_profiles` | Perfiles de plataforma (varios por user) |
 | `tenants` | Colectivo / promoter |
 | `event_members` | user + event + rol + estado |
@@ -198,6 +198,7 @@ Una sola base. `tenant_id` indexado. No un esquema por tenant.
 | `payment_transactions` | Idempotencia webhook |
 | `ticket_scan_logs` | Auditoría: ticket, event, scanner_user_id, resultado, ts |
 | `refresh_tokens` | Hash del refresh, familia, revoked_at |
+| `password_reset_tokens` | Hash del token de un uso, expiry, used_at |
 | `event_recommendations` | Sprint 4 |
 
 Errores de persistencia: transacción en compra/reserva; webhook idempotente. Logs con `request_id`; el cliente ve códigos (`VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `GONE`).
@@ -227,8 +228,8 @@ Paginación: `cursor` + `limit` (máx. 50). Filtros de eventos: `from`, `to`, `g
 | POST | `/v1/auth/login` | no | 1 |
 | POST | `/v1/auth/refresh` | refresh | 1 |
 | POST | `/v1/auth/logout` | refresh | 1 |
-| POST | `/v1/auth/password/forgot` | no | backlog |
-| POST | `/v1/auth/password/reset` | no | backlog |
+| POST | `/v1/auth/password/forgot` | no | 1 |
+| POST | `/v1/auth/password/reset` | no | 1 |
 | GET | `/v1/me` | access | 1 |
 | PATCH | `/v1/me` | access | 2 |
 | GET | `/v1/me/memberships` | access | 2 |

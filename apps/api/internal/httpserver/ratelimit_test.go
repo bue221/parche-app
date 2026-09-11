@@ -47,6 +47,32 @@ func TestRateLimitLogin(t *testing.T) {
 	}
 }
 
+func TestRateLimitPasswordForgot(t *testing.T) {
+	limiter := ratelimit.NewMemory()
+	mux := newMux(testLogger(), configCORS(), limiter, nil, func(mux *http.ServeMux) {
+		mux.HandleFunc("POST /v1/auth/password/forgot", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}, Routes{})
+	body := `{"email":"user@example.com"}`
+	for i := 0; i < 5; i++ {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/forgot", strings.NewReader(body))
+		req.RemoteAddr = "203.0.113.10:1234"
+		mux.ServeHTTP(rr, req)
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("hit %d status=%d body=%s", i+1, rr.Code, rr.Body.String())
+		}
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/password/forgot", strings.NewReader(body))
+	req.RemoteAddr = "203.0.113.10:1234"
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusTooManyRequests {
+		t.Fatalf("status=%d", rr.Code)
+	}
+}
+
 func TestRateLimitCheckIn(t *testing.T) {
 	limiter := ratelimit.NewMemory()
 	mux := newMux(testLogger(), configCORS(), limiter, nil, func(mux *http.ServeMux) {

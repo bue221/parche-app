@@ -7,6 +7,7 @@ var (
 	ErrUnauthorized = errors.New("unauthorized")
 	ErrForbidden    = errors.New("forbidden")
 	ErrNotFound     = errors.New("not found")
+	ErrGone         = errors.New("gone")
 	ErrEmailTaken   = errors.New("email taken")
 	ErrValidation   = errors.New("validation")
 )

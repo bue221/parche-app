@@ -37,6 +37,7 @@ type Config struct {
 	SMTPUser             string
 	SMTPPassword         string
 	EmailFrom            string
+	AppOrigin            string
 	CORSOrigins          []string
 }
 
@@ -68,6 +69,7 @@ func Load() (Config, error) {
 		SMTPUser:                 os.Getenv("SMTP_USER"),
 		SMTPPassword:             os.Getenv("SMTP_PASSWORD"),
 		EmailFrom:                os.Getenv("EMAIL_FROM"),
+		AppOrigin:                getenv("APP_ORIGIN", "http://localhost:3000"),
 		CORSOrigins:              splitCSV(os.Getenv("CORS_ORIGINS")),
 	}
 

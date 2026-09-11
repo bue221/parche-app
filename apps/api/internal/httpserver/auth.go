@@ -34,6 +34,15 @@ type loginBody struct {
 	Password string `json:"password"`
 }
 
+type forgotBody struct {
+	Email string `json:"email"`
+}
+
+type resetBody struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
 type refreshBody struct {
 	RefreshToken string `json:"refresh_token"`
 }
@@ -51,6 +60,8 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/auth/login", h.login)
 	mux.HandleFunc("POST /v1/auth/refresh", h.refresh)
 	mux.HandleFunc("POST /v1/auth/logout", h.logout)
+	mux.HandleFunc("POST /v1/auth/password/forgot", h.forgot)
+	mux.HandleFunc("POST /v1/auth/password/reset", h.reset)
 	mux.HandleFunc("GET /v1/me", h.me)
 	mux.HandleFunc("GET /v1/me/sessions", h.sessions)
 	mux.HandleFunc("DELETE /v1/me/sessions", h.logoutAll)
@@ -109,6 +120,31 @@ func (h authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 
 func (h authHandler) logout(w http.ResponseWriter, r *http.Request) {
 	if err := h.svc.Logout(r.Context(), readRefresh(r)); err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	clearRefreshCookie(w, r)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h authHandler) forgot(w http.ResponseWriter, r *http.Request) {
+	var req forgotBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.svc.Forgot(r.Context(), req.Email); err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h authHandler) reset(w http.ResponseWriter, r *http.Request) {
+	var req resetBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.svc.Reset(r.Context(), auth.ResetInput{Token: req.Token, Password: req.Password}); err != nil {
 		writeAuthErr(w, r, err)
 		return
 	}
@@ -251,6 +287,8 @@ func writeAuthErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, auth.ErrEmailTaken):
 		apierr.Write(w, r, apierr.Conflict, "Ese correo ya tiene cuenta", nil)
+	case errors.Is(err, auth.ErrGone):
+		apierr.Write(w, r, apierr.Gone, "", nil)
 	case errors.Is(err, auth.ErrForbidden):
 		apierr.Write(w, r, apierr.Forbidden, "", nil)
 	case errors.Is(err, auth.ErrUnauthorized):

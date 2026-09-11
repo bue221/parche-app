@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/parche-app/backend/internal/mailer"
 )
 
 // Hasher hashes passwords. Argon2 implements it.
@@ -13,13 +16,15 @@ type Hasher interface {
 	Hash(password string) (string, error)
 }
 
-// Service is register/login/refresh/logout and /v1/me.
+// Service is register/login/refresh/logout, password recovery, and /v1/me.
 type Service struct {
-	Store  Store
-	Tokens *Tokens
-	Hasher Hasher
-	Log    *slog.Logger
-	dummy  string
+	Store     Store
+	Tokens    *Tokens
+	Hasher    Hasher
+	Mailer    mailer.Sender
+	AppOrigin string
+	Log       *slog.Logger
+	dummy     string
 }
 
 // NewService prepares a dummy password hash so missing-user login takes a similar path.
@@ -35,6 +40,18 @@ func NewService(store Store, tokens *Tokens, hasher Hasher, log *slog.Logger) (*
 		log = slog.Default()
 	}
 	return &Service{Store: store, Tokens: tokens, Hasher: hasher, Log: log, dummy: dummy}, nil
+}
+
+// AccessIdentity is status + session_epoch for access JWT middleware (F05).
+type AccessIdentity struct {
+	Status string
+	Epoch  int
+}
+
+// ResetInput is POST /v1/auth/password/reset.
+type ResetInput struct {
+	Token    string
+	Password string
 }
 
 // RegisterInput is POST /v1/auth/register.
@@ -258,6 +275,109 @@ func (s *Service) LogoutAll(ctx context.Context, userID string) error {
 	return s.Store.RevokeUser(ctx, userID, s.now())
 }
 
+func (s *Service) Forgot(ctx context.Context, email string) error {
+	email = normalizeEmail(email)
+	raw, err := NewRefresh()
+	if err != nil {
+		return err
+	}
+	// Same HMAC work whether or not the account exists (no user enumeration).
+	hash := s.Tokens.hashRefresh(raw)
+	if !validEmail(email) {
+		return nil
+	}
+	user, err := s.Store.UserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	if user.Status != StatusActive {
+		return nil
+	}
+	id, err := newID()
+	if err != nil {
+		return err
+	}
+	now := s.now()
+	if err := s.Store.InTx(ctx, func(st Store) error {
+		if err := st.InvalidateUserPasswordResets(ctx, user.ID, now); err != nil {
+			return err
+		}
+		return st.InsertPasswordReset(ctx, PasswordResetRow{
+			ID:        id,
+			UserID:    user.ID,
+			TokenHash: hash,
+			ExpiresAt: now.Add(PasswordResetTTL),
+		})
+	}); err != nil {
+		return err
+	}
+	if s.Mailer == nil {
+		return nil
+	}
+	origin := strings.TrimRight(s.AppOrigin, "/")
+	if origin == "" {
+		origin = "http://localhost:3000"
+	}
+	resetURL := origin + "/reset?token=" + url.QueryEscape(raw)
+	if err := s.Mailer.Send(ctx, mailer.Message{
+		To:             user.Email,
+		ToUserID:       user.ID,
+		Template:       mailer.TemplatePasswordReset,
+		Vars:           map[string]string{"reset_url": resetURL},
+		IdempotencyKey: id,
+	}); err != nil {
+		s.Log.Error("password_reset_email", "user_id", user.ID, "err", err)
+	}
+	return nil
+}
+
+func (s *Service) Reset(ctx context.Context, in ResetInput) error {
+	var fields []Field
+	token := strings.TrimSpace(in.Token)
+	if token == "" {
+		fields = append(fields, Field{Name: "token", Issue: "required"})
+	}
+	fields = append(fields, passwordIssues(in.Password)...)
+	if len(fields) > 0 {
+		return Invalid{Fields: fields}
+	}
+	newHash, err := s.Hasher.Hash(in.Password)
+	if err != nil {
+		return err
+	}
+	hash := s.Tokens.hashRefresh(token)
+	now := s.now()
+	return s.Store.InTx(ctx, func(st Store) error {
+		row, err := st.PasswordResetByHash(ctx, hash)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return ErrGone
+			}
+			return err
+		}
+		if row.UsedAt != nil || !row.ExpiresAt.After(now) {
+			return ErrGone
+		}
+		user, err := st.UserByID(ctx, row.UserID)
+		if err != nil {
+			return err
+		}
+		if user.Status != StatusActive {
+			return ErrForbidden
+		}
+		if err := st.MarkPasswordResetUsed(ctx, row.ID, now); err != nil {
+			return err
+		}
+		if err := st.SetPasswordAndBumpEpoch(ctx, user.ID, newHash); err != nil {
+			return err
+		}
+		return st.RevokeUser(ctx, user.ID, now)
+	})
+}
+
 func (s *Service) Me(ctx context.Context, userID string) (Me, error) {
 	user, err := s.requireActive(ctx, userID)
 	if err != nil {
@@ -306,11 +426,19 @@ func (s *Service) Sessions(ctx context.Context, userID, currentRaw string) ([]Se
 }
 
 func (s *Service) UserStatus(ctx context.Context, userID string) (string, error) {
-	user, err := s.Store.UserByID(ctx, userID)
+	ident, err := s.AccessIdentity(ctx, userID)
 	if err != nil {
 		return "", err
 	}
-	return user.Status, nil
+	return ident.Status, nil
+}
+
+func (s *Service) AccessIdentity(ctx context.Context, userID string) (AccessIdentity, error) {
+	user, err := s.Store.UserByID(ctx, userID)
+	if err != nil {
+		return AccessIdentity{}, err
+	}
+	return AccessIdentity{Status: user.Status, Epoch: user.SessionEpoch}, nil
 }
 
 func (s *Service) requireActive(ctx context.Context, userID string) (User, error) {
@@ -374,7 +502,7 @@ func (s *Service) issueSessionOn(ctx context.Context, st Store, user User, profi
 	if err := st.InsertRefresh(ctx, row); err != nil {
 		return sessionInternal{}, err
 	}
-	access, accessExp, err := s.Tokens.IssueAccess(user.ID, profiles)
+	access, accessExp, err := s.Tokens.IssueAccess(user.ID, profiles, user.SessionEpoch)
 	if err != nil {
 		return sessionInternal{}, err
 	}

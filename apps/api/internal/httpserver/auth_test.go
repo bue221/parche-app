@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -14,11 +15,18 @@ import (
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/config"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/ratelimit"
 )
 
 func testAuthStack(t *testing.T) (http.Handler, *bytes.Buffer) {
+	t.Helper()
+	mux, logs, _ := testAuthStackMail(t)
+	return mux, logs
+}
+
+func testAuthStackMail(t *testing.T) (http.Handler, *bytes.Buffer, *mailer.Memory) {
 	t.Helper()
 	store := auth.NewMemory()
 	tokens := &auth.Tokens{
@@ -30,12 +38,36 @@ func testAuthStack(t *testing.T) (http.Handler, *bytes.Buffer) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	access := JWTAccess{Tokens: tokens, Status: svc.UserStatus}
+	inbox := &mailer.Memory{}
+	svc.Mailer = inbox
+	svc.AppOrigin = "http://localhost:3000"
+	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(slog.New(slog.NewJSONHandler(&logs, nil)), config.Config{CORSOrigins: []string{"http://localhost:3000"}}, ratelimit.NewMemory(), nil, nil, Routes{
 		Access: access,
 		Auth:   svc,
 	})
-	return mux, &logs
+	return mux, &logs, inbox
+}
+
+func resetTokenFromMail(t *testing.T, inbox *mailer.Memory) string {
+	t.Helper()
+	msg, ok := inbox.Last()
+	if !ok {
+		t.Fatal("expected password_reset mail")
+	}
+	if msg.Template != mailer.TemplatePasswordReset {
+		t.Fatalf("template=%s", msg.Template)
+	}
+	rawURL := msg.Vars["reset_url"]
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok := u.Query().Get("token")
+	if tok == "" {
+		t.Fatalf("reset_url=%s", rawURL)
+	}
+	return tok
 }
 
 func TestAuthRegisterLoginMeAndRefresh(t *testing.T) {
@@ -238,7 +270,7 @@ func TestUploadsAvatarWithAccessJWT(t *testing.T) {
 	}
 	mux := newMux(testLogger(), config.Config{}, ratelimit.NewMemory(), nil, nil, Routes{
 		Store:  fsStore,
-		Access: JWTAccess{Tokens: tokens, Status: svc.UserStatus},
+		Access: JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity},
 		Events: DenyEventWrite{},
 		Auth:   svc,
 	})
@@ -283,4 +315,77 @@ func TestRefreshCookieRoundTrip(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("cookie refresh=%d %s", rr.Code, rr.Body.String())
 	}
+}
+
+func TestPasswordForgotAlways204AndResetKillsSessions(t *testing.T) {
+	mux, logs, inbox := testAuthStackMail(t)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"r@example.com","password":"correct-horse","display_name":"R","profile":"attendee"}`)))
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("register=%d %s", rr.Code, rr.Body.String())
+	}
+	var sess sessionBody
+	_ = json.Unmarshal(rr.Body.Bytes(), &sess)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/forgot", strings.NewReader(`{"email":"missing@example.com"}`)))
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("missing forgot=%d %s", rr.Code, rr.Body.String())
+	}
+	if inbox.Len() != 0 {
+		t.Fatal("must not email unknown accounts")
+	}
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/forgot", strings.NewReader(`{"email":"r@example.com"}`)))
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("forgot=%d %s", rr.Code, rr.Body.String())
+	}
+	tok := resetTokenFromMail(t, inbox)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset", strings.NewReader(`{"token":"`+tok+`","password":"new-correct-horse"}`)))
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("reset=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer "+sess.AccessToken)
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", strings.NewReader(`{"refresh_token":"`+sess.RefreshToken+`"}`)))
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/login", strings.NewReader(`{"email":"r@example.com","password":"correct-horse"}`)))
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/login", strings.NewReader(`{"email":"r@example.com","password":"new-correct-horse"}`)))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("new login=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset", strings.NewReader(`{"token":"`+tok+`","password":"another-horse1"}`)))
+	assertAPICode(t, rr, http.StatusGone, apierr.Gone)
+
+	out := logs.String()
+	if strings.Contains(out, tok) || strings.Contains(out, "new-correct-horse") {
+		t.Fatalf("logs leaked secrets: %s", out)
+	}
+}
+
+func TestPasswordResetValidationAndUnknownToken(t *testing.T) {
+	mux, _, _ := testAuthStackMail(t)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset", strings.NewReader(`{"token":"x","password":"123"}`)))
+	assertAPICode(t, rr, http.StatusBadRequest, apierr.Validation)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset", strings.NewReader(`{"token":"not-a-real-token","password":"correct-horse"}`)))
+	assertAPICode(t, rr, http.StatusGone, apierr.Gone)
 }

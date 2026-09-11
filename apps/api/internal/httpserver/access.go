@@ -48,7 +48,7 @@ func (RejectAccess) Authenticate(r *http.Request) (Principal, error) {
 // JWTAccess verifies HS256 access tokens issued by auth.Tokens.
 type JWTAccess struct {
 	Tokens *auth.Tokens
-	Status func(ctx context.Context, userID string) (status string, err error)
+	Lookup func(ctx context.Context, userID string) (auth.AccessIdentity, error)
 }
 
 func (j JWTAccess) Peek(r *http.Request) (Principal, error) {
@@ -64,22 +64,30 @@ func (j JWTAccess) Peek(r *http.Request) (Principal, error) {
 }
 
 func (j JWTAccess) Authenticate(r *http.Request) (Principal, error) {
-	p, err := j.Peek(r)
-	if err != nil {
-		return Principal{}, err
+	raw := bearerToken(r)
+	if raw == "" || j.Tokens == nil {
+		return Principal{}, errUnauthorized
 	}
-	if j.Status == nil {
+	claims, err := j.Tokens.ParseAccess(raw)
+	if err != nil {
+		return Principal{}, errUnauthorized
+	}
+	p := Principal{UserID: claims.Subject}
+	if j.Lookup == nil {
 		return p, nil
 	}
-	status, err := j.Status(r.Context(), p.UserID)
+	ident, err := j.Lookup(r.Context(), p.UserID)
 	if err != nil {
 		if errors.Is(err, auth.ErrNotFound) {
 			return Principal{}, errUnauthorized
 		}
 		return Principal{}, err
 	}
-	if status != auth.StatusActive {
+	if ident.Status != auth.StatusActive {
 		return Principal{}, errForbidden
+	}
+	if ident.Epoch != claims.Epoch {
+		return Principal{}, errUnauthorized
 	}
 	return p, nil
 }

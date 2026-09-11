@@ -18,6 +18,8 @@ type Memory struct {
 	members    []member
 	refresh    map[string]RefreshRow
 	byID       map[string]RefreshRow
+	resets     map[string]PasswordResetRow
+	resetsByID map[string]PasswordResetRow
 }
 
 type member struct {
@@ -35,6 +37,8 @@ func NewMemory() *Memory {
 		tenants:    map[string]Tenant{},
 		refresh:    map[string]RefreshRow{},
 		byID:       map[string]RefreshRow{},
+		resets:     map[string]PasswordResetRow{},
+		resetsByID: map[string]PasswordResetRow{},
 	}
 }
 
@@ -244,6 +248,66 @@ func (m *Memory) ListSessions(_ context.Context, userID string, now time.Time) (
 		out = append(out, SessionView{ID: id, CreatedAt: earliest[id], UserAgent: latestUA[id]})
 	}
 	return out, nil
+}
+
+func (m *Memory) InsertPasswordReset(_ context.Context, row PasswordResetRow) error {
+	m.lock()
+	defer m.unlock()
+	m.resets[row.TokenHash] = row
+	m.resetsByID[row.ID] = row
+	return nil
+}
+
+func (m *Memory) PasswordResetByHash(_ context.Context, hash string) (PasswordResetRow, error) {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.resets[hash]
+	if !ok {
+		return PasswordResetRow{}, ErrNotFound
+	}
+	return row, nil
+}
+
+func (m *Memory) MarkPasswordResetUsed(_ context.Context, id string, at time.Time) error {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.resetsByID[id]
+	if !ok {
+		return ErrNotFound
+	}
+	if row.UsedAt == nil {
+		row.UsedAt = &at
+	}
+	m.resetsByID[id] = row
+	m.resets[row.TokenHash] = row
+	return nil
+}
+
+func (m *Memory) InvalidateUserPasswordResets(_ context.Context, userID string, at time.Time) error {
+	m.lock()
+	defer m.unlock()
+	for hash, row := range m.resets {
+		if row.UserID != userID || row.UsedAt != nil {
+			continue
+		}
+		row.UsedAt = &at
+		m.resets[hash] = row
+		m.resetsByID[row.ID] = row
+	}
+	return nil
+}
+
+func (m *Memory) SetPasswordAndBumpEpoch(_ context.Context, userID, passwordHash string) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	u.PasswordHash = passwordHash
+	u.SessionEpoch++
+	m.users[userID] = u
+	return nil
 }
 
 func (m *Memory) SetStatus(userID, status string) {

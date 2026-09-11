@@ -92,16 +92,16 @@ func (s *PG) CreateAccount(ctx context.Context, acc Account) error {
 }
 
 func (s *PG) UserByEmail(ctx context.Context, email string) (User, error) {
-	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, created_at FROM users WHERE email = $1`, email)
+	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, session_epoch, created_at FROM users WHERE email = $1`, email)
 }
 
 func (s *PG) UserByID(ctx context.Context, id string) (User, error) {
-	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, created_at FROM users WHERE id = $1`, id)
+	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, session_epoch, created_at FROM users WHERE id = $1`, id)
 }
 
 func (s *PG) scanUser(ctx context.Context, q string, arg any) (User, error) {
 	var u User
-	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.CreatedAt)
+	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.SessionEpoch, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -218,6 +218,50 @@ func (s *PG) ListSessions(ctx context.Context, userID string, now time.Time) ([]
 		out = append(out, v)
 	}
 	return out, rows.Err()
+}
+
+func (s *PG) InsertPasswordReset(ctx context.Context, row PasswordResetRow) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, used_at)
+		VALUES ($1, $2, $3, $4, $5)`,
+		row.ID, row.UserID, row.TokenHash, row.ExpiresAt, row.UsedAt)
+	return err
+}
+
+func (s *PG) PasswordResetByHash(ctx context.Context, hash string) (PasswordResetRow, error) {
+	q := `
+		SELECT id, user_id, token_hash, expires_at, used_at
+		FROM password_reset_tokens WHERE token_hash = $1`
+	if s.forUpdate {
+		q += ` FOR UPDATE`
+	}
+	var row PasswordResetRow
+	err := s.q.QueryRow(ctx, q, hash).Scan(&row.ID, &row.UserID, &row.TokenHash, &row.ExpiresAt, &row.UsedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PasswordResetRow{}, ErrNotFound
+	}
+	if err != nil {
+		return PasswordResetRow{}, err
+	}
+	return row, nil
+}
+
+func (s *PG) MarkPasswordResetUsed(ctx context.Context, id string, at time.Time) error {
+	_, err := s.q.Exec(ctx, `
+		UPDATE password_reset_tokens SET used_at = $2 WHERE id = $1 AND used_at IS NULL`, id, at)
+	return err
+}
+
+func (s *PG) InvalidateUserPasswordResets(ctx context.Context, userID string, at time.Time) error {
+	_, err := s.q.Exec(ctx, `
+		UPDATE password_reset_tokens SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, userID, at)
+	return err
+}
+
+func (s *PG) SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash string) error {
+	_, err := s.q.Exec(ctx, `
+		UPDATE users SET password_hash = $2, session_epoch = session_epoch + 1 WHERE id = $1`, userID, passwordHash)
+	return err
 }
 
 func mapUniqueEmail(err error) error {

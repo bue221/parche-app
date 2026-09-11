@@ -129,12 +129,14 @@ func cors(next http.Handler, origins []string) http.Handler {
 }
 
 const (
-	authLimit        = 10
-	authWindow       = 15 * time.Minute
-	checkInLimit     = 30
-	checkInWindow    = time.Second
-	publicListLimit  = 60
-	publicListWindow = time.Minute
+	authLimit            = 10
+	authWindow           = 15 * time.Minute
+	passwordForgotLimit  = 5
+	passwordForgotWindow = time.Hour
+	checkInLimit         = 30
+	checkInWindow        = time.Second
+	publicListLimit      = 60
+	publicListWindow     = time.Minute
 )
 
 func rateLimit(next http.Handler, limiter ratelimit.Limiter) http.Handler {
@@ -166,6 +168,9 @@ func limitSpec(r *http.Request) (key string, limit int, window time.Duration, ap
 	path := r.URL.Path
 	ip := clientIP(r)
 	switch {
+	case r.Method == http.MethodPost && path == "/v1/auth/password/forgot":
+		email := peekEmail(r)
+		return "rl:pwforgot:" + ip + ":" + strings.ToLower(email), passwordForgotLimit, passwordForgotWindow, true
 	case r.Method == http.MethodPost && isAuthHotPath(path):
 		email := peekEmail(r)
 		return "rl:auth:" + ip + ":" + strings.ToLower(email), authLimit, authWindow, true

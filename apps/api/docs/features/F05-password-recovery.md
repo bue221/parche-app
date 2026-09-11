@@ -51,10 +51,10 @@ Template `password_reset`: link `{APP_ORIGIN}/reset?token=`. Texto plano + html.
 
 ## Checklist
 
-- [ ] Forgot siempre 204
-- [ ] Token un uso / 30 min
-- [ ] Reset tumba sesiones
-- [ ] Access con epoch viejo es 401
+- [x] Forgot siempre 204
+- [x] Token un uso / 30 min
+- [x] Reset tumba sesiones
+- [x] Access con epoch viejo es 401
 
 ## Next step
 

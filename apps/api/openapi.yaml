@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.4.0
+  version: 0.5.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -149,8 +149,51 @@ paths:
             schema:
               $ref: "#/components/schemas/RefreshRequest"
       responses:
-        "204":
+		"204":
           description: Family revoked (idempotent)
+  /v1/auth/password/forgot:
+    post:
+      summary: Start password recovery (F05)
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: ada@example.com
+      responses:
+        "204":
+          description: Always no content (does not reveal whether the email exists)
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/password/reset:
+    post:
+      summary: Complete password recovery (F05)
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              token: url-safe-one-use-token
+              password: new-correct-horse
+      responses:
+        "204":
+          description: Password updated; caller must log in again
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          $ref: "#/components/responses/Gone"
   /v1/me:
     get:
       summary: Current user (F04)
@@ -364,6 +407,22 @@ components:
         refresh_token:
           type: string
           description: Opaque refresh; web may send httpOnly cookie `refresh` instead
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 10
     PublicUser:
       type: object
       required: [id, email, display_name, profiles]
@@ -533,6 +592,16 @@ components:
           example:
             code: FORBIDDEN
             message: No tienes permiso
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    Gone:
+      description: Reset, invite, or QR token expired or already used
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: GONE
+            message: El recurso ya no está disponible
             request_id: "0199a0c0-0000-7000-8000-000000000001"
     NotReady:
       description: A runtime dependency failed

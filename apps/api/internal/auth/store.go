@@ -20,7 +20,17 @@ type User struct {
 	PasswordHash string
 	DisplayName  string
 	Status       string
+	SessionEpoch int
 	CreatedAt    time.Time
+}
+
+// PasswordResetRow is a hashed one-use reset token. TokenHash is never the mail value.
+type PasswordResetRow struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
 }
 
 // RefreshRow is a hashed refresh token. TokenHash is HMAC hex, never the client value.
@@ -81,6 +91,12 @@ type Store interface {
 	RevokeFamily(ctx context.Context, familyID string, at time.Time) error
 	RevokeUser(ctx context.Context, userID string, at time.Time) error
 	ListSessions(ctx context.Context, userID string, now time.Time) ([]SessionView, error)
+
+	InsertPasswordReset(ctx context.Context, row PasswordResetRow) error
+	PasswordResetByHash(ctx context.Context, hash string) (PasswordResetRow, error)
+	MarkPasswordResetUsed(ctx context.Context, id string, at time.Time) error
+	InvalidateUserPasswordResets(ctx context.Context, userID string, at time.Time) error
+	SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash string) error
 
 	InTx(ctx context.Context, fn func(Store) error) error
 }

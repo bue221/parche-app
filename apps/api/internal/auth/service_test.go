@@ -5,9 +5,12 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/parche-app/backend/internal/mailer"
 )
 
 func testService(t *testing.T) (*Service, *Memory) {
@@ -210,6 +213,9 @@ func TestAccessJWTDoesNotEmbedEventRoles(t *testing.T) {
 	if claims.Subject != sess.User.ID {
 		t.Fatalf("sub=%s", claims.Subject)
 	}
+	if claims.Epoch != 0 {
+		t.Fatalf("epoch=%d", claims.Epoch)
+	}
 }
 
 func TestPasswordHashRoundTrip(t *testing.T) {
@@ -237,4 +243,118 @@ func TestRefreshHashIsNotPlain(t *testing.T) {
 	if sum == raw || strings.Contains(sum, raw) {
 		t.Fatal("hash must not contain plaintext")
 	}
+}
+
+func TestForgotResetOneUseAndEpoch(t *testing.T) {
+	svc, store := testService(t)
+	inbox := &mailer.Memory{}
+	svc.Mailer = inbox
+	svc.AppOrigin = "http://localhost:3000"
+	ctx := context.Background()
+	sess, err := svc.Register(ctx, RegisterInput{
+		Email: "r@example.com", Password: "correct-horse", DisplayName: "R", Profile: "attendee",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := svc.Forgot(ctx, "missing@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if inbox.Len() != 0 {
+		t.Fatal("unknown email must not send")
+	}
+	if err := svc.Forgot(ctx, "r@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	msg, ok := inbox.Last()
+	if !ok || msg.Template != mailer.TemplatePasswordReset {
+		t.Fatalf("mail=%+v", msg)
+	}
+	tok := tokenFromResetURL(t, msg.Vars["reset_url"])
+	if strings.Contains(msg.Vars["reset_url"], "password=") {
+		t.Fatal("mail must not include password")
+	}
+
+	if err := svc.Reset(ctx, ResetInput{Token: tok, Password: "new-correct-horse"}); err != nil {
+		t.Fatal(err)
+	}
+	ident, err := svc.AccessIdentity(ctx, sess.User.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ident.Epoch != 1 {
+		t.Fatalf("epoch=%d", ident.Epoch)
+	}
+
+	_, err = svc.Refresh(ctx, sess.RefreshToken, "")
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("refresh after reset err=%v", err)
+	}
+	_, err = svc.Login(ctx, LoginInput{Email: "r@example.com", Password: "correct-horse"})
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("old password err=%v", err)
+	}
+	if _, err := svc.Login(ctx, LoginInput{Email: "r@example.com", Password: "new-correct-horse"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Reset(ctx, ResetInput{Token: tok, Password: "another-horse1"}); !errors.Is(err, ErrGone) {
+		t.Fatalf("reuse err=%v", err)
+	}
+
+	store.SetStatus(sess.User.ID, StatusDisabled)
+	if err := svc.Forgot(ctx, "r@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if inbox.Len() != 1 {
+		t.Fatalf("disabled user must not get a second mail, n=%d", inbox.Len())
+	}
+}
+
+func TestResetExpiredToken(t *testing.T) {
+	now := time.Now().UTC()
+	svc, _ := testService(t)
+	svc.Tokens.Now = func() time.Time { return now }
+	inbox := &mailer.Memory{}
+	svc.Mailer = inbox
+	ctx := context.Background()
+	if _, err := svc.Register(ctx, RegisterInput{
+		Email: "e@example.com", Password: "correct-horse", DisplayName: "E", Profile: "attendee",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Forgot(ctx, "e@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	msg, ok := inbox.Last()
+	if !ok {
+		t.Fatal("expected mail")
+	}
+	tok := tokenFromResetURL(t, msg.Vars["reset_url"])
+	svc.Tokens.Now = func() time.Time { return now.Add(31 * time.Minute) }
+	if err := svc.Reset(ctx, ResetInput{Token: tok, Password: "new-correct-horse"}); !errors.Is(err, ErrGone) {
+		t.Fatalf("expired err=%v", err)
+	}
+}
+
+func TestResetPasswordPolicy(t *testing.T) {
+	svc, _ := testService(t)
+	err := svc.Reset(context.Background(), ResetInput{Token: "abc", Password: "short"})
+	var inv Invalid
+	if !errors.As(err, &inv) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func tokenFromResetURL(t *testing.T, raw string) string {
+	t.Helper()
+	u, err := url.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok := u.Query().Get("token")
+	if tok == "" {
+		t.Fatalf("reset_url=%s", raw)
+	}
+	return tok
 }

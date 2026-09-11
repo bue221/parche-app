@@ -13,6 +13,7 @@ import (
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/config"
 	"github.com/parche-app/backend/internal/health"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
@@ -80,9 +81,13 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if err != nil {
 		log.Error("auth service", "err", err)
 	}
-	access := JWTAccess{Tokens: tokens, Status: nil}
 	if sessions != nil {
-		access.Status = sessions.UserStatus
+		sessions.Mailer = mailer.Log{Logger: log}
+		sessions.AppOrigin = cfg.AppOrigin
+	}
+	access := JWTAccess{Tokens: tokens, Lookup: nil}
+	if sessions != nil {
+		access.Lookup = sessions.AccessIdentity
 	}
 
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{

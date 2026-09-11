@@ -77,6 +77,7 @@ Access. Incluye `profiles`, `tenant` si promoter, `memberships` resumidas (F11: 
 | `jti` | unique |
 | `iat` `exp` | 10–15 min |
 | `iss` | `parche-api` |
+| `epoch` | `users.session_epoch` (F05; middleware rejects stale access) |
 
 Algoritmo: **EdDSA o RS256** preferido; HS256 aceptable en MVP si el secret ≥ 32 bytes crypto-random. **No** incluir roles de evento. Opcional `profiles` array (cambia poco).
 
