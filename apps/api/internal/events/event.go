@@ -231,6 +231,7 @@ type Store interface {
 	HourlyApproved(ctx context.Context, eventID string) ([]HourlyApproved, error)
 	ListEventOrders(ctx context.Context, eventID, cursor string, limit int) ([]MetricsOrderRow, error)
 	ListEventTicketExport(ctx context.Context, eventID string) ([]TicketExportRow, error)
+	TenantMetricsWindow(ctx context.Context, tenantID string, from, to time.Time) ([]TenantEventMetricRow, int, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.

@@ -344,6 +344,54 @@ func (m *Memory) listTicketTypesLocked(eventID string) []TicketType {
 	return out
 }
 
+func (m *Memory) TenantMetricsWindow(_ context.Context, tenantID string, from, to time.Time) ([]TenantEventMetricRow, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	type keyed struct {
+		row      TenantEventMetricRow
+		startsAt time.Time
+	}
+	var keyedRows []keyed
+	ids := map[string]struct{}{}
+	for _, e := range m.byID {
+		if e.TenantID != tenantID || !eventOverlapsWindow(e.StartsAt, e.EndsAt, from, to) {
+			continue
+		}
+		sold, gross := 0, 0
+		for _, tt := range m.tickets {
+			if tt.EventID != e.ID || tt.Status == TicketDraft {
+				continue
+			}
+			sold += tt.SoldCount
+			gross += tt.SoldCount * tt.PriceCents
+		}
+		ids[e.ID] = struct{}{}
+		keyedRows = append(keyedRows, keyed{
+			row: TenantEventMetricRow{
+				EventID: e.ID, Title: e.Title, Status: e.Status, GrossCents: gross, Sold: sold,
+			},
+			startsAt: e.StartsAt,
+		})
+	}
+	sort.Slice(keyedRows, func(i, j int) bool {
+		if !keyedRows[i].startsAt.Equal(keyedRows[j].startsAt) {
+			return keyedRows[i].startsAt.Before(keyedRows[j].startsAt)
+		}
+		return keyedRows[i].row.EventID < keyedRows[j].row.EventID
+	})
+	out := make([]TenantEventMetricRow, 0, len(keyedRows))
+	for _, row := range keyedRows {
+		out = append(out, row.row)
+	}
+	paid := 0
+	for _, o := range m.orders {
+		if _, ok := ids[o.EventID]; ok && o.Status == OrderPaid {
+			paid++
+		}
+	}
+	return out, paid, nil
+}
+
 func cloneEvent(e Event) Event {
 	e.Genres = cloneGenres(e.Genres)
 	return e

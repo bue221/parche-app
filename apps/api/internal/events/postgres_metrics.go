@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"time"
 )
 
 func (s *PG) TicketStatusCounts(ctx context.Context, eventID string) (valid, used, cancelled int, err error) {
@@ -134,4 +135,47 @@ func (s *PG) ListEventTicketExport(ctx context.Context, eventID string) ([]Ticke
 		out = []TicketExportRow{}
 	}
 	return out, rows.Err()
+}
+
+func (s *PG) TenantMetricsWindow(ctx context.Context, tenantID string, from, to time.Time) ([]TenantEventMetricRow, int, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT e.id, e.title, e.status,
+			COALESCE(SUM(tt.sold_count) FILTER (WHERE tt.status IS DISTINCT FROM $4), 0)::int,
+			COALESCE(SUM(tt.sold_count * tt.price_cents) FILTER (WHERE tt.status IS DISTINCT FROM $4), 0)::int
+		FROM events e
+		LEFT JOIN ticket_types tt ON tt.event_id = e.id
+		WHERE e.tenant_id = $1 AND e.starts_at <= $3 AND e.ends_at >= $2
+		GROUP BY e.id, e.title, e.status, e.starts_at
+		ORDER BY e.starts_at ASC, e.id ASC`,
+		tenantID, from.UTC(), to.UTC(), TicketDraft)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []TenantEventMetricRow
+	for rows.Next() {
+		var row TenantEventMetricRow
+		if err := rows.Scan(&row.EventID, &row.Title, &row.Status, &row.Sold, &row.GrossCents); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	if out == nil {
+		out = []TenantEventMetricRow{}
+	}
+	var paid int
+	err = s.q.QueryRow(ctx, `
+		SELECT COUNT(*)::int
+		FROM orders o
+		INNER JOIN events e ON e.id = o.event_id
+		WHERE e.tenant_id = $1 AND o.status = $4
+			AND e.starts_at <= $3 AND e.ends_at >= $2`,
+		tenantID, from.UTC(), to.UTC(), OrderPaid).Scan(&paid)
+	if err != nil {
+		return nil, 0, err
+	}
+	return out, paid, nil
 }

@@ -1434,6 +1434,46 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/metrics:
+    get:
+      summary: Tenant box-office metrics across events (F21)
+      operationId: tenantMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Window start (UTC). Default now-30d.
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Window end (UTC). Default now. Max span 366 days.
+      responses:
+        "200":
+          description: Owner-only totals. Gross and sold match the sum of F20 for events overlapping the window.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMetrics"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/tenants/{id}/members:
     get:
       summary: List tenant members (owner) (F06)
@@ -2842,6 +2882,41 @@ components:
           type: string
           format: date-time
         approved:
+          type: integer
+    TenantMetrics:
+      type: object
+      required: [from, to, gross_cents, orders_paid, tickets_sold, events_published, by_event]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        gross_cents:
+          type: integer
+        orders_paid:
+          type: integer
+        tickets_sold:
+          type: integer
+        events_published:
+          type: integer
+        by_event:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantEventMetrics"
+    TenantEventMetrics:
+      type: object
+      required: [event_id, title, gross_cents, sold]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        gross_cents:
+          type: integer
+        sold:
           type: integer
     MetricsOrder:
       type: object

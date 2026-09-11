@@ -158,6 +158,25 @@ func (h eventHandler) doorLive(w http.ResponseWriter, r *http.Request) {
 	apierr.WriteJSON(w, http.StatusOK, out)
 }
 
+func (h eventHandler) tenantMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	out, err := h.svc.TenantMetrics(r.Context(), p.UserID, r.PathValue("id"), q.Get("from"), q.Get("to"))
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, out)
+}
+
 func (h eventHandler) eventMetrics(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil {
 		apierr.Write(w, r, apierr.Internal, "", nil)

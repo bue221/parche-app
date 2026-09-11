@@ -29,9 +29,9 @@ Rango máx 366 días. Default últimos 30.
 
 ## Checklist
 
-- [ ] Staff tenant sin billing 403
+- [x] Staff tenant sin billing 403
 - [ ] Platform admin puede consultar cualquier tenant (F27)
-- [ ] Cuadra con suma de F20
+- [x] Cuadra con suma de F20
 
 ## Next step
 
