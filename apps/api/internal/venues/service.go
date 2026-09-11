@@ -54,6 +54,11 @@ func (s *Service) Create(ctx context.Context, userID string, in CreateInput) (Ve
 	if err != nil {
 		return Venue{}, err
 	}
+	kind, err := normalizeKind(in.Kind)
+	if err != nil {
+		return Venue{}, err
+	}
+	listed := in.Listed && kind == KindClub
 	v := Venue{
 		ID:          id,
 		TenantID:    in.TenantID,
@@ -63,6 +68,8 @@ func (s *Service) Create(ctx context.Context, userID string, in CreateInput) (Ve
 		Lng:         in.Lng,
 		GeoJSON:     normalizeGeoJSON(in.GeoJSON),
 		Source:      SourceUserPin,
+		Kind:        kind,
+		Listed:      listed,
 	}
 	if err := s.Store.Create(ctx, v); err != nil {
 		return Venue{}, err
@@ -79,16 +86,52 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Venue, error) {
 	if err != nil {
 		return Venue{}, err
 	}
-	if v.PublishedUses > 0 {
+	return s.visible(ctx, userID, v)
+}
+
+// CreateClub is POST /v1/clubs: a venue with kind=club and listed=true.
+func (s *Service) CreateClub(ctx context.Context, userID string, in CreateInput) (Venue, error) {
+	in.Kind = KindClub
+	in.Listed = true
+	return s.Create(ctx, userID, in)
+}
+
+// GetClub is GET /v1/clubs/{id}. Public when listed or a published event uses it.
+func (s *Service) GetClub(ctx context.Context, userID, id string) (Venue, error) {
+	v, err := s.Store.ByID(ctx, id)
+	if err != nil {
+		return Venue{}, err
+	}
+	if v.Kind != KindClub {
+		return Venue{}, auth.ErrNotFound
+	}
+	if v.Listed || v.PublishedUses > 0 {
 		return v, nil
 	}
-	if userID == "" {
+	return s.visible(ctx, userID, v)
+}
+
+// PatchClub is PATCH /v1/clubs/{id} for the tenant owner.
+func (s *Service) PatchClub(ctx context.Context, userID, id string, in PatchInput) (Venue, error) {
+	v, err := s.Store.ByID(ctx, id)
+	if err != nil {
+		return Venue{}, err
+	}
+	if v.Kind != KindClub {
 		return Venue{}, auth.ErrNotFound
 	}
-	if err := s.requireMember(ctx, v.TenantID, userID); err != nil {
-		return Venue{}, auth.ErrNotFound
+	if err := s.requireOwner(ctx, v.TenantID, userID); err != nil {
+		return Venue{}, err
 	}
-	return v, nil
+	return s.patchVenue(ctx, v, in)
+}
+
+// ListClubs is GET /v1/clubs: kind=club and (listed or ≥1 published event).
+func (s *Service) ListClubs(ctx context.Context, f ListFilter) ([]Venue, error) {
+	f.Kind = KindClub
+	f.Directory = true
+	f.TenantID = ""
+	return s.List(ctx, "", f)
 }
 
 func (s *Service) Patch(ctx context.Context, userID, id string, in PatchInput) (Venue, error) {
@@ -102,37 +145,7 @@ func (s *Service) Patch(ctx context.Context, userID, id string, in PatchInput) (
 		}
 		return Venue{}, auth.ErrNotFound
 	}
-	if in.Name == nil && in.AddressText == nil && in.Lat == nil && in.Lng == nil && in.GeoJSON == nil {
-		return Venue{}, auth.Invalid{Fields: []auth.Field{{Name: "body", Issue: "empty"}}}
-	}
-	if in.Name != nil {
-		v.Name = strings.TrimSpace(*in.Name)
-	}
-	if in.AddressText != nil {
-		v.AddressText = strings.TrimSpace(*in.AddressText)
-	}
-	if err := validateNameAddress(v.Name, v.AddressText); err != nil {
-		return Venue{}, err
-	}
-	if (in.Lat == nil) != (in.Lng == nil) {
-		return Venue{}, auth.Invalid{Fields: []auth.Field{{Name: "lat", Issue: "pair"}, {Name: "lng", Issue: "pair"}}}
-	}
-	if in.Lat != nil {
-		if err := geo.ValidLatLng(*in.Lat, *in.Lng); err != nil {
-			return Venue{}, err
-		}
-		v.Lat, v.Lng = *in.Lat, *in.Lng
-	}
-	if in.GeoJSON != nil {
-		if err := geo.ValidateGeoJSON(*in.GeoJSON); err != nil {
-			return Venue{}, err
-		}
-		v.GeoJSON = normalizeGeoJSON(*in.GeoJSON)
-	}
-	if err := s.Store.Update(ctx, v); err != nil {
-		return Venue{}, err
-	}
-	return s.Store.ByID(ctx, id)
+	return s.patchVenue(ctx, v, in)
 }
 
 func (s *Service) List(ctx context.Context, userID string, f ListFilter) ([]Venue, error) {
@@ -168,6 +181,66 @@ func (s *Service) RecordPublishedEvent(ctx context.Context, venueID string, delt
 	return s.Store.AdjustPublishedUses(ctx, venueID, delta)
 }
 
+func (s *Service) visible(ctx context.Context, userID string, v Venue) (Venue, error) {
+	if v.PublishedUses > 0 || v.Listed {
+		return v, nil
+	}
+	if userID == "" {
+		return Venue{}, auth.ErrNotFound
+	}
+	if err := s.requireMember(ctx, v.TenantID, userID); err != nil {
+		return Venue{}, auth.ErrNotFound
+	}
+	return v, nil
+}
+
+func (s *Service) patchVenue(ctx context.Context, v Venue, in PatchInput) (Venue, error) {
+	if in.Name == nil && in.AddressText == nil && in.Lat == nil && in.Lng == nil && in.GeoJSON == nil && in.Kind == nil && in.Listed == nil {
+		return Venue{}, auth.Invalid{Fields: []auth.Field{{Name: "body", Issue: "empty"}}}
+	}
+	if in.Name != nil {
+		v.Name = strings.TrimSpace(*in.Name)
+	}
+	if in.AddressText != nil {
+		v.AddressText = strings.TrimSpace(*in.AddressText)
+	}
+	if err := validateNameAddress(v.Name, v.AddressText); err != nil {
+		return Venue{}, err
+	}
+	if (in.Lat == nil) != (in.Lng == nil) {
+		return Venue{}, auth.Invalid{Fields: []auth.Field{{Name: "lat", Issue: "pair"}, {Name: "lng", Issue: "pair"}}}
+	}
+	if in.Lat != nil {
+		if err := geo.ValidLatLng(*in.Lat, *in.Lng); err != nil {
+			return Venue{}, err
+		}
+		v.Lat, v.Lng = *in.Lat, *in.Lng
+	}
+	if in.GeoJSON != nil {
+		if err := geo.ValidateGeoJSON(*in.GeoJSON); err != nil {
+			return Venue{}, err
+		}
+		v.GeoJSON = normalizeGeoJSON(*in.GeoJSON)
+	}
+	if in.Kind != nil {
+		kind, err := normalizeKind(*in.Kind)
+		if err != nil {
+			return Venue{}, err
+		}
+		v.Kind = kind
+	}
+	if in.Listed != nil {
+		v.Listed = *in.Listed
+	}
+	if v.Kind != KindClub {
+		v.Listed = false
+	}
+	if err := s.Store.Update(ctx, v); err != nil {
+		return Venue{}, err
+	}
+	return s.Store.ByID(ctx, v.ID)
+}
+
 func (s *Service) requireMember(ctx context.Context, tenantID, userID string) error {
 	if s.Tenancy == nil {
 		return auth.ErrForbidden
@@ -183,6 +256,37 @@ func (s *Service) requireMember(ctx context.Context, tenantID, userID string) er
 		return err
 	}
 	return nil
+}
+
+func (s *Service) requireOwner(ctx context.Context, tenantID, userID string) error {
+	if s.Tenancy == nil {
+		return auth.ErrForbidden
+	}
+	if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(userID) == "" {
+		return auth.ErrNotFound
+	}
+	role, err := s.Tenancy.Membership(ctx, tenantID, userID)
+	if err != nil {
+		if errors.Is(err, auth.ErrNotFound) {
+			return auth.ErrNotFound
+		}
+		return err
+	}
+	if role != auth.TenantOwner {
+		return auth.ErrForbidden
+	}
+	return nil
+}
+
+func normalizeKind(kind string) (string, error) {
+	k := strings.ToLower(strings.TrimSpace(kind))
+	if k == "" {
+		return KindOther, nil
+	}
+	if k != KindClub && k != KindOther {
+		return "", auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "invalid"}}}
+	}
+	return k, nil
 }
 
 func validateNameAddress(name, addr string) error {

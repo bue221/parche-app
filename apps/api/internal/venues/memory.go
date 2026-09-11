@@ -29,6 +29,9 @@ func (m *Memory) Create(_ context.Context, v Venue) error {
 	if v.Source == "" {
 		v.Source = SourceUserPin
 	}
+	if v.Kind == "" {
+		v.Kind = KindOther
+	}
 	m.byID[v.ID] = v
 	m.order = append(m.order, v.ID)
 	return nil
@@ -55,6 +58,9 @@ func (m *Memory) Update(_ context.Context, v Venue) error {
 	v.PublishedUses = cur.PublishedUses
 	v.TenantID = cur.TenantID
 	v.Source = SourceUserPin
+	if v.Kind == "" {
+		v.Kind = cur.Kind
+	}
 	m.byID[v.ID] = v
 	return nil
 }
@@ -77,11 +83,18 @@ func (m *Memory) List(_ context.Context, f ListFilter) ([]Venue, error) {
 			}
 			continue
 		}
-		if f.TenantID != "" {
+		if f.Directory {
+			if v.Kind != KindClub || (!v.Listed && v.PublishedUses <= 0) {
+				continue
+			}
+		} else if f.TenantID != "" {
 			if v.TenantID != f.TenantID {
 				continue
 			}
 		} else if v.PublishedUses <= 0 {
+			continue
+		}
+		if f.Kind != "" && !f.Directory && v.Kind != f.Kind {
 			continue
 		}
 		if q != "" {

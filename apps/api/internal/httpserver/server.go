@@ -58,6 +58,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerUploadRoutes(mux, routes)
 	registerAuthRoutes(mux, routes)
 	registerVenueRoutes(mux, routes)
+	registerClubRoutes(mux, routes)
 	registerEventRoutes(mux, routes)
 	registerAssetRoutes(mux, routes)
 	registerTrackRoutes(mux, routes)

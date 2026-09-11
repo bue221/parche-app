@@ -17,6 +17,7 @@ type createVenueBody struct {
 	Lng         *float64        `json:"lng"`
 	GeoJSON     json.RawMessage `json:"geojson"`
 	Source      string          `json:"source"`
+	Kind        string          `json:"kind"`
 }
 
 type patchVenueBody struct {
@@ -25,6 +26,8 @@ type patchVenueBody struct {
 	Lat         *float64         `json:"lat"`
 	Lng         *float64         `json:"lng"`
 	GeoJSON     *json.RawMessage `json:"geojson"`
+	Kind        *string          `json:"kind"`
+	Listed      *bool            `json:"listed"`
 }
 
 func registerVenueRoutes(mux *http.ServeMux, routes Routes) {
@@ -73,6 +76,7 @@ func (h venueHandler) createVenue(w http.ResponseWriter, r *http.Request) {
 		Lng:         *req.Lng,
 		GeoJSON:     req.GeoJSON,
 		Source:      req.Source,
+		Kind:        req.Kind,
 	})
 	if err != nil {
 		writeAuthErr(w, r, err)
@@ -118,6 +122,8 @@ func (h venueHandler) patchVenue(w http.ResponseWriter, r *http.Request) {
 		Lat:         req.Lat,
 		Lng:         req.Lng,
 		GeoJSON:     req.GeoJSON,
+		Kind:        req.Kind,
+		Listed:      req.Listed,
 	})
 	if err != nil {
 		writeAuthErr(w, r, err)
@@ -194,6 +200,8 @@ func publicVenue(v venues.Venue) map[string]any {
 		"lat":          v.Lat,
 		"lng":          v.Lng,
 		"source":       v.Source,
+		"kind":         v.Kind,
+		"listed":       v.Listed,
 		"created_at":   v.CreatedAt,
 	}
 	if len(v.GeoJSON) > 0 {

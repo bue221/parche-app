@@ -34,15 +34,15 @@ func (s *PG) Create(ctx context.Context, v Venue) error {
 		return err
 	}
 	_, err = s.q.Exec(ctx, `
-		INSERT INTO venues (id, tenant_id, name, address_text, lat, lng, geojson, source)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		v.ID, v.TenantID, v.Name, v.AddressText, v.Lat, v.Lng, geo, SourceUserPin)
+		INSERT INTO venues (id, tenant_id, name, address_text, lat, lng, geojson, source, kind, listed)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		v.ID, v.TenantID, v.Name, v.AddressText, v.Lat, v.Lng, geo, SourceUserPin, v.Kind, v.Listed)
 	return err
 }
 
 func (s *PG) ByID(ctx context.Context, id string) (Venue, error) {
 	return scanVenue(s.q.QueryRow(ctx, `
-		SELECT id, tenant_id, name, address_text, lat, lng, geojson, source, published_uses, created_at
+		SELECT id, tenant_id, name, address_text, lat, lng, geojson, source, kind, listed, published_uses, created_at
 		FROM venues WHERE id = $1`, id))
 }
 
@@ -52,8 +52,8 @@ func (s *PG) Update(ctx context.Context, v Venue) error {
 		return err
 	}
 	tag, err := s.q.Exec(ctx, `
-		UPDATE venues SET name = $2, address_text = $3, lat = $4, lng = $5, geojson = $6
-		WHERE id = $1`, v.ID, v.Name, v.AddressText, v.Lat, v.Lng, geo)
+		UPDATE venues SET name = $2, address_text = $3, lat = $4, lng = $5, geojson = $6, kind = $7, listed = $8
+		WHERE id = $1`, v.ID, v.Name, v.AddressText, v.Lat, v.Lng, geo, v.Kind, v.Listed)
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,17 @@ func (s *PG) List(ctx context.Context, f ListFilter) ([]Venue, error) {
 		}
 	)
 	b.WriteString(`
-		SELECT id, tenant_id, name, address_text, lat, lng, geojson, source, published_uses, created_at
+		SELECT id, tenant_id, name, address_text, lat, lng, geojson, source, kind, listed, published_uses, created_at
 		FROM venues WHERE 1=1`)
-	if f.TenantID != "" {
+	if f.Directory {
+		b.WriteString(" AND kind = 'club' AND (listed OR published_uses > 0)")
+	} else if f.TenantID != "" {
 		add("tenant_id = $%d", f.TenantID)
 	} else {
 		b.WriteString(" AND published_uses > 0")
+	}
+	if f.Kind != "" && !f.Directory {
+		add("kind = $%d", f.Kind)
 	}
 	if q := strings.TrimSpace(f.Q); q != "" {
 		n++
@@ -136,12 +141,14 @@ type rowScanner interface {
 
 func scanVenue(row rowScanner) (Venue, error) {
 	var (
-		v    Venue
-		raw  []byte
-		src  string
-		uses int
+		v      Venue
+		raw    []byte
+		src    string
+		kind   string
+		listed bool
+		uses   int
 	)
-	err := row.Scan(&v.ID, &v.TenantID, &v.Name, &v.AddressText, &v.Lat, &v.Lng, &raw, &src, &uses, &v.CreatedAt)
+	err := row.Scan(&v.ID, &v.TenantID, &v.Name, &v.AddressText, &v.Lat, &v.Lng, &raw, &src, &kind, &listed, &uses, &v.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Venue{}, auth.ErrNotFound
 	}
@@ -149,6 +156,8 @@ func scanVenue(row rowScanner) (Venue, error) {
 		return Venue{}, err
 	}
 	v.Source = src
+	v.Kind = kind
+	v.Listed = listed
 	v.PublishedUses = uses
 	if len(raw) > 0 {
 		v.GeoJSON = json.RawMessage(raw)

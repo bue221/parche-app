@@ -103,6 +103,61 @@ func TestCreateGetPatchListAndBBox(t *testing.T) {
 	}
 }
 
+func TestClubDirectoryListedAndPublished(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemory()
+	ten := memTenancy{roles: map[string]string{"t1/u1": auth.TenantOwner, "t1/staff": auth.TenantStaff}}
+	svc := NewService(store, ten)
+
+	other, err := svc.Create(ctx, "u1", CreateInput{TenantID: "t1", Name: "Casa", Lat: 4.65, Lng: -74.06})
+	if err != nil || other.Kind != KindOther || other.Listed {
+		t.Fatalf("other=%+v %v", other, err)
+	}
+	club, err := svc.CreateClub(ctx, "u1", CreateInput{TenantID: "t1", Name: "Video Club", AddressText: "Chapinero", Lat: 4.65, Lng: -74.06})
+	if err != nil || club.Kind != KindClub || !club.Listed {
+		t.Fatalf("club=%+v %v", club, err)
+	}
+
+	open, err := svc.GetClub(ctx, "", club.ID)
+	if err != nil || open.ID != club.ID {
+		t.Fatalf("listed public=%+v %v", open, err)
+	}
+	if _, err := svc.GetClub(ctx, "", other.ID); !errors.Is(err, auth.ErrNotFound) {
+		t.Fatalf("other as club=%v", err)
+	}
+	dir, err := svc.ListClubs(ctx, ListFilter{Limit: 20, Q: "video"})
+	if err != nil || len(dir) != 1 {
+		t.Fatalf("listed dir=%+v %v", dir, err)
+	}
+
+	listed := false
+	if _, err := svc.PatchClub(ctx, "staff", club.ID, PatchInput{Listed: &listed}); !errors.Is(err, auth.ErrForbidden) {
+		t.Fatalf("staff patch=%v", err)
+	}
+	unlisted, err := svc.PatchClub(ctx, "u1", club.ID, PatchInput{Listed: &listed})
+	if err != nil || unlisted.Listed {
+		t.Fatalf("unlist=%+v %v", unlisted, err)
+	}
+	if _, err := svc.GetClub(ctx, "", club.ID); !errors.Is(err, auth.ErrNotFound) {
+		t.Fatalf("unlisted public=%v", err)
+	}
+	empty, err := svc.ListClubs(ctx, ListFilter{Limit: 20})
+	if err != nil || len(empty) != 0 {
+		t.Fatalf("unlisted dir=%+v %v", empty, err)
+	}
+	if err := svc.RecordPublishedEvent(ctx, club.ID, 1); err != nil {
+		t.Fatal(err)
+	}
+	pub, err := svc.GetClub(ctx, "", club.ID)
+	if err != nil || pub.PublishedUses != 1 {
+		t.Fatalf("published club=%+v %v", pub, err)
+	}
+	again, err := svc.ListClubs(ctx, ListFilter{Limit: 20})
+	if err != nil || len(again) != 1 {
+		t.Fatalf("published dir=%+v %v", again, err)
+	}
+}
+
 func TestPublishWithoutPin(t *testing.T) {
 	if err := geo.RequirePin(nil, nil); !errors.Is(err, auth.ErrValidation) {
 		t.Fatalf("err=%v", err)

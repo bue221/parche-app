@@ -951,6 +951,123 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/Error"
+  /v1/clubs:
+    get:
+      summary: Public club directory (F25)
+      operationId: listClubs
+      security: []
+      description: >
+        Venues with kind=club that are listed or have at least one published event.
+        Pins are WGS84 for MapLibre/OSM; no Google Maps.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
+      responses:
+        "200":
+          description: Club map directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClubList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      summary: Create a listed club venue (F25)
+      operationId: createClub
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVenueRequest"
+            example:
+              tenant_id: "0199a0c0-0000-7000-8000-000000000010"
+              name: Video Club
+              address_text: Chapinero, Bogotá
+              lat: 4.65
+              lng: -74.06
+      responses:
+        "201":
+          description: Venue stored as kind=club listed=true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/clubs/{id}:
+    get:
+      summary: Get a club with pin, address, and upcoming events (F25)
+      operationId: getClub
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Public if listed or a published event uses it; otherwise tenant member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update a club (tenant owner) (F25)
+      operationId: patchClub
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchClubRequest"
+      responses:
+        "200":
+          description: Updated club
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
   /v1/auth/register:
     post:
       summary: Register (F04)
@@ -2614,6 +2731,32 @@ components:
         created_at:
           type: string
           format: date-time
+        kind:
+          type: string
+          enum: [club, other]
+        listed:
+          type: boolean
+          description: Explicit directory listing. Clubs also appear when published_uses > 0.
+    Club:
+      allOf:
+        - $ref: "#/components/schemas/Venue"
+        - type: object
+          properties:
+            upcoming:
+              type: array
+              items:
+                $ref: "#/components/schemas/EventMapItem"
+    ClubList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Venue"
+        next_cursor:
+          type: string
+          nullable: true
     VenueList:
       type: object
       required: [items]
@@ -2645,6 +2788,9 @@ components:
         source:
           type: string
           enum: [user_pin]
+        kind:
+          type: string
+          enum: [club, other]
     PatchVenueRequest:
       type: object
       properties:
@@ -2659,6 +2805,27 @@ components:
         geojson:
           type: object
           nullable: true
+        kind:
+          type: string
+          enum: [club, other]
+        listed:
+          type: boolean
+    PatchClubRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+          nullable: true
+        listed:
+          type: boolean
     RegisterRequest:
       type: object
       required: [email, password, display_name, profile]

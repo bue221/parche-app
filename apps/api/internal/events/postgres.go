@@ -141,6 +141,9 @@ func (s *PG) List(ctx context.Context, f ListFilter) ([]Event, error) {
 		}
 		add("e.id = ANY($%d::uuid[])", f.RestrictIDs)
 	}
+	if f.VenueID != "" {
+		add("e.venue_id = $%d", f.VenueID)
+	}
 	if f.Cursor != "" {
 		n++
 		args = append(args, curStarts)

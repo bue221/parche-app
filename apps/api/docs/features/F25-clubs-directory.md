@@ -25,9 +25,9 @@ Venues persistentes (clubes, casas) explorables aparte de un evento suelto.
 
 ## Checklist
 
-- [ ] Mapa de clubes sin Google
-- [ ] Próximos eventos embebidos
-- [ ] No duplicar tabla: es vista sobre venues
+- [x] Mapa de clubes sin Google
+- [x] Próximos eventos embebidos
+- [x] No duplicar tabla: es vista sobre venues
 
 ## Next step
 

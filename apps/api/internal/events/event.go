@@ -152,6 +152,7 @@ type ListFilter struct {
 	To          *time.Time
 	Genres      []string
 	ArtistID    string
+	VenueID     string
 	RestrictIDs []string
 }
 

@@ -8,7 +8,11 @@ import (
 	"github.com/parche-app/backend/internal/geo"
 )
 
-const SourceUserPin = "user_pin"
+const (
+	SourceUserPin = "user_pin"
+	KindClub      = "club"
+	KindOther     = "other"
+)
 
 // Venue is a reusable place. lat/lng are WGS84. GeoJSON is Point or Polygon.
 type Venue struct {
@@ -20,11 +24,13 @@ type Venue struct {
 	Lng           float64         `json:"lng"`
 	GeoJSON       json.RawMessage `json:"geojson,omitempty"`
 	Source        string          `json:"source"`
+	Kind          string          `json:"kind"`
+	Listed        bool            `json:"listed"`
 	CreatedAt     time.Time       `json:"created_at"`
 	PublishedUses int             `json:"-"`
 }
 
-// CreateInput is POST /v1/venues.
+// CreateInput is POST /v1/venues (and POST /v1/clubs with Kind=club Listed=true).
 type CreateInput struct {
 	TenantID    string
 	Name        string
@@ -33,6 +39,8 @@ type CreateInput struct {
 	Lng         float64
 	GeoJSON     json.RawMessage
 	Source      string
+	Kind        string
+	Listed      bool
 }
 
 // PatchInput is PATCH /v1/venues/{id}. Nil fields stay unchanged.
@@ -42,15 +50,19 @@ type PatchInput struct {
 	Lat         *float64
 	Lng         *float64
 	GeoJSON     *json.RawMessage
+	Kind        *string
+	Listed      *bool
 }
 
-// ListFilter is GET /v1/venues.
+// ListFilter is GET /v1/venues. Directory is GET /v1/clubs (kind=club and listed or published).
 type ListFilter struct {
-	Q        string
-	BBox     *geo.BBox
-	TenantID string
-	Cursor   string
-	Limit    int
+	Q         string
+	BBox      *geo.BBox
+	TenantID  string
+	Cursor    string
+	Limit     int
+	Kind      string
+	Directory bool
 }
 
 // Store persists venues. Implementations must not talk to Google or other map vendors.

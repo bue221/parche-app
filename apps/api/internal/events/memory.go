@@ -135,6 +135,9 @@ func (m *Memory) List(_ context.Context, f ListFilter) ([]Event, error) {
 		if !inRestrictIDs(e.ID, f.RestrictIDs) {
 			continue
 		}
+		if f.VenueID != "" && e.VenueID != f.VenueID {
+			continue
+		}
 		if !afterCursor(e, curStarts, curID) {
 			continue
 		}
