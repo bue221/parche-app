@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parche web
 
-## Getting Started
+Sitio público de Parche en [Next.js 16](https://nextjs.org/docs). Landing de eventos en vivo + el mismo sistema visual que `app-frontend`: flyer blanco y negro, claro/oscuro del sistema, verde solo en confirmación.
 
-First, run the development server:
+## Quick path
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. `pnpm install` (solo pnpm; npm/yarn/bun están bloqueados)
+2. `pnpm dev`
+3. Abre [http://localhost:3000](http://localhost:3000)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Tokens y reglas visuales: [`docs/ui/design.md`](docs/ui/design.md). Catálogo interno (noindex): `/sistema`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Pieza | Dónde |
+|-------|--------|
+| Landing | `src/app/page.tsx` + `src/components/landing/` |
+| Tokens | `src/app/globals.css` |
+| Primitivos | `src/components/ui/` |
+| SEO | `src/lib/seo.ts`, `sitemap.ts`, `robots.ts`, JSON-LD, OG image |
+| Fuentes | Inter (Favorit) y Antonio (Foggy) vía `next/font/local` |
 
-## Learn More
+## SEO
 
-To learn more about Next.js, take a look at the following resources:
+- `metadataBase`, title template, Open Graph, Twitter, canonical y `es-CO`
+- `sitemap.ts` / `robots.ts` / `manifest.ts`
+- JSON-LD: Organization, WebSite, WebPage, SoftwareApplication, FAQPage
+- Imagen OG generada con Antonio (flyer)
+- `/sistema` queda fuera del índice
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Env
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Copia [`.env.example`](.env.example) a `.env`.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Variable | Uso |
+|----------|-----|
+| `NEXT_PUBLIC_SITE_URL` | Canonical, sitemap y JSON-LD de este sitio |
+| `NEXT_PUBLIC_APP_WEB_URL` | App Expo en web (`app-frontend`, `pnpm web`) |
+| `NEXT_PUBLIC_APP_STORE_URL` | Listado de App Store (vacío = próximamente) |
+| `NEXT_PUBLIC_PLAY_STORE_URL` | Listado de Google Play (vacío = próximamente) |
