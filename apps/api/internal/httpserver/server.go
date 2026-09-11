@@ -18,15 +18,23 @@ import (
 	"github.com/parche-app/backend/internal/redisx"
 )
 
-// NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
-func NewMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers ...health.Checker) http.Handler {
-	return newMux(log, cfg, limiter, checkers, nil)
+// Routes are product handlers that sit on the F02 mux. Optional until later features wire them.
+type Routes struct {
+	Store  objectstore.Store
+	Access Access
+	Events EventWrite
 }
 
-func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers []health.Checker, extra func(*http.ServeMux)) http.Handler {
+// NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
+func NewMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers ...health.Checker) http.Handler {
+	return newMux(log, cfg, limiter, checkers, nil, Routes{})
+}
+
+func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers []health.Checker, extra func(*http.ServeMux), routes Routes) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", health.Health())
 	mux.Handle("GET /ready", health.Ready(log, checkers...))
+	registerUploadRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -61,11 +69,15 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		log.Error("object store", "err", err)
 	}
 
-	handler := NewMux(log, cfg, ratelimit.New(rdb),
+	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
 		objectstore.Checker{Store: store},
-	)
+	}, nil, Routes{
+		Store:  store,
+		Access: RejectAccess{},
+		Events: DenyEventWrite{},
+	})
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

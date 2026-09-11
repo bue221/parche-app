@@ -21,14 +21,15 @@ type Config struct {
 	JWTRefreshSecret string
 	TicketSigningKey string
 
-	ObjectStoreDriver    string
-	ObjectStoreEndpoint  string
-	ObjectStoreBucket    string
-	ObjectStoreAccessKey string
-	ObjectStoreSecretKey string
-	ObjectStoreRegion    string
-	ObjectStoreUseSSL    bool
-	ObjectStorePath      string
+	ObjectStoreDriver        string
+	ObjectStoreEndpoint      string
+	ObjectStoreBucket        string
+	ObjectStoreAccessKey     string
+	ObjectStoreSecretKey     string
+	ObjectStoreRegion        string
+	ObjectStoreUseSSL        bool
+	ObjectStorePath          string
+	ObjectStorePublicBaseURL string
 
 	PaymentWebhookSecret string
 	SMTPHost             string
@@ -43,30 +44,31 @@ type Config struct {
 // Missing DATABASE_URL or JWT secrets is a fatal configuration error.
 func Load() (Config, error) {
 	cfg := Config{
-		Service:              getenv("SERVICE", "api"),
-		HTTPAddr:             getenv("HTTP_ADDR", ":8080"),
-		DatabaseURL:          os.Getenv("DATABASE_URL"),
-		RedisURL:             os.Getenv("REDIS_URL"),
-		BrokerURL:            os.Getenv("BROKER_URL"),
-		LogLevel:             getenv("LOG_LEVEL", "info"),
-		JWTAccessSecret:      os.Getenv("JWT_ACCESS_SECRET"),
-		JWTRefreshSecret:     os.Getenv("JWT_REFRESH_SECRET"),
-		TicketSigningKey:     os.Getenv("TICKET_SIGNING_KEY"),
-		ObjectStoreDriver:    getenv("OBJECT_STORE_DRIVER", "fs"),
-		ObjectStoreEndpoint:  os.Getenv("OBJECT_STORE_ENDPOINT"),
-		ObjectStoreBucket:    getenv("OBJECT_STORE_BUCKET", "parche"),
-		ObjectStoreAccessKey: os.Getenv("OBJECT_STORE_ACCESS_KEY"),
-		ObjectStoreSecretKey: os.Getenv("OBJECT_STORE_SECRET_KEY"),
-		ObjectStoreRegion:    getenv("OBJECT_STORE_REGION", "us-east-1"),
-		ObjectStoreUseSSL:    getenvBool("OBJECT_STORE_USE_SSL", false),
-		ObjectStorePath:      getenv("OBJECT_STORE_PATH", "./data/media"),
-		PaymentWebhookSecret: os.Getenv("PAYMENT_WEBHOOK_SECRET"),
-		SMTPHost:             os.Getenv("SMTP_HOST"),
-		SMTPPort:             getenv("SMTP_PORT", "587"),
-		SMTPUser:             os.Getenv("SMTP_USER"),
-		SMTPPassword:         os.Getenv("SMTP_PASSWORD"),
-		EmailFrom:            os.Getenv("EMAIL_FROM"),
-		CORSOrigins:          splitCSV(os.Getenv("CORS_ORIGINS")),
+		Service:                  getenv("SERVICE", "api"),
+		HTTPAddr:                 getenv("HTTP_ADDR", ":8080"),
+		DatabaseURL:              os.Getenv("DATABASE_URL"),
+		RedisURL:                 os.Getenv("REDIS_URL"),
+		BrokerURL:                os.Getenv("BROKER_URL"),
+		LogLevel:                 getenv("LOG_LEVEL", "info"),
+		JWTAccessSecret:          os.Getenv("JWT_ACCESS_SECRET"),
+		JWTRefreshSecret:         os.Getenv("JWT_REFRESH_SECRET"),
+		TicketSigningKey:         os.Getenv("TICKET_SIGNING_KEY"),
+		ObjectStoreDriver:        getenv("OBJECT_STORE_DRIVER", "fs"),
+		ObjectStoreEndpoint:      os.Getenv("OBJECT_STORE_ENDPOINT"),
+		ObjectStoreBucket:        getenv("OBJECT_STORE_BUCKET", "parche"),
+		ObjectStoreAccessKey:     os.Getenv("OBJECT_STORE_ACCESS_KEY"),
+		ObjectStoreSecretKey:     os.Getenv("OBJECT_STORE_SECRET_KEY"),
+		ObjectStoreRegion:        getenv("OBJECT_STORE_REGION", "us-east-1"),
+		ObjectStoreUseSSL:        getenvBool("OBJECT_STORE_USE_SSL", false),
+		ObjectStorePath:          getenv("OBJECT_STORE_PATH", "./data/media"),
+		ObjectStorePublicBaseURL: os.Getenv("OBJECT_STORE_PUBLIC_BASE_URL"),
+		PaymentWebhookSecret:     os.Getenv("PAYMENT_WEBHOOK_SECRET"),
+		SMTPHost:                 os.Getenv("SMTP_HOST"),
+		SMTPPort:                 getenv("SMTP_PORT", "587"),
+		SMTPUser:                 os.Getenv("SMTP_USER"),
+		SMTPPassword:             os.Getenv("SMTP_PASSWORD"),
+		EmailFrom:                os.Getenv("EMAIL_FROM"),
+		CORSOrigins:              splitCSV(os.Getenv("CORS_ORIGINS")),
 	}
 
 	if err := cfg.Validate(); err != nil {

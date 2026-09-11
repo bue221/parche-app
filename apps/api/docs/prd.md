@@ -396,7 +396,7 @@ RC-021–025 viven en F05, F08 PATCH, F25, F27, F26 — no en un cajón “despu
 ## Checklist de aceptación
 
 - [ ] `docker compose up` levanta api, worker, postgres, redis, broker y MinIO (o FS).
-- [ ] Cambiar `OBJECT_STORE_DRIVER` a `s3` no exige reescribir handlers.
+- [x] Cambiar `OBJECT_STORE_DRIVER` a `s3` no exige reescribir handlers.
 - [ ] Un promoter crea un evento con flyer, pin (`lat`/`lng`) y, en Sprint 2, audios; el detalle público los muestra.
 - [ ] El mapa del cliente no usa Google Maps; consume coordenadas de la API.
 - [ ] El promoter invita a dos usuarios `door`; ambos escanean a la vez; el mismo QR no entra dos veces.

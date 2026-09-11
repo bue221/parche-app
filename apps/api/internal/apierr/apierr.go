@@ -147,6 +147,11 @@ func DefaultMessage(code string) string {
 	}
 }
 
+// WriteJSON sends a success body with the product Content-Type.
+func WriteJSON(w http.ResponseWriter, status int, body any) {
+	writeJSON(w, status, body)
+}
+
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)

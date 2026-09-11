@@ -90,10 +90,10 @@ No hay fila hasta confirmación. Opcional: tabla `upload_intents` (`key`, `user_
 
 ## Checklist
 
-- [ ] Un test usa driver `fs` o MinIO y completa PUT + Exists
-- [ ] Cambiar driver a `s3` es env-only
-- [ ] Presign expira; un PUT tarde falla en el store
-- [ ] Avatar no puede escribirse bajo `events/`
+- [x] Un test usa driver `fs` o MinIO y completa PUT + Exists
+- [x] Cambiar driver a `s3` es env-only
+- [x] Presign expira; un PUT tarde falla en el store
+- [x] Avatar no puede escribirse bajo `events/`
 
 ## Next step
 

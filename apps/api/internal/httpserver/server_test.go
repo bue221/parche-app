@@ -36,7 +36,7 @@ func testMux(t *testing.T, extra func(*http.ServeMux)) http.Handler {
 	cfg := config.Config{CORSOrigins: []string{"http://localhost:3000", "*"}}
 	return newMux(testLogger(), cfg, ratelimit.NewMemory(), []health.Checker{
 		pingOK{name: "postgres"}, pingOK{name: "redis"}, pingOK{name: "object_store"},
-	}, extra)
+	}, extra, Routes{})
 }
 
 func TestMuxHealthAndReady(t *testing.T) {
@@ -60,7 +60,7 @@ func TestMuxHealthAndReady(t *testing.T) {
 
 func TestMuxReadyFailsClosed(t *testing.T) {
 	cfg := config.Config{}
-	mux := newMux(testLogger(), cfg, nil, []health.Checker{pingOK{name: "postgres"}, pingFail{name: "redis"}}, nil)
+	mux := newMux(testLogger(), cfg, nil, []health.Checker{pingOK{name: "postgres"}, pingFail{name: "redis"}}, nil, Routes{})
 
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/health", nil))
@@ -208,7 +208,7 @@ func TestAccessLogOmitsAuthorization(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewJSONHandler(&buf, nil))
 	cfg := config.Config{CORSOrigins: []string{"http://localhost:3000"}}
-	mux := newMux(log, cfg, ratelimit.NewMemory(), nil, nil)
+	mux := newMux(log, cfg, ratelimit.NewMemory(), nil, nil, Routes{})
 	req := httptest.NewRequest(http.MethodGet, "/v1/secret", nil)
 	req.Header.Set("Authorization", "Bearer super-secret-token")
 	req.URL.RawQuery = "refresh_token=hidden"

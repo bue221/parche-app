@@ -17,7 +17,7 @@ func TestRateLimitLogin(t *testing.T) {
 		mux.HandleFunc("POST /v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
-	})
+	}, Routes{})
 	body := `{"email":"user@example.com","password":"x"}`
 	for i := 0; i < 10; i++ {
 		rr := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func TestRateLimitCheckIn(t *testing.T) {
 		mux.HandleFunc("POST /v1/events/{eventId}/check-in", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
-	})
+	}, Routes{})
 	for i := 0; i < 30; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/v1/events/11111111-1111-1111-1111-111111111111/check-in", nil)
@@ -78,7 +78,7 @@ func TestRateLimitPublicList(t *testing.T) {
 		mux.HandleFunc("GET /v1/events", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		})
-	})
+	}, Routes{})
 	for i := 0; i < 60; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)

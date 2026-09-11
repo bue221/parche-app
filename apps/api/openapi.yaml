@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.2.0
+  version: 0.3.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -88,6 +88,46 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/uploads:
+    post:
+      summary: Issue a short-lived PUT presign (F03)
+      operationId: createUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+            example:
+              kind: flyer
+              content_type: image/jpeg
+              byte_size: 1200000
+              event_id: "0199a0c0-0000-7000-8000-000000000010"
+      responses:
+        "200":
+          description: Server-generated key and PUT grant (5 minute TTL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+              example:
+                key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/flyer/0199a0c0-0000-7000-8000-000000000030.webp
+                upload:
+                  method: PUT
+                  url: https://minio.example/parche/...?X-Amz-Signature=redacted
+                  headers:
+                    Content-Type: image/jpeg
+                  expires_at: "2026-09-11T19:35:00Z"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Error"
   /v1/events/{eventId}/check-in:
     post:
       summary: Door check-in (F19)
@@ -189,6 +229,44 @@ components:
         next_cursor:
           type: string
           nullable: true
+    UploadRequest:
+      type: object
+      required: [kind, content_type, byte_size]
+      properties:
+        kind:
+          type: string
+          enum: [flyer, gallery, avatar, audio]
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          format: int64
+        event_id:
+          type: string
+          format: uuid
+          nullable: true
+    UploadResponse:
+      type: object
+      required: [key, upload]
+      properties:
+        key:
+          type: string
+        upload:
+          type: object
+          required: [method, url, headers, expires_at]
+          properties:
+            method:
+              type: string
+              example: PUT
+            url:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            expires_at:
+              type: string
+              format: date-time
   responses:
     Error:
       description: Standard product error

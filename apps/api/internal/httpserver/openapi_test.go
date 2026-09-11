@@ -24,6 +24,7 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"/health",
 		"/ready",
 		"/v1/auth/login",
+		"/v1/uploads",
 		"/v1/events/{eventId}/check-in",
 		"VALIDATION_ERROR",
 		"UNAUTHORIZED",
