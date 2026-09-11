@@ -144,6 +144,9 @@ func (s *PG) List(ctx context.Context, f ListFilter) ([]Event, error) {
 	if f.VenueID != "" {
 		add("e.venue_id = $%d", f.VenueID)
 	}
+	if f.Status != "" {
+		add("e.status = $%d", f.Status)
+	}
 	if f.Cursor != "" {
 		n++
 		args = append(args, curStarts)

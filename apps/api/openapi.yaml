@@ -1421,6 +1421,28 @@ paths:
           $ref: "#/components/responses/Error"
         "410":
           $ref: "#/components/responses/Error"
+  /v1/me/email/opt-out:
+    post:
+      summary: Unsubscribe from broadcasts and digest (F27)
+      operationId: optOutEmail
+      security: []
+      description: Access JWT or signed token from mail (body.token or query token). Sets users.email_opt_out.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        "204":
+          description: Opted out
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/users/{id}:
     get:
       summary: Public user profile (F14)
@@ -2181,6 +2203,304 @@ paths:
           $ref: "#/components/responses/NotFound"
         "410":
           $ref: "#/components/responses/Gone"
+  /v1/admin/events:
+    get:
+      summary: Admin event queue (F27)
+      operationId: listAdminEvents
+      security:
+        - bearerAuth: []
+      description: Requires platform_admin. Default status is pending_review. Does not grant event.door.scan.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_review, published, rejected, cancelled, archived]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        "200":
+          description: Events matching status
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/admin/events/{id}/approve:
+    post:
+      summary: Publish a pending_review event (F27)
+      operationId: approveAdminEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Event is published; public list cache dropped; artist follow mail queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/events/{id}/reject:
+    post:
+      summary: Reject a pending_review event (F27)
+      operationId: rejectAdminEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Status is rejected; promoter is emailed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/users:
+    get:
+      summary: Search users by email or name (F27)
+      operationId: listAdminUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        "200":
+          description: Admin user rows including email
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/admin/users/{id}:
+    get:
+      summary: User detail with profiles and tenants (F27)
+      operationId: getAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Admin user
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/admin/users/{id}/disable:
+    post:
+      summary: Disable a user and revoke sessions (F27)
+      operationId: disableAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status disabled; refresh revoked; session_epoch incremented
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/users/{id}/enable:
+    post:
+      summary: Re-enable a user (F27)
+      operationId: enableAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status active
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/admin/users/{id}/profiles:
+    post:
+      summary: Add or remove platform_admin or promoter (F27)
+      operationId: mutateAdminUserProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile, op]
+              properties:
+                profile:
+                  type: string
+                  enum: [platform_admin, promoter]
+                op:
+                  type: string
+                  enum: [add, remove]
+      responses:
+        "204":
+          description: Profile updated
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/metrics:
+    get:
+      summary: Platform totals (F27)
+      operationId: getAdminMetrics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Users, published events, GMV last 30 days
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: integer
+                  events_published:
+                    type: integer
+                  gmv_cents_30d:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/admin/broadcasts:
+    post:
+      summary: Queue transactional digest to a Parche audience (F26, F27)
+      operationId: createAdminBroadcast
+      security:
+        - bearerAuth: []
+      description: platform_admin only. Recipients are Parche users who have not set email_opt_out. Rate limited harder than other admin routes. Does not buy lists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audience]
+              properties:
+                template:
+                  type: string
+                  default: admin_digest
+                audience:
+                  type: string
+                  enum: [all_attendees, followers_of_artist, event_buyers]
+                artist_id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+                vars:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        "202":
+          description: Messages queued through email.send
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)

@@ -20,6 +20,7 @@ const (
 	TemplateEventCancelled = "event_cancelled"
 	TemplateArtistNewEvent = "artist_new_event"
 	TemplateAdminDigest    = "admin_digest"
+	TemplateEventRejected  = "event_rejected"
 )
 
 // Message is the F26 Send contract. Vars must not include passwords or QR tokens.

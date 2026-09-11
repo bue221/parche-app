@@ -27,6 +27,7 @@ type User struct {
 	AvatarAssetID string
 	Status        string
 	SessionEpoch  int
+	EmailOptOut   bool
 	CreatedAt     time.Time
 }
 
@@ -139,6 +140,15 @@ type Store interface {
 	EmailChangeByHash(ctx context.Context, hash string) (EmailChangeRow, error)
 	MarkEmailChangeUsed(ctx context.Context, id string, at time.Time) error
 	InvalidateUserEmailChanges(ctx context.Context, userID string, at time.Time) error
+
+	DeleteProfile(ctx context.Context, userID, profile string) error
+	SearchUsers(ctx context.Context, q string, limit int) ([]User, error)
+	CountUsers(ctx context.Context) (int, error)
+	CountActiveProfiles(ctx context.Context, profile string) (int, error)
+	SetUserStatus(ctx context.Context, userID, status string) error
+	BumpSessionEpoch(ctx context.Context, userID string) error
+	SetEmailOptOut(ctx context.Context, userID string, optedOut bool) error
+	ListMailRecipients(ctx context.Context) ([]User, error)
 
 	InTx(ctx context.Context, fn func(Store) error) error
 }

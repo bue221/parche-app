@@ -47,7 +47,7 @@ func mustLoadTemplates() map[string]templateFile {
 	required := []string{
 		TemplatePasswordReset, TemplateEventInvite, TemplateEmailChange, TemplateTicketClaim,
 		TemplateOrderPaid, TemplateOrderFailed, TemplateEventCancelled, TemplateArtistNewEvent,
-		TemplateAdminDigest,
+		TemplateAdminDigest, TemplateEventRejected,
 	}
 	for _, id := range required {
 		if _, ok := out[id]; !ok {

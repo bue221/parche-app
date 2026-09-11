@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/parche-app/backend/internal/admin"
 	"github.com/parche-app/backend/internal/applog"
 	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
@@ -44,6 +46,7 @@ type Routes struct {
 	Payments      payments.Provider
 	WebhookSecret string
 	AppEnv        string
+	Audit         admin.Auditor
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -66,6 +69,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerPostRoutes(mux, routes)
 	registerRecRoutes(mux, routes)
 	registerOrderRoutes(mux, routes)
+	registerAdminRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -111,6 +115,13 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if sessions != nil {
 		sessions.Mailer = mailer.Log{Logger: log}
 		sessions.AppOrigin = cfg.AppOrigin
+		if email := strings.TrimSpace(cfg.BootstrapAdminEmail); email != "" {
+			if err := sessions.BootstrapPlatformAdmin(ctx, email); err != nil {
+				log.Error("bootstrap platform admin", "err", err)
+			} else {
+				log.Info("bootstrap platform admin granted")
+			}
+		}
 	}
 	access := JWTAccess{Tokens: tokens, Lookup: nil}
 	if sessions != nil {
@@ -228,6 +239,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Payments:      pay,
 		WebhookSecret: cfg.PaymentWebhookSecret,
 		AppEnv:        cfg.AppEnv,
+		Audit:         admin.PG{Pool: pool},
 	})
 
 	srv := &http.Server{

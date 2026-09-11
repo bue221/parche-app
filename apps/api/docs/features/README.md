@@ -115,9 +115,9 @@ F01 runtime
 
 ## Checklist de carpeta
 
-- [ ] Toda historia RC-001–025 tiene dueño en una feature
-- [ ] Nada del PRD (media, mapa, RBAC, QR, métricas, email, clubes, admin) quedó “para después”
-- [ ] Cada feature nueva se enlaza **aquí** y en [docs/README.md](../README.md)
+- [x] Toda historia RC-001–025 tiene dueño en una feature
+- [x] Nada del PRD (media, mapa, RBAC, QR, métricas, email, clubes, admin) quedó “para después”
+- [x] Cada feature nueva se enlaza **aquí** y en [docs/README.md](../README.md)
 
 ## Next step
 

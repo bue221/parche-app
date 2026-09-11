@@ -307,6 +307,8 @@ func writeAuthErr(w http.ResponseWriter, r *http.Request, err error) {
 		apierr.Write(w, r, apierr.Conflict, "Ese correo ya tiene cuenta", nil)
 	case errors.Is(err, auth.ErrLastOwner):
 		apierr.Write(w, r, apierr.Conflict, "El colectivo debe tener al menos un owner", nil)
+	case errors.Is(err, auth.ErrLastAdmin):
+		apierr.Write(w, r, apierr.Conflict, "Debe quedar al menos un admin de plataforma", nil)
 	case errors.Is(err, auth.ErrConflict):
 		apierr.Write(w, r, apierr.Conflict, "", nil)
 	case errors.Is(err, auth.ErrNotFound):

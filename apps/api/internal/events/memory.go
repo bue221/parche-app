@@ -138,6 +138,9 @@ func (m *Memory) List(_ context.Context, f ListFilter) ([]Event, error) {
 		if f.VenueID != "" && e.VenueID != f.VenueID {
 			continue
 		}
+		if f.Status != "" && e.Status != f.Status {
+			continue
+		}
 		if !afterCursor(e, curStarts, curID) {
 			continue
 		}
@@ -405,6 +408,30 @@ func (m *Memory) TenantMetricsWindow(_ context.Context, tenantID string, from, t
 		}
 	}
 	return out, paid, nil
+}
+
+func (m *Memory) CountPublished(_ context.Context) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, e := range m.byID {
+		if e.Status == StatusPublished {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (m *Memory) GMVSince(_ context.Context, since time.Time) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	sum := 0
+	for _, o := range m.orders {
+		if o.Status == OrderPaid && !o.CreatedAt.Before(since) {
+			sum += o.AmountCents
+		}
+	}
+	return sum, nil
 }
 
 func cloneEvent(e Event) Event {

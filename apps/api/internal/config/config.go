@@ -42,6 +42,7 @@ type Config struct {
 	SMTPPassword           string
 	EmailFrom              string
 	EmailDriver            string
+	BootstrapAdminEmail    string
 	AppOrigin              string
 	CORSOrigins            []string
 	AppEnv                 string
@@ -79,6 +80,7 @@ func Load() (Config, error) {
 		SMTPPassword:             os.Getenv("SMTP_PASSWORD"),
 		EmailFrom:                os.Getenv("EMAIL_FROM"),
 		EmailDriver:              getenv("EMAIL_DRIVER", "log"),
+		BootstrapAdminEmail:      os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 		AppOrigin:                getenv("APP_ORIGIN", "http://localhost:3000"),
 		CORSOrigins:              splitCSV(os.Getenv("CORS_ORIGINS")),
 		AppEnv:                   getenv("APP_ENV", ""),

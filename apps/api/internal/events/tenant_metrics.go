@@ -42,7 +42,6 @@ type TenantEventMetricRow struct {
 	Sold       int
 }
 
-// TenantMetrics is GET /v1/tenants/{id}/metrics. Staff is 403; strangers 404.
 func (s *Service) TenantMetrics(ctx context.Context, userID, tenantID, fromRaw, toRaw string) (TenantMetrics, error) {
 	from, to, err := parseTenantMetricsWindow(s.now(), fromRaw, toRaw)
 	if err != nil {
@@ -86,6 +85,9 @@ func (s *Service) requireTenantOwner(ctx context.Context, tenantID, userID strin
 		}
 		return err
 	}
+	if s.isPlatformAdmin(ctx, userID) {
+		return nil
+	}
 	role, err := s.Tenancy.Membership(ctx, tenantID, userID)
 	if err != nil {
 		if errors.Is(err, auth.ErrNotFound) {
@@ -97,6 +99,22 @@ func (s *Service) requireTenantOwner(ctx context.Context, tenantID, userID strin
 		return auth.ErrForbidden
 	}
 	return nil
+}
+
+func (s *Service) isPlatformAdmin(ctx context.Context, userID string) bool {
+	if s.Tenancy == nil || strings.TrimSpace(userID) == "" {
+		return false
+	}
+	profs, err := s.Tenancy.Profiles(ctx, userID)
+	if err != nil {
+		return false
+	}
+	for _, p := range profs {
+		if p == auth.ProfilePlatformAdmin {
+			return true
+		}
+	}
+	return false
 }
 
 func parseTenantMetricsWindow(now time.Time, fromRaw, toRaw string) (time.Time, time.Time, error) {

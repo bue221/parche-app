@@ -139,6 +139,12 @@ const (
 	publicListWindow     = time.Minute
 	meTicketsLimit       = 60
 	meTicketsWindow      = time.Minute
+	adminLimit           = 30
+	adminWindow          = time.Minute
+	broadcastLimit       = 2
+	broadcastWindow      = time.Minute
+	emailOptOutLimit     = 10
+	emailOptOutWindow    = time.Hour
 )
 
 func rateLimit(next http.Handler, limiter ratelimit.Limiter) http.Handler {
@@ -188,6 +194,24 @@ func limitSpec(r *http.Request) (key string, limit int, window time.Duration, ap
 			user = ip
 		}
 		return "rl:tickets:" + user, meTicketsLimit, meTicketsWindow, true
+	case r.Method == http.MethodPost && path == "/v1/me/email/opt-out":
+		user := userIDFromRequest(r)
+		if user == "" {
+			user = ip
+		}
+		return "rl:optout:" + user, emailOptOutLimit, emailOptOutWindow, true
+	case r.Method == http.MethodPost && path == "/v1/admin/broadcasts":
+		user := userIDFromRequest(r)
+		if user == "" {
+			user = ip
+		}
+		return "rl:broadcast:" + user, broadcastLimit, broadcastWindow, true
+	case strings.HasPrefix(path, "/v1/admin/"):
+		user := userIDFromRequest(r)
+		if user == "" {
+			user = ip
+		}
+		return "rl:admin:" + user, adminLimit, adminWindow, true
 	case r.Method == http.MethodGet && isPublicListPath(path):
 		return "rl:list:" + ip, publicListLimit, publicListWindow, true
 	default:

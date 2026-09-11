@@ -154,6 +154,7 @@ type ListFilter struct {
 	ArtistID    string
 	VenueID     string
 	RestrictIDs []string
+	Status      string
 }
 
 // Member is an event-scoped role. Status is active or revoked (pending lives on Invite).
@@ -242,6 +243,8 @@ type Store interface {
 	ListEventTicketExport(ctx context.Context, eventID string) ([]TicketExportRow, error)
 	TenantMetricsWindow(ctx context.Context, tenantID string, from, to time.Time) ([]TenantEventMetricRow, int, error)
 	ListTicketHolderIDs(ctx context.Context, eventID string) ([]string, error)
+	CountPublished(ctx context.Context) (int, error)
+	GMVSince(ctx context.Context, since time.Time) (int, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.

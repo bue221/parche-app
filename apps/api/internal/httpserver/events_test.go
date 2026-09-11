@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/parche-app/backend/internal/admin"
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
@@ -216,7 +217,10 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 	esvc := events.NewService(events.NewMemory(), store, vsvc, vmem, events.NewMemoryCache())
 	esvc.Pepper = tokens.RefreshPepper
 	esvc.AppOrigin = "http://localhost:3000"
-	esvc.Mailer = &mailer.Memory{}
+	box := &mailer.Memory{}
+	esvc.Mailer = box
+	svc.Mailer = box
+	svc.AppOrigin = "http://localhost:3000"
 	svc.EventRoles = esvc
 	obj, err := objectstore.NewFS(t.TempDir())
 	if err != nil {
@@ -244,6 +248,7 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 	msvc.Posts = psvc
 	psvc.Covers = msvc
 	rsvc := recs.NewService(recs.NewLive(esvc, asvc), recs.NewMemory())
+	audit := &admin.Memory{}
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
 		Store:         obj,
@@ -259,6 +264,7 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 		Payments:      payments.Fake{},
 		WebhookSecret: "test-webhook-secret",
 		AppEnv:        "dev",
+		Audit:         audit,
 	})
 	return mux, esvc, store
 }

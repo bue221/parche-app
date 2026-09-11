@@ -179,3 +179,18 @@ func (s *PG) TenantMetricsWindow(ctx context.Context, tenantID string, from, to 
 	}
 	return out, paid, nil
 }
+
+func (s *PG) CountPublished(ctx context.Context) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `SELECT COUNT(*)::int FROM events WHERE status = $1`, StatusPublished).Scan(&n)
+	return n, err
+}
+
+func (s *PG) GMVSince(ctx context.Context, since time.Time) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `
+		SELECT COALESCE(SUM(amount_cents), 0)::int
+		FROM orders
+		WHERE status = $1 AND created_at >= $2`, OrderPaid, since.UTC()).Scan(&n)
+	return n, err
+}

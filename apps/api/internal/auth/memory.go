@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -525,6 +526,123 @@ func (m *Memory) InsertEmailChange(_ context.Context, row EmailChangeRow) error 
 	m.emailChg[row.TokenHash] = row
 	m.emailChgID[row.ID] = row
 	return nil
+}
+
+func (m *Memory) DeleteProfile(_ context.Context, userID, profile string) error {
+	m.lock()
+	defer m.unlock()
+	cur := m.profiles[userID]
+	out := make([]string, 0, len(cur))
+	for _, p := range cur {
+		if p != profile {
+			out = append(out, p)
+		}
+	}
+	m.profiles[userID] = out
+	return nil
+}
+
+func (m *Memory) SearchUsers(_ context.Context, q string, limit int) ([]User, error) {
+	m.lock()
+	defer m.unlock()
+	if limit < 1 {
+		limit = 20
+	}
+	q = strings.ToLower(strings.TrimSpace(q))
+	out := make([]User, 0, limit)
+	for _, u := range m.users {
+		if q != "" {
+			if !strings.Contains(strings.ToLower(u.Email), q) && !strings.Contains(strings.ToLower(u.DisplayName), q) {
+				continue
+			}
+		}
+		out = append(out, u)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].CreatedAt.After(out[j].CreatedAt)
+		}
+		return out[i].ID < out[j].ID
+	})
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
+func (m *Memory) CountUsers(_ context.Context) (int, error) {
+	m.lock()
+	defer m.unlock()
+	return len(m.users), nil
+}
+
+func (m *Memory) CountActiveProfiles(_ context.Context, profile string) (int, error) {
+	m.lock()
+	defer m.unlock()
+	n := 0
+	for uid, profs := range m.profiles {
+		u, ok := m.users[uid]
+		if !ok || u.Status != StatusActive {
+			continue
+		}
+		for _, p := range profs {
+			if p == profile {
+				n++
+				break
+			}
+		}
+	}
+	return n, nil
+}
+
+func (m *Memory) SetUserStatus(_ context.Context, userID, status string) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	u.Status = status
+	m.users[userID] = u
+	return nil
+}
+
+func (m *Memory) BumpSessionEpoch(_ context.Context, userID string) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	u.SessionEpoch++
+	m.users[userID] = u
+	return nil
+}
+
+func (m *Memory) SetEmailOptOut(_ context.Context, userID string, optedOut bool) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	u.EmailOptOut = optedOut
+	m.users[userID] = u
+	return nil
+}
+
+func (m *Memory) ListMailRecipients(_ context.Context) ([]User, error) {
+	m.lock()
+	defer m.unlock()
+	out := make([]User, 0, len(m.users))
+	for _, u := range m.users {
+		if u.Status != StatusActive || u.EmailOptOut || strings.TrimSpace(u.Email) == "" {
+			continue
+		}
+		out = append(out, u)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
 }
 
 func (m *Memory) EmailChangeByHash(_ context.Context, hash string) (EmailChangeRow, error) {

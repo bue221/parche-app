@@ -54,9 +54,9 @@ Todo correo sale por un puerto `Mailer` y subjects en la cola. No hay SMTP en lo
 - [x] Forgot dispara template
 - [x] Invite dispara template
 - [x] Pago success dispara template
-- [ ] Broadcast con opt-out (F27 platform admin)
+- [x] Broadcast con opt-out (F27 platform admin)
 - [x] Driver log en tests
 
 ## Next step
 
-[F27](F27-platform-admin.md) broadcasts, `notify_email`, and opt-out.
+[F27](F27-platform-admin.md) broadcasts, `email_opt_out`, and opt-out.

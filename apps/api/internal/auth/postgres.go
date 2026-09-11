@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -99,11 +100,11 @@ func (s *PG) UserByID(ctx context.Context, id string) (User, error) {
 	return s.scanUser(ctx, userSelect+` WHERE id = $1`, id)
 }
 
-const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio, ''), COALESCE(avatar_asset_id::text, ''), status, session_epoch, created_at FROM users`
+const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio, ''), COALESCE(avatar_asset_id::text, ''), status, session_epoch, created_at, COALESCE(email_opt_out, false) FROM users`
 
 func (s *PG) scanUser(ctx context.Context, q string, arg any) (User, error) {
 	var u User
-	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt)
+	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -475,6 +476,122 @@ func (s *PG) InvalidateUserEmailChanges(ctx context.Context, userID string, at t
 	_, err := s.q.Exec(ctx, `
 		UPDATE email_change_tokens SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, userID, at)
 	return err
+}
+
+func (s *PG) DeleteProfile(ctx context.Context, userID, profile string) error {
+	_, err := s.q.Exec(ctx, `DELETE FROM user_profiles WHERE user_id = $1 AND profile = $2`, userID, profile)
+	return err
+}
+
+func (s *PG) SearchUsers(ctx context.Context, q string, limit int) ([]User, error) {
+	if limit < 1 {
+		limit = 20
+	}
+	q = strings.TrimSpace(q)
+	var (
+		rows pgx.Rows
+		err  error
+	)
+	if q == "" {
+		rows, err = s.q.Query(ctx, userSelect+` ORDER BY created_at DESC, id DESC LIMIT $1`, limit)
+	} else {
+		pat := "%" + likeEscape(q) + "%"
+		rows, err = s.q.Query(ctx, userSelect+`
+			WHERE email ILIKE $1 ESCAPE '\' OR display_name ILIKE $1 ESCAPE '\'
+			ORDER BY created_at DESC, id DESC LIMIT $2`, pat, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	if out == nil {
+		out = []User{}
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) CountUsers(ctx context.Context) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `SELECT COUNT(*)::int FROM users`).Scan(&n)
+	return n, err
+}
+
+func (s *PG) CountActiveProfiles(ctx context.Context, profile string) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `
+		SELECT COUNT(*)::int
+		FROM user_profiles p
+		INNER JOIN users u ON u.id = p.user_id
+		WHERE p.profile = $1 AND u.status = $2`, profile, StatusActive).Scan(&n)
+	return n, err
+}
+
+func (s *PG) SetUserStatus(ctx context.Context, userID, status string) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET status = $2 WHERE id = $1`, userID, status)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) BumpSessionEpoch(ctx context.Context, userID string) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET session_epoch = session_epoch + 1 WHERE id = $1`, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) SetEmailOptOut(ctx context.Context, userID string, optedOut bool) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET email_opt_out = $2 WHERE id = $1`, userID, optedOut)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) ListMailRecipients(ctx context.Context) ([]User, error) {
+	rows, err := s.q.Query(ctx, userSelect+` WHERE status = $1 AND email_opt_out = FALSE AND email <> '' ORDER BY id`, StatusActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut); err != nil {
+			return nil, err
+		}
+		out = append(out, u)
+	}
+	if out == nil {
+		out = []User{}
+	}
+	return out, rows.Err()
+}
+
+func likeEscape(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
 }
 
 func mapUniqueEmail(err error) error {

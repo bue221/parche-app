@@ -117,6 +117,42 @@ func HashRefresh(pepper []byte, raw string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// SignEmailOptOut is a signed unsubscribe token for POST /v1/me/email/opt-out (F27).
+func (t *Tokens) SignEmailOptOut(userID string) (string, error) {
+	if t == nil || len(t.RefreshPepper) == 0 || strings.TrimSpace(userID) == "" {
+		return "", fmt.Errorf("opt-out signing key missing")
+	}
+	mac := hmac.New(sha256.New, t.RefreshPepper)
+	_, _ = mac.Write([]byte("email_opt_out:" + userID))
+	return b64([]byte(userID)) + "." + hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+// ParseEmailOptOut verifies the signed unsubscribe token.
+func (t *Tokens) ParseEmailOptOut(token string) (string, error) {
+	if t == nil || len(t.RefreshPepper) == 0 {
+		return "", ErrUnauthorized
+	}
+	userID, sig, ok := strings.Cut(strings.TrimSpace(token), ".")
+	if !ok || userID == "" || sig == "" {
+		return "", ErrUnauthorized
+	}
+	rawID, err := base64.RawURLEncoding.DecodeString(userID)
+	if err != nil || len(rawID) == 0 {
+		return "", ErrUnauthorized
+	}
+	id := string(rawID)
+	mac := hmac.New(sha256.New, t.RefreshPepper)
+	_, _ = mac.Write([]byte("email_opt_out:" + id))
+	got, err := hex.DecodeString(sig)
+	if err != nil {
+		return "", ErrUnauthorized
+	}
+	if !hmac.Equal(mac.Sum(nil), got) {
+		return "", ErrUnauthorized
+	}
+	return id, nil
+}
+
 func (t *Tokens) hashRefresh(raw string) string {
 	var pepper []byte
 	if t != nil {

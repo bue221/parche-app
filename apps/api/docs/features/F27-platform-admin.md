@@ -51,12 +51,14 @@ Ver F26 `POST /v1/admin/broadcasts`.
 
 ## Checklist
 
-- [ ] Approve publica y cache drop
-- [ ] Reject con reason
-- [ ] Disable user tumba refresh
-- [ ] Audit de cada acción
-- [ ] Bootstrap email
+- [x] Approve publica y cache drop
+- [x] Reject con reason
+- [x] Disable user tumba refresh
+- [x] Audit de cada acción
+- [x] Bootstrap email
+
+Admin uses a strong password plus `session_epoch` (no 2FA in MVP). `/v1/admin/*` is rate-limited harder than public list; broadcasts tighter still.
 
 ## Next step
 
-Cierra el catálogo. Implementación: [F01](F01-runtime.md).
+Catálogo F01–F27 cerrado.

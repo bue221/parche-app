@@ -11,6 +11,7 @@ var (
 	ErrEmailTaken   = errors.New("email taken")
 	ErrConflict     = errors.New("conflict")
 	ErrLastOwner    = errors.New("last owner")
+	ErrLastAdmin    = errors.New("last platform admin")
 	ErrValidation   = errors.New("validation")
 )
 

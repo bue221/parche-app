@@ -231,7 +231,7 @@ func (s *Service) Submit(ctx context.Context, userID, id string) error {
 	return s.Store.Update(ctx, e)
 }
 
-// Publish is pending_review → published. F27 will expose admin HTTP; tests call this so GET /v1/events works.
+// Publish is pending_review → published. F27 HTTP approve calls this.
 func (s *Service) Publish(ctx context.Context, id string) (Event, error) {
 	e, err := s.Store.ByID(ctx, id)
 	if err != nil {
