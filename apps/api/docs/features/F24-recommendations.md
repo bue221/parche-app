@@ -31,10 +31,10 @@ Worker `recs.refresh` subject cron.
 
 ## Checklist
 
-- [ ] User nuevo recibe popular
-- [ ] Follow DJ → su fecha aparece
-- [ ] Evento comprado no se sugiere como “ir”
-- [ ] Job en worker F01
+- [x] User nuevo recibe popular
+- [x] Follow DJ → su fecha aparece
+- [x] Evento comprado no se sugiere como “ir”
+- [x] Job en worker F01
 
 ## Next step
 

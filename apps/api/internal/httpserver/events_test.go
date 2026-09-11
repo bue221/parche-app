@@ -22,6 +22,7 @@ import (
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/payments"
+	"github.com/parche-app/backend/internal/recs"
 	"github.com/parche-app/backend/internal/ticketsign"
 	"github.com/parche-app/backend/internal/venues"
 )
@@ -241,6 +242,7 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 	psvc := editorial.NewService(editorial.NewMemory(), store)
 	msvc.Posts = psvc
 	psvc.Covers = msvc
+	rsvc := recs.NewService(recs.NewLive(esvc, asvc), recs.NewMemory())
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
 		Store:         obj,
@@ -252,6 +254,7 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 		Media:         msvc,
 		Artists:       asvc,
 		Posts:         psvc,
+		Recs:          rsvc,
 		Payments:      payments.Fake{},
 		WebhookSecret: "test-webhook-secret",
 		AppEnv:        "dev",

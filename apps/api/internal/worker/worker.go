@@ -20,6 +20,7 @@ type Handlers struct {
 	MediaProcess func(ctx context.Context, assetID string) error
 	ExpireOrders func(ctx context.Context) (int, error)
 	TicketUsed   func(ctx context.Context, job events.TicketScanJob) error
+	RefreshRecs  func(ctx context.Context) (int, error)
 }
 
 // Run subscribes to product subjects and idles until ctx is cancelled.
@@ -55,6 +56,9 @@ func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger, h Hand
 
 	if h.ExpireOrders != nil {
 		go expireLoop(ctx, log, h.ExpireOrders)
+	}
+	if h.RefreshRecs != nil {
+		go recsLoop(ctx, log, h.RefreshRecs)
 	}
 
 	log.Info("worker idle")
@@ -116,6 +120,12 @@ func dispatch(ctx context.Context, h Handlers, msg *nats.Msg) error {
 			return err
 		}
 		return h.TicketUsed(ctx, job)
+	case broker.SubjectRecsRefresh:
+		if h.RefreshRecs == nil {
+			return nil
+		}
+		_, err := h.RefreshRecs(ctx)
+		return err
 	default:
 		return nil
 	}
@@ -133,6 +143,28 @@ func expireLoop(ctx context.Context, log *slog.Logger, expire func(context.Conte
 		if n > 0 {
 			log.Info("order.expire", "released", n)
 		}
+	}
+	run()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
+		}
+	}
+}
+
+func recsLoop(ctx context.Context, log *slog.Logger, refresh func(context.Context) (int, error)) {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+	run := func() {
+		n, err := refresh(ctx)
+		if err != nil {
+			log.Error("recs.refresh failed", "err", err)
+			return
+		}
+		log.Info("recs.refresh", "users", n)
 	}
 	run()
 	for {

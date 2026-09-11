@@ -23,6 +23,7 @@ import (
 	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
+	"github.com/parche-app/backend/internal/recs"
 	"github.com/parche-app/backend/internal/redisx"
 	"github.com/parche-app/backend/internal/ticketsign"
 	"github.com/parche-app/backend/internal/venues"
@@ -39,6 +40,7 @@ type Routes struct {
 	Media         *media.Service
 	Artists       *artists.Service
 	Posts         *editorial.Service
+	Recs          *recs.Service
 	Payments      payments.Provider
 	WebhookSecret string
 	AppEnv        string
@@ -61,6 +63,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerTrackRoutes(mux, routes)
 	registerArtistRoutes(mux, routes)
 	registerPostRoutes(mux, routes)
+	registerRecRoutes(mux, routes)
 	registerOrderRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
@@ -154,6 +157,11 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		eventSvc.Lineup = artistSvc
 		artistSvc.Catalog = eventSvc
 	}
+	var recSvc *recs.Service
+	if eventSvc != nil && artistSvc != nil {
+		recSvc = recs.NewService(recs.NewLive(eventSvc, artistSvc), recs.NewPG(pool))
+		recSvc.Log = log
+	}
 	eventWrite := EventWrite(DenyEventWrite{})
 	if eventSvc != nil {
 		eventWrite = eventSvc
@@ -206,6 +214,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Media:         mediaSvc,
 		Artists:       artistSvc,
 		Posts:         postSvc,
+		Recs:          recSvc,
 		Payments:      pay,
 		WebhookSecret: cfg.PaymentWebhookSecret,
 		AppEnv:        cfg.AppEnv,

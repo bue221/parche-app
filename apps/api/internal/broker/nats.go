@@ -13,6 +13,7 @@ const (
 	SubjectPaymentConfirmed = "payment.confirmed"
 	SubjectEmailSend        = "email.send"
 	SubjectMediaProcess     = "media.process"
+	SubjectRecsRefresh      = "recs.refresh"
 	SubjectDLQ              = "parche.dlq"
 )
 
@@ -23,6 +24,7 @@ func Subjects() []string {
 		SubjectPaymentConfirmed,
 		SubjectEmailSend,
 		SubjectMediaProcess,
+		SubjectRecsRefresh,
 	}
 }
 

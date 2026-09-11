@@ -15,6 +15,7 @@ import (
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
+	"github.com/parche-app/backend/internal/recs"
 	"github.com/parche-app/backend/internal/redisx"
 	"github.com/parche-app/backend/internal/worker"
 )
@@ -79,7 +80,13 @@ func main() {
 			events.InvalidateEventMetrics(ctx, cache, job.EventID)
 			return nil
 		}
-		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed}); err != nil {
+		recStore := recs.NewPG(pool)
+		recSvc := recs.NewService(recStore, recStore)
+		recSvc.Log = log
+		refreshRecs := func(ctx context.Context) (int, error) {
+			return recSvc.RefreshAll(ctx)
+		}
+		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed, RefreshRecs: refreshRecs}); err != nil {
 			log.Error("worker stopped", "err", err)
 			os.Exit(1)
 		}

@@ -183,6 +183,29 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/similar:
+    get:
+      summary: Similar published events by genre and lineup (F24)
+      operationId: listSimilarEvents
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Up to 20 published events. Drafts and the seed id are never included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/events/{id}/submit:
     post:
       summary: Send draft or rejected event to review (F08)
@@ -1343,6 +1366,31 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/recommendations:
+    get:
+      summary: Personalized upcoming events (F24)
+      operationId: listMyRecommendations
+      security:
+        - bearerAuth: []
+      description: |
+        Scores published events from follows (F13), lineup (F12), genre overlap from
+        follows and purchases, optional same-city bbox, and 7-day popularity.
+        Bought tickets are never suggested. Max 20. Worker recs.refresh stores top 50.
+      responses:
+        "200":
+          description: Ranked public event summaries with reason follow, genre, or popular
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationList"
+              example:
+                events: []
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/me/profiles/artist:
     post:
       summary: Add artist platform profile (F06)
@@ -2375,6 +2423,24 @@ components:
             type: string
         flyer:
           $ref: "#/components/schemas/EventImage"
+    RecommendationList:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/RecommendedEvent"
+    RecommendedEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventMapItem"
+        - type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [follow, genre, popular]
     Event:
       type: object
       required: [id, tenant_id, title, slug, starts_at, ends_at, venue_id, status, lat, lng]

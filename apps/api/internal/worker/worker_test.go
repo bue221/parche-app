@@ -17,8 +17,8 @@ func TestDurableName(t *testing.T) {
 }
 
 func TestSubjectsCoverIdleLoop(t *testing.T) {
-	if len(broker.Subjects()) != 4 {
-		t.Fatalf("expected 4 product subjects, got %d", len(broker.Subjects()))
+	if len(broker.Subjects()) != 5 {
+		t.Fatalf("expected 5 product subjects, got %d", len(broker.Subjects()))
 	}
 }
 
@@ -38,5 +38,24 @@ func TestDispatchTicketUsed(t *testing.T) {
 	}
 	if got.TicketID != "t1" || got.EventID != "e1" || got.Result != events.ScanApproved {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestDispatchRecsRefresh(t *testing.T) {
+	called := false
+	err := dispatch(context.Background(), Handlers{
+		RefreshRecs: func(_ context.Context) (int, error) {
+			called = true
+			return 3, nil
+		},
+	}, &nats.Msg{
+		Subject: broker.SubjectRecsRefresh,
+		Data:    []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("expected recs.refresh handler")
 	}
 }
