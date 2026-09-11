@@ -18,6 +18,7 @@ import (
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/ratelimit"
+	"github.com/parche-app/backend/internal/venues"
 )
 
 func testAuthStack(t *testing.T) (http.Handler, *bytes.Buffer) {
@@ -43,8 +44,10 @@ func testAuthStackMail(t *testing.T) (http.Handler, *bytes.Buffer, *mailer.Memor
 	svc.AppOrigin = "http://localhost:3000"
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(slog.New(slog.NewJSONHandler(&logs, nil)), config.Config{CORSOrigins: []string{"http://localhost:3000"}}, ratelimit.NewMemory(), nil, nil, Routes{
-		Access: access,
-		Auth:   svc,
+		Access:  access,
+		Auth:    svc,
+		Venues:  venues.NewService(venues.NewMemory(), store),
+		MapPins: venues.EmptyPins{},
 	})
 	return mux, &logs, inbox
 }

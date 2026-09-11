@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.6.0
+  version: 0.7.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -42,15 +42,19 @@ paths:
           $ref: "#/components/responses/NotReady"
   /v1/events:
     get:
-      summary: Public event list (F08)
+      summary: Public event list with optional bbox (F07 filter, F08 catalog)
       operationId: listEvents
       security: []
       parameters:
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
       responses:
         "200":
-          description: Cursor page
+          description: Cursor page of published events. Each item includes WGS84 lat/lng.
           content:
             application/json:
               schema:
@@ -58,9 +62,131 @@ paths:
               example:
                 items: []
                 next_cursor: null
+        "400":
+          $ref: "#/components/responses/Error"
         "429":
           $ref: "#/components/responses/RateLimited"
         default:
+          $ref: "#/components/responses/Error"
+  /v1/venues:
+    get:
+      summary: List venues (F07)
+      operationId: listVenues
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - name: tenant_id
+          in: query
+          description: Member-only list of that colectivo's venues (including unpublished)
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
+      responses:
+        "200":
+          description: Public venues with at least one published event, or tenant venues when tenant_id is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VenueList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      summary: Create a venue pin in a tenant (F07)
+      operationId: createVenue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVenueRequest"
+            example:
+              tenant_id: "0199a0c0-0000-7000-8000-000000000010"
+              name: Video Club
+              address_text: Chapinero, Bogotá
+              lat: 4.65
+              lng: -74.06
+      responses:
+        "201":
+          description: Venue stored with user_pin source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/venues/{id}:
+    get:
+      summary: Get a venue (F07)
+      operationId: getVenue
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Public if a published event uses it; otherwise tenant member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update venue (tenant owner or staff) (F07)
+      operationId: patchVenue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchVenueRequest"
+      responses:
+        "200":
+          description: Updated venue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
           $ref: "#/components/responses/Error"
   /v1/auth/register:
     post:
@@ -508,6 +634,34 @@ components:
       required: false
       schema:
         type: string
+    MinLat:
+      name: min_lat
+      in: query
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    MinLng:
+      name: min_lng
+      in: query
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+    MaxLat:
+      name: max_lat
+      in: query
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    MaxLng:
+      name: max_lng
+      in: query
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
   schemas:
     Health:
       type: object
@@ -561,9 +715,100 @@ components:
         items:
           type: array
           items:
-            type: object
+            $ref: "#/components/schemas/EventMapItem"
         next_cursor:
           type: string
+          nullable: true
+    EventMapItem:
+      type: object
+      required: [id, lat, lng]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        lat:
+          type: number
+          description: WGS84. Required on published events.
+        lng:
+          type: number
+        venue_id:
+          type: string
+          format: uuid
+        address_text:
+          type: string
+    Venue:
+      type: object
+      required: [id, tenant_id, name, address_text, lat, lng, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          description: Optional GeoJSON Point or Polygon. Never Google Places.
+          type: object
+        source:
+          type: string
+          enum: [user_pin]
+        created_at:
+          type: string
+          format: date-time
+    VenueList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Venue"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateVenueRequest:
+      type: object
+      required: [tenant_id, name, lat, lng]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+        source:
+          type: string
+          enum: [user_pin]
+    PatchVenueRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
           nullable: true
     RegisterRequest:
       type: object

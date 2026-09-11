@@ -18,14 +18,17 @@ import (
 	"github.com/parche-app/backend/internal/postgres"
 	"github.com/parche-app/backend/internal/ratelimit"
 	"github.com/parche-app/backend/internal/redisx"
+	"github.com/parche-app/backend/internal/venues"
 )
 
 // Routes are product handlers that sit on the F02 mux. Optional until later features wire them.
 type Routes struct {
-	Store  objectstore.Store
-	Access Access
-	Events EventWrite
-	Auth   *auth.Service
+	Store   objectstore.Store
+	Access  Access
+	Events  EventWrite
+	Auth    *auth.Service
+	Venues  *venues.Service
+	MapPins venues.MapPins
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -39,6 +42,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	mux.Handle("GET /ready", health.Ready(log, checkers...))
 	registerUploadRoutes(mux, routes)
 	registerAuthRoutes(mux, routes)
+	registerVenueRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -90,15 +94,21 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		access.Lookup = sessions.AccessIdentity
 	}
 
+	var venueSvc *venues.Service
+	if sessions != nil {
+		venueSvc = venues.NewService(venues.NewPG(pool), sessions.Store)
+	}
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
 		objectstore.Checker{Store: store},
 	}, nil, Routes{
-		Store:  store,
-		Access: access,
-		Events: DenyEventWrite{},
-		Auth:   sessions,
+		Store:   store,
+		Access:  access,
+		Events:  DenyEventWrite{},
+		Auth:    sessions,
+		Venues:  venueSvc,
+		MapPins: venues.EmptyPins{},
 	})
 
 	srv := &http.Server{

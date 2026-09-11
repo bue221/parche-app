@@ -64,11 +64,11 @@ Rechazar bbox > ~2 grados de lado para no escanear el planeta (`VALIDATION_ERROR
 
 ## Checklist
 
-- [ ] Evento published siempre trae lat/lng
-- [ ] Bbox filtra
-- [ ] GeoJSON se persiste y se valida
-- [ ] Cero dependencia Google en backend
-- [ ] Documentado en OpenAPI
+- [x] Evento published siempre trae lat/lng
+- [x] Bbox filtra
+- [x] GeoJSON se persiste y se valida
+- [x] Cero dependencia Google en backend
+- [x] Documentado en OpenAPI
 
 ## Next step
 

@@ -100,18 +100,14 @@ func TestRateLimitCheckIn(t *testing.T) {
 
 func TestRateLimitPublicList(t *testing.T) {
 	limiter := ratelimit.NewMemory()
-	mux := newMux(testLogger(), configCORS(), limiter, nil, func(mux *http.ServeMux) {
-		mux.HandleFunc("GET /v1/events", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		})
-	}, Routes{})
+	mux := newMux(testLogger(), configCORS(), limiter, nil, nil, Routes{})
 	for i := 0; i < 60; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
 		req.RemoteAddr = "198.51.100.2:9"
 		mux.ServeHTTP(rr, req)
-		if rr.Code != http.StatusNoContent {
-			t.Fatalf("hit %d status=%d", i+1, rr.Code)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("hit %d status=%d body=%s", i+1, rr.Code, rr.Body.String())
 		}
 	}
 	rr := httptest.NewRecorder()
