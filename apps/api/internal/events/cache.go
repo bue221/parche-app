@@ -311,6 +311,7 @@ func (c RedisCache) Delete(ctx context.Context, keys ...string) error {
 	return c.Client.Del(ctx, keys...).Err()
 }
 
+// listCacheKey hashes the raw query so F22 filters (q, genre, dates, artist, bbox) do not share a 30s entry.
 func listCacheKey(rawQuery string) string {
 	sum := sha256.Sum256([]byte(rawQuery))
 	return listCachePref + hex.EncodeToString(sum[:16])

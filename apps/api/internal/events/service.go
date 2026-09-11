@@ -286,10 +286,26 @@ func (s *Service) Cancel(ctx context.Context, userID, id string) error {
 }
 
 func (s *Service) ListPublic(ctx context.Context, f ListFilter) ([]Event, error) {
+	if err := normalizeSearch(&f); err != nil {
+		return nil, err
+	}
 	f.Public = true
 	f.Now = s.now()
 	if f.Limit < 1 {
 		f.Limit = 20
+	}
+	if f.ArtistID != "" {
+		if s.Lineup == nil {
+			return []Event{}, nil
+		}
+		ids, err := s.Lineup.EventIDsByArtist(ctx, f.ArtistID)
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return []Event{}, nil
+		}
+		f.RestrictIDs = ids
 	}
 	items, err := s.Store.List(ctx, f)
 	if err != nil {

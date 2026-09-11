@@ -42,12 +42,43 @@ paths:
           $ref: "#/components/responses/NotReady"
   /v1/events:
     get:
-      summary: Public event list with optional bbox (F07 filter, F08 catalog)
+      summary: Public published agenda with search filters (F08 catalog, F22 q/genre/dates/artist, F07 bbox)
       operationId: listEvents
       security: []
       parameters:
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          description: ILIKE title and description (max 80 characters)
+          schema:
+            type: string
+            maxLength: 80
+        - name: from
+          in: query
+          description: Inclusive lower bound on starts_at (RFC3339 or YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          in: query
+          description: Inclusive upper bound on starts_at (RFC3339 or YYYY-MM-DD)
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: Overlap event genres. Repeat for any-of (genre=techno&genre=acid)
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: artist_id
+          in: query
+          description: Events that include this artist on the lineup
+          schema:
+            type: string
+            format: uuid
         - $ref: "#/components/parameters/MinLat"
         - $ref: "#/components/parameters/MinLng"
         - $ref: "#/components/parameters/MaxLat"

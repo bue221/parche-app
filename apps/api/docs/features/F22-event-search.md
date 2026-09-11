@@ -31,10 +31,10 @@ Invalidar caché: incluir hash de query en key (F08).
 
 ## Checklist
 
-- [ ] Combinar q + genre + bbox
-- [ ] artist_id filtra lineup
-- [ ] No leak drafts
-- [ ] OpenAPI query params
+- [x] Combinar q + genre + bbox
+- [x] artist_id filtra lineup
+- [x] No leak drafts
+- [x] OpenAPI query params
 
 ## Next step
 

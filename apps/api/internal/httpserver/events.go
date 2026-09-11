@@ -249,15 +249,25 @@ func (h eventHandler) listEvents(w http.ResponseWriter, r *http.Request) {
 		writeEventErr(w, r, err)
 		return
 	}
+	search, err := events.ParseSearch(r.URL.Query())
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
 	if h.svc == nil {
 		apierr.WriteJSON(w, http.StatusOK, ListEnvelope[events.PublicItem]{Items: []events.PublicItem{}, NextCursor: nil})
 		return
 	}
 	miss := func() ([]byte, error) {
 		items, err := h.svc.ListPublic(r.Context(), events.ListFilter{
-			BBox:   bbox,
-			Cursor: page.Cursor,
-			Limit:  page.Limit,
+			BBox:     bbox,
+			Cursor:   page.Cursor,
+			Limit:    page.Limit,
+			Q:        search.Q,
+			From:     search.From,
+			To:       search.To,
+			Genres:   search.Genres,
+			ArtistID: search.ArtistID,
 		})
 		if err != nil {
 			return nil, err

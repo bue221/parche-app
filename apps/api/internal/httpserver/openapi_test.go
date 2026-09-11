@@ -72,6 +72,7 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"/v1/events/{id}/metrics/orders",
 		"/v1/events/{id}/metrics/export",
 		"/v1/tenants/{id}/metrics",
+		"artist_id",
 		"VALIDATION_ERROR",
 		"UNAUTHORIZED",
 		"FORBIDDEN",

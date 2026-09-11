@@ -123,6 +123,18 @@ func (m *Memory) List(_ context.Context, f ListFilter) ([]Event, error) {
 		if f.BBox != nil && !f.BBox.Contains(e.Lat, e.Lng) {
 			continue
 		}
+		if !matchesQuery(e, f.Q) {
+			continue
+		}
+		if !startsInWindow(e, f.From, f.To) {
+			continue
+		}
+		if !overlapsGenres(e.Genres, f.Genres) {
+			continue
+		}
+		if !inRestrictIDs(e.ID, f.RestrictIDs) {
+			continue
+		}
 		if !afterCursor(e, curStarts, curID) {
 			continue
 		}

@@ -295,6 +295,24 @@ func (s *Service) EventLineup(ctx context.Context, eventID string) ([]events.Lin
 	return out, nil
 }
 
+// EventIDsByArtist implements events.Lineup for GET /v1/events?artist_id= (F22).
+func (s *Service) EventIDsByArtist(ctx context.Context, artistID string) ([]string, error) {
+	slots, err := s.Store.SlotsByArtist(ctx, artistID)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{}, len(slots))
+	out := make([]string, 0, len(slots))
+	for _, sl := range slots {
+		if _, ok := seen[sl.EventID]; ok {
+			continue
+		}
+		seen[sl.EventID] = struct{}{}
+		out = append(out, sl.EventID)
+	}
+	return out, nil
+}
+
 func (s *Service) ListEvents(ctx context.Context, artistID string, f EventFilter) ([]events.Event, error) {
 	if _, err := s.Store.ByID(ctx, artistID); err != nil {
 		return nil, err

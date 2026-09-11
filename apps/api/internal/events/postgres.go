@@ -119,6 +119,28 @@ func (s *PG) List(ctx context.Context, f ListFilter) ([]Event, error) {
 		add("v.lng >= $%d", f.BBox.MinLng)
 		add("v.lng <= $%d", f.BBox.MaxLng)
 	}
+	if f.Q != "" {
+		n++
+		args = append(args, likePattern(f.Q))
+		n++
+		args = append(args, f.Q)
+		fmt.Fprintf(&b, ` AND (e.title ILIKE $%d ESCAPE '\' OR e.description ILIKE $%d ESCAPE '\' OR e.title %% $%d)`, n-1, n-1, n)
+	}
+	if f.From != nil {
+		add("e.starts_at >= $%d", *f.From)
+	}
+	if f.To != nil {
+		add("e.starts_at <= $%d", *f.To)
+	}
+	if len(f.Genres) > 0 {
+		add("e.genres && $%d::text[]", f.Genres)
+	}
+	if f.RestrictIDs != nil {
+		if len(f.RestrictIDs) == 0 {
+			return []Event{}, nil
+		}
+		add("e.id = ANY($%d::uuid[])", f.RestrictIDs)
+	}
 	if f.Cursor != "" {
 		n++
 		args = append(args, curStarts)

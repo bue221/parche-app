@@ -29,6 +29,7 @@ const (
 	publicHorizon = 12 * time.Hour
 	listCacheTTL  = 30 * time.Second
 	listCachePref = "events:list:"
+	maxSearchQ    = 80
 )
 
 // Event is a parche with a venue pin and a lifecycle status.
@@ -138,13 +139,20 @@ type PatchInput struct {
 }
 
 // ListFilter is GET /v1/events (public) and GET /v1/tenants/{id}/events.
+// Public search (F22) uses Q, From/To, Genres, ArtistID; RestrictIDs is lineup resolution.
 type ListFilter struct {
-	TenantID string
-	Public   bool
-	BBox     *geo.BBox
-	Cursor   string
-	Limit    int
-	Now      time.Time
+	TenantID    string
+	Public      bool
+	BBox        *geo.BBox
+	Cursor      string
+	Limit       int
+	Now         time.Time
+	Q           string
+	From        *time.Time
+	To          *time.Time
+	Genres      []string
+	ArtistID    string
+	RestrictIDs []string
 }
 
 // Member is an event-scoped role. Status is active or revoked (pending lives on Invite).
@@ -283,9 +291,10 @@ type EventMedia struct {
 	Gallery []Image
 }
 
-// Lineup loads billed artists for GET event detail (F12).
+// Lineup loads billed artists for GET event detail (F12) and search by artist (F22).
 type Lineup interface {
 	EventLineup(ctx context.Context, eventID string) ([]LineupSlot, error)
+	EventIDsByArtist(ctx context.Context, artistID string) ([]string, error)
 }
 
 // Queue publishes broker subjects. Optional until a worker is connected.
