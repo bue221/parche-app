@@ -10,6 +10,7 @@ import (
 
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/auth"
+	"github.com/parche-app/backend/internal/media"
 )
 
 const refreshCookie = "refresh"
@@ -55,7 +56,7 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	if access == nil {
 		access = RejectAccess{}
 	}
-	h := authHandler{svc: routes.Auth, access: access}
+	h := authHandler{svc: routes.Auth, access: access, media: routes.Media}
 	mux.HandleFunc("POST /v1/auth/register", h.register)
 	mux.HandleFunc("POST /v1/auth/login", h.login)
 	mux.HandleFunc("POST /v1/auth/refresh", h.refresh)
@@ -63,6 +64,11 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/auth/password/forgot", h.forgot)
 	mux.HandleFunc("POST /v1/auth/password/reset", h.reset)
 	mux.HandleFunc("GET /v1/me", h.me)
+	mux.HandleFunc("PATCH /v1/me", h.patchMe)
+	mux.HandleFunc("POST /v1/me/avatar", h.confirmAvatar)
+	mux.HandleFunc("POST /v1/me/email/change", h.changeEmail)
+	mux.HandleFunc("POST /v1/me/email/confirm", h.confirmEmail)
+	mux.HandleFunc("GET /v1/users/{id}", h.publicUser)
 	mux.HandleFunc("POST /v1/me/profiles/artist", h.addArtist)
 	mux.HandleFunc("GET /v1/me/sessions", h.sessions)
 	mux.HandleFunc("DELETE /v1/me/sessions", h.logoutAll)
@@ -77,6 +83,7 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 type authHandler struct {
 	svc    *auth.Service
 	access Access
+	media  *media.Service
 }
 
 func (h authHandler) register(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +177,7 @@ func (h authHandler) me(w http.ResponseWriter, r *http.Request) {
 		writeAuthErr(w, r, err)
 		return
 	}
-	apierr.WriteJSON(w, http.StatusOK, me)
+	apierr.WriteJSON(w, http.StatusOK, h.withAvatarURL(r, me))
 }
 
 func (h authHandler) sessions(w http.ResponseWriter, r *http.Request) {

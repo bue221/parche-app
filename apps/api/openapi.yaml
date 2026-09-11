@@ -845,13 +845,13 @@ paths:
           $ref: "#/components/responses/Gone"
   /v1/me:
     get:
-      summary: Current user (F04)
+      summary: Current user (F04, F14)
       operationId: getMe
       security:
         - bearerAuth: []
       responses:
         "200":
-          description: Profiles, optional tenant, membership summaries
+          description: Profiles, optional tenant, membership summaries, bio, avatar
           content:
             application/json:
               schema:
@@ -860,6 +860,130 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Update display name and bio (F14)
+      operationId: patchMe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMeRequest"
+      responses:
+        "200":
+          description: Updated me document. Email is not accepted here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/avatar:
+    post:
+      summary: Confirm a user avatar upload (F14)
+      operationId: confirmMyAvatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmUserAvatarRequest"
+      responses:
+        "201":
+          description: Avatar image with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/me/email/change:
+    post:
+      summary: Request an email change (F14)
+      operationId: changeMyEmail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeEmailRequest"
+      responses:
+        "204":
+          description: email_change mail sent to the new address
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/me/email/confirm:
+    post:
+      summary: Confirm an email change token (F14)
+      operationId: confirmMyEmail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEmailRequest"
+      responses:
+        "204":
+          description: Email updated
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/users/{id}:
+    get:
+      summary: Public user profile (F14)
+      operationId: getUser
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: display_name, bio, avatar_url. Never email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /v1/me/memberships:
     get:
       summary: Active event memberships (F11)
@@ -1863,7 +1987,7 @@ components:
           $ref: "#/components/schemas/PublicUser"
     Me:
       type: object
-      required: [id, email, display_name, profiles, tenants, memberships]
+      required: [id, email, display_name, profiles, tenants, memberships, bio]
       properties:
         id:
           type: string
@@ -1871,6 +1995,14 @@ components:
         email:
           type: string
         display_name:
+          type: string
+        bio:
+          type: string
+          maxLength: 280
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar_url:
           type: string
         profiles:
           type: array
@@ -2085,7 +2217,54 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: Required with kind=avatar to upload an artist photo (F12)
+          description: With kind=avatar, artist photo (F12). Omit event_id and artist_id for the caller's avatar (F14)
+    PatchMeRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+        bio:
+          type: string
+          maxLength: 280
+    ChangeEmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ConfirmEmailRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    PublicProfile:
+      type: object
+      required: [id, display_name, bio]
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        bio:
+          type: string
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar_url:
+          type: string
+    ConfirmUserAvatarRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [avatar]
     ConfirmArtistAssetRequest:
       type: object
       required: [key]

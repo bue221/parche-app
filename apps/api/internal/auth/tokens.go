@@ -23,7 +23,9 @@ const (
 	RefreshTTL = 14 * 24 * time.Hour
 	// PasswordResetTTL is the one-use mail token lifetime (F05).
 	PasswordResetTTL = 30 * time.Minute
-	leeway           = 30 * time.Second
+	// EmailChangeTTL is the one-use F14 email-change mail token lifetime.
+	EmailChangeTTL = 30 * time.Minute
+	leeway         = 30 * time.Second
 )
 
 // Tokens issues access JWTs (HS256) and hashes opaque refresh values.

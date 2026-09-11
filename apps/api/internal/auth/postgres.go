@@ -92,16 +92,18 @@ func (s *PG) CreateAccount(ctx context.Context, acc Account) error {
 }
 
 func (s *PG) UserByEmail(ctx context.Context, email string) (User, error) {
-	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, session_epoch, created_at FROM users WHERE email = $1`, email)
+	return s.scanUser(ctx, userSelect+` WHERE email = $1`, email)
 }
 
 func (s *PG) UserByID(ctx context.Context, id string) (User, error) {
-	return s.scanUser(ctx, `SELECT id, email, password_hash, display_name, status, session_epoch, created_at FROM users WHERE id = $1`, id)
+	return s.scanUser(ctx, userSelect+` WHERE id = $1`, id)
 }
+
+const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio, ''), COALESCE(avatar_asset_id::text, ''), status, session_epoch, created_at FROM users`
 
 func (s *PG) scanUser(ctx context.Context, q string, arg any) (User, error) {
 	var u User
-	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Status, &u.SessionEpoch, &u.CreatedAt)
+	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -393,6 +395,85 @@ func (s *PG) InvalidateUserPasswordResets(ctx context.Context, userID string, at
 func (s *PG) SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash string) error {
 	_, err := s.q.Exec(ctx, `
 		UPDATE users SET password_hash = $2, session_epoch = session_epoch + 1 WHERE id = $1`, userID, passwordHash)
+	return err
+}
+
+func (s *PG) UpdateProfile(ctx context.Context, userID, displayName, bio string) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET display_name = $2, bio = $3 WHERE id = $1`, userID, displayName, bio)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) SetAvatarAsset(ctx context.Context, userID, assetID string) (string, error) {
+	var prev *string
+	err := s.q.QueryRow(ctx, `SELECT avatar_asset_id::text FROM users WHERE id = $1`, userID).Scan(&prev)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	_, err = s.q.Exec(ctx, `UPDATE users SET avatar_asset_id = $2::uuid WHERE id = $1`, userID, assetID)
+	if err != nil {
+		return "", err
+	}
+	if prev == nil {
+		return "", nil
+	}
+	return *prev, nil
+}
+
+func (s *PG) SetEmail(ctx context.Context, userID, email string) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET email = $2 WHERE id = $1`, userID, email)
+	if err != nil {
+		return mapUniqueEmail(err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *PG) InsertEmailChange(ctx context.Context, row EmailChangeRow) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO email_change_tokens (id, user_id, new_email, token_hash, expires_at, used_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		row.ID, row.UserID, row.NewEmail, row.TokenHash, row.ExpiresAt, row.UsedAt)
+	return err
+}
+
+func (s *PG) EmailChangeByHash(ctx context.Context, hash string) (EmailChangeRow, error) {
+	q := `
+		SELECT id, user_id, new_email, token_hash, expires_at, used_at
+		FROM email_change_tokens WHERE token_hash = $1`
+	if s.forUpdate {
+		q += ` FOR UPDATE`
+	}
+	var row EmailChangeRow
+	err := s.q.QueryRow(ctx, q, hash).Scan(&row.ID, &row.UserID, &row.NewEmail, &row.TokenHash, &row.ExpiresAt, &row.UsedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return EmailChangeRow{}, ErrNotFound
+	}
+	if err != nil {
+		return EmailChangeRow{}, err
+	}
+	return row, nil
+}
+
+func (s *PG) MarkEmailChangeUsed(ctx context.Context, id string, at time.Time) error {
+	_, err := s.q.Exec(ctx, `
+		UPDATE email_change_tokens SET used_at = $2 WHERE id = $1 AND used_at IS NULL`, id, at)
+	return err
+}
+
+func (s *PG) InvalidateUserEmailChanges(ctx context.Context, userID string, at time.Time) error {
+	_, err := s.q.Exec(ctx, `
+		UPDATE email_change_tokens SET used_at = $2 WHERE user_id = $1 AND used_at IS NULL`, userID, at)
 	return err
 }
 

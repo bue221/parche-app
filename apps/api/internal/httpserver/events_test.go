@@ -223,6 +223,7 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	asvc.Avatars = msvc
 	esvc.Lineup = asvc
 	msvc.Artists = asvc
+	msvc.Users = svc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
 		Store:   obj,

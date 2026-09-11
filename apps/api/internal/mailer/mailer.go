@@ -6,10 +6,11 @@ import (
 	"sync"
 )
 
-// Template IDs. SMTP delivery is F26; F05 uses password_reset and F11 uses event_invite.
+// Template IDs. SMTP delivery is F26; F05 uses password_reset, F14 email_change, F11 event_invite.
 const (
 	TemplatePasswordReset = "password_reset"
 	TemplateEventInvite   = "event_invite"
+	TemplateEmailChange   = "email_change"
 )
 
 // Message is the F26 Send contract. Vars must not include passwords.

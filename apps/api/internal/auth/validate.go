@@ -4,15 +4,25 @@ import (
 	"net/mail"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
 	minPasswordLen = 10
 	maxDisplayName = 80
+	maxUserBio     = 280
 )
 
 func normalizeDisplayName(name string) string {
 	return strings.TrimSpace(name)
+}
+
+func normalizeBio(bio string) string {
+	return strings.TrimSpace(bio)
+}
+
+func bioTooLong(bio string) bool {
+	return utf8.RuneCountInString(bio) > maxUserBio
 }
 
 func validEmail(email string) bool {

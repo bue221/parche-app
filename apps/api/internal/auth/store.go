@@ -19,13 +19,25 @@ const (
 
 // User is the persisted account. PasswordHash must never be serialized to clients.
 type User struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	DisplayName  string
-	Status       string
-	SessionEpoch int
-	CreatedAt    time.Time
+	ID            string
+	Email         string
+	PasswordHash  string
+	DisplayName   string
+	Bio           string
+	AvatarAssetID string
+	Status        string
+	SessionEpoch  int
+	CreatedAt     time.Time
+}
+
+// EmailChangeRow is a hashed one-use token to confirm a new email (F14).
+type EmailChangeRow struct {
+	ID        string
+	UserID    string
+	NewEmail  string
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
 }
 
 // PasswordResetRow is a hashed one-use reset token. TokenHash is never the mail value.
@@ -119,6 +131,14 @@ type Store interface {
 	MarkPasswordResetUsed(ctx context.Context, id string, at time.Time) error
 	InvalidateUserPasswordResets(ctx context.Context, userID string, at time.Time) error
 	SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash string) error
+
+	UpdateProfile(ctx context.Context, userID, displayName, bio string) error
+	SetAvatarAsset(ctx context.Context, userID, assetID string) (previousAssetID string, err error)
+	SetEmail(ctx context.Context, userID, email string) error
+	InsertEmailChange(ctx context.Context, row EmailChangeRow) error
+	EmailChangeByHash(ctx context.Context, hash string) (EmailChangeRow, error)
+	MarkEmailChangeUsed(ctx context.Context, id string, at time.Time) error
+	InvalidateUserEmailChanges(ctx context.Context, userID string, at time.Time) error
 
 	InTx(ctx context.Context, fn func(Store) error) error
 }

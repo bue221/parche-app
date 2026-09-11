@@ -20,6 +20,8 @@ type Memory struct {
 	byID       map[string]RefreshRow
 	resets     map[string]PasswordResetRow
 	resetsByID map[string]PasswordResetRow
+	emailChg   map[string]EmailChangeRow
+	emailChgID map[string]EmailChangeRow
 }
 
 type member struct {
@@ -40,6 +42,8 @@ func NewMemory() *Memory {
 		byID:       map[string]RefreshRow{},
 		resets:     map[string]PasswordResetRow{},
 		resetsByID: map[string]PasswordResetRow{},
+		emailChg:   map[string]EmailChangeRow{},
+		emailChgID: map[string]EmailChangeRow{},
 	}
 }
 
@@ -469,6 +473,96 @@ func (m *Memory) SetPasswordAndBumpEpoch(_ context.Context, userID, passwordHash
 	u.PasswordHash = passwordHash
 	u.SessionEpoch++
 	m.users[userID] = u
+	return nil
+}
+
+func (m *Memory) UpdateProfile(_ context.Context, userID, displayName, bio string) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	u.DisplayName = displayName
+	u.Bio = bio
+	m.users[userID] = u
+	return nil
+}
+
+func (m *Memory) SetAvatarAsset(_ context.Context, userID, assetID string) (string, error) {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return "", ErrNotFound
+	}
+	prev := u.AvatarAssetID
+	u.AvatarAssetID = assetID
+	m.users[userID] = u
+	return prev, nil
+}
+
+func (m *Memory) SetEmail(_ context.Context, userID, email string) error {
+	m.lock()
+	defer m.unlock()
+	u, ok := m.users[userID]
+	if !ok {
+		return ErrNotFound
+	}
+	if other, taken := m.emailIndex[email]; taken && other != userID {
+		return ErrEmailTaken
+	}
+	delete(m.emailIndex, u.Email)
+	u.Email = email
+	m.users[userID] = u
+	m.emailIndex[email] = userID
+	return nil
+}
+
+func (m *Memory) InsertEmailChange(_ context.Context, row EmailChangeRow) error {
+	m.lock()
+	defer m.unlock()
+	m.emailChg[row.TokenHash] = row
+	m.emailChgID[row.ID] = row
+	return nil
+}
+
+func (m *Memory) EmailChangeByHash(_ context.Context, hash string) (EmailChangeRow, error) {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.emailChg[hash]
+	if !ok {
+		return EmailChangeRow{}, ErrNotFound
+	}
+	return row, nil
+}
+
+func (m *Memory) MarkEmailChangeUsed(_ context.Context, id string, at time.Time) error {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.emailChgID[id]
+	if !ok {
+		return ErrNotFound
+	}
+	if row.UsedAt == nil {
+		row.UsedAt = &at
+	}
+	m.emailChgID[id] = row
+	m.emailChg[row.TokenHash] = row
+	return nil
+}
+
+func (m *Memory) InvalidateUserEmailChanges(_ context.Context, userID string, at time.Time) error {
+	m.lock()
+	defer m.unlock()
+	for hash, row := range m.emailChg {
+		if row.UserID != userID || row.UsedAt != nil {
+			continue
+		}
+		row.UsedAt = &at
+		m.emailChg[hash] = row
+		m.emailChgID[row.ID] = row
+	}
 	return nil
 }
 

@@ -164,6 +164,11 @@ type ArtistBinder interface {
 	BindAvatar(ctx context.Context, artistID, assetID string) (previousAssetID string, err error)
 }
 
+// UserBinder updates users.avatar_asset_id (implemented by auth.Service).
+type UserBinder interface {
+	BindAvatar(ctx context.Context, userID, assetID string) (previousAssetID string, err error)
+}
+
 // Publisher is NATS (or a test fake). Nil means Process runs in-process.
 type Publisher interface {
 	Publish(ctx context.Context, subject string, payload []byte) error

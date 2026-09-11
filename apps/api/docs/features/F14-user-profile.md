@@ -36,11 +36,11 @@ Público mínimo: display_name, avatar_url. Sin email. 404 si disabled.
 
 ## Checklist
 
-- [ ] PATCH nombre
-- [ ] Avatar presign + confirm
-- [ ] Cambio de email con verify
-- [ ] Perfil público sin PII
+- [x] PATCH nombre
+- [x] Avatar presign + confirm
+- [x] Cambio de email con verify
+- [x] Perfil público sin PII
 
 ## Next step
 
-[F05](F05-password-recovery.md) si aún no está.
+[F15](F15-ticket-types.md).

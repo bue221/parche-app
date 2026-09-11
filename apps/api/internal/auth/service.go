@@ -97,9 +97,27 @@ type PublicUser struct {
 // Me is GET /v1/me. Memberships are active event roles (F11).
 type Me struct {
 	PublicUser
-	Tenant      *TenantView       `json:"tenant,omitempty"`
-	Tenants     []TenantView      `json:"tenants"`
-	Memberships []EventMembership `json:"memberships"`
+	Bio           string            `json:"bio"`
+	AvatarAssetID string            `json:"avatar_asset_id,omitempty"`
+	AvatarURL     string            `json:"avatar_url,omitempty"`
+	Tenant        *TenantView       `json:"tenant,omitempty"`
+	Tenants       []TenantView      `json:"tenants"`
+	Memberships   []EventMembership `json:"memberships"`
+}
+
+// PublicProfile is GET /v1/users/{id}. Email is never included.
+type PublicProfile struct {
+	ID            string `json:"id"`
+	DisplayName   string `json:"display_name"`
+	Bio           string `json:"bio"`
+	AvatarAssetID string `json:"avatar_asset_id,omitempty"`
+	AvatarURL     string `json:"avatar_url,omitempty"`
+}
+
+// PatchMeInput is PATCH /v1/me. Nil fields stay unchanged. Email is not accepted here.
+type PatchMeInput struct {
+	DisplayName *string
+	Bio         *string
 }
 
 // EventMembership is a summarized event role (F11).
@@ -407,10 +425,12 @@ func (s *Service) Me(ctx context.Context, userID string) (Me, error) {
 		}
 	}
 	return Me{
-		PublicUser:  toPublic(user, profiles),
-		Tenant:      tenant,
-		Tenants:     tenants,
-		Memberships: memberships,
+		PublicUser:    toPublic(user, profiles),
+		Bio:           user.Bio,
+		AvatarAssetID: user.AvatarAssetID,
+		Tenant:        tenant,
+		Tenants:       tenants,
+		Memberships:   memberships,
 	}, nil
 }
 

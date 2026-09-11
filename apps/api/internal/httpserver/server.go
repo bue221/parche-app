@@ -143,6 +143,9 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 			mediaSvc.Artists = artistSvc
 			artistSvc.Avatars = mediaSvc
 		}
+		if sessions != nil {
+			mediaSvc.Users = sessions
+		}
 		if cfg.BrokerURL != "" {
 			if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
 				log.Error("broker publisher", "err", err)
