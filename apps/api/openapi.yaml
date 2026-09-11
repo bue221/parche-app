@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Parche API
-  version: 0.3.0
+  version: 0.4.0
   description: >
     Product HTTP contract. All product routes live under /v1, speak JSON,
     echo X-Request-Id, and fail with the Error envelope. Update this file
@@ -62,32 +62,137 @@ paths:
           $ref: "#/components/responses/RateLimited"
         default:
           $ref: "#/components/responses/Error"
-  /v1/auth/login:
+  /v1/auth/register:
     post:
-      summary: Login (F04)
-      operationId: login
+      summary: Register (F04)
+      operationId: register
       security: []
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              email: ada@example.com
+              password: correct-horse
+              display_name: Ada
+              profile: attendee
+      responses:
+        "201":
+          description: Session tokens and public user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/login:
+    post:
+      summary: Login (F04)
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Session tokens (implemented in F04)
+          description: Session tokens and public user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/refresh:
+    post:
+      summary: Rotate refresh (F04)
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New access and refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /v1/auth/logout:
+    post:
+      summary: Revoke refresh family (F04)
+      operationId: logout
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "204":
+          description: Family revoked (idempotent)
+  /v1/me:
+    get:
+      summary: Current user (F04)
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profiles, optional tenant, membership summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/sessions:
+    get:
+      summary: List refresh families (F04)
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active sessions without hashes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      summary: Revoke all refresh families (F04)
+      operationId: logoutAll
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: All sessions revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)
@@ -229,6 +334,123 @@ components:
         next_cursor:
           type: string
           nullable: true
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name, profile]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+        display_name:
+          type: string
+        profile:
+          type: string
+          enum: [attendee, promoter]
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Opaque refresh; web may send httpOnly cookie `refresh` instead
+    PublicUser:
+      type: object
+      required: [id, email, display_name, profiles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        profiles:
+          type: array
+          items:
+            type: string
+    Session:
+      type: object
+      required: [access_token, access_expires_at, refresh_token, refresh_expires_at, user]
+      properties:
+        access_token:
+          type: string
+        access_expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+        refresh_expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/PublicUser"
+    Me:
+      type: object
+      required: [id, email, display_name, profiles, memberships]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        profiles:
+          type: array
+          items:
+            type: string
+        tenant:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            role:
+              type: string
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [event_id, role, status]
+            properties:
+              event_id:
+                type: string
+              role:
+                type: string
+              status:
+                type: string
+    SessionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, created_at, user_agent, current]
+            properties:
+              id:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              user_agent:
+                type: string
+              current:
+                type: boolean
     UploadRequest:
       type: object
       required: [kind, content_type, byte_size]

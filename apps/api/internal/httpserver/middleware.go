@@ -33,7 +33,7 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-func wrap(next http.Handler, log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter) http.Handler {
+func wrap(next http.Handler, log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, access Access) http.Handler {
 	if limiter == nil {
 		limiter = ratelimit.NewMemory()
 	}
@@ -41,7 +41,7 @@ func wrap(next http.Handler, log *applog.Logger, cfg config.Config, limiter rate
 	h = rateLimit(h, limiter)
 	h = cors(h, cfg.CORSOrigins)
 	h = securityHeaders(h)
-	h = accessLog(h, log)
+	h = accessLog(h, log, access)
 	h = requestID(h)
 	h = recoverPanic(h, log)
 	return h
@@ -81,9 +81,10 @@ func recoverPanic(next http.Handler, log *applog.Logger) http.Handler {
 	})
 }
 
-func accessLog(next http.Handler, log *applog.Logger) http.Handler {
+func accessLog(next http.Handler, log *applog.Logger, access Access) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+		r = bindUser(r, access)
 		sw := &statusWriter{ResponseWriter: w}
 		next.ServeHTTP(sw, r)
 		attrs := []any{
@@ -222,6 +223,25 @@ func WithUserID(ctx context.Context, userID string) context.Context {
 func userIDFromRequest(r *http.Request) string {
 	v, _ := r.Context().Value(userIDKey).(string)
 	return v
+}
+
+func bindUser(r *http.Request, access Access) *http.Request {
+	if access == nil {
+		return r
+	}
+	var (
+		p   Principal
+		err error
+	)
+	if pk, ok := access.(peeker); ok {
+		p, err = pk.Peek(r)
+	} else {
+		p, err = access.Authenticate(r)
+	}
+	if err != nil || p.UserID == "" {
+		return r
+	}
+	return r.WithContext(WithUserID(r.Context(), p.UserID))
 }
 
 func peekEmail(r *http.Request) string {

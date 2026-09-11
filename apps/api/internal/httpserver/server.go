@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/parche-app/backend/internal/applog"
+	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/config"
 	"github.com/parche-app/backend/internal/health"
 	"github.com/parche-app/backend/internal/objectstore"
@@ -23,6 +24,7 @@ type Routes struct {
 	Store  objectstore.Store
 	Access Access
 	Events EventWrite
+	Auth   *auth.Service
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -35,10 +37,11 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	mux.Handle("GET /health", health.Health())
 	mux.Handle("GET /ready", health.Ready(log, checkers...))
 	registerUploadRoutes(mux, routes)
+	registerAuthRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
-	return wrap(&v1Mux{inner: mux}, log, cfg, limiter)
+	return wrap(&v1Mux{inner: mux}, log, cfg, limiter, routes.Access)
 }
 
 // Run connects dependencies, applies migrations, and serves HTTP until ctx is done.
@@ -69,14 +72,28 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		log.Error("object store", "err", err)
 	}
 
+	tokens := &auth.Tokens{
+		AccessSecret:  []byte(cfg.JWTAccessSecret),
+		RefreshPepper: []byte(cfg.JWTRefreshSecret),
+	}
+	sessions, err := auth.NewService(auth.NewPG(pool), tokens, auth.DefaultArgon2(), log)
+	if err != nil {
+		log.Error("auth service", "err", err)
+	}
+	access := JWTAccess{Tokens: tokens, Status: nil}
+	if sessions != nil {
+		access.Status = sessions.UserStatus
+	}
+
 	handler := newMux(log, cfg, ratelimit.New(rdb), []health.Checker{
 		postgres.Checker{Pool: pool},
 		redisx.Checker{Client: rdb},
 		objectstore.Checker{Store: store},
 	}, nil, Routes{
 		Store:  store,
-		Access: RejectAccess{},
+		Access: access,
 		Events: DenyEventWrite{},
+		Auth:   sessions,
 	})
 
 	srv := &http.Server{

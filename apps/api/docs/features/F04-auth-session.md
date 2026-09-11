@@ -111,12 +111,12 @@ Lista sesiones (id, created, user_agent, current). Sin hashes.
 
 ## Checklist
 
-- [ ] Access < 15 min
-- [ ] Refresh no se guarda en claro
-- [ ] Reuso tumba la familia
-- [ ] Logout y logout-all
-- [ ] Logs sin passwords ni JWT
-- [ ] Tests de login genérico y refresh rotation
+- [x] Access < 15 min
+- [x] Refresh no se guarda en claro
+- [x] Reuso tumba la familia
+- [x] Logout y logout-all
+- [x] Logs sin passwords ni JWT
+- [x] Tests de login genérico y refresh rotation
 
 ## Next step
 

@@ -55,7 +55,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir fs.FS) error {
 		if err != nil {
 			return fmt.Errorf("begin migration %s: %w", version, err)
 		}
-		if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
+		if err := execMigrationSQL(ctx, tx, string(sqlBytes)); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("apply migration %s: %w", version, err)
 		}
@@ -68,4 +68,37 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir fs.FS) error {
 		}
 	}
 	return nil
+}
+
+func execMigrationSQL(ctx context.Context, tx pgx.Tx, sqlText string) error {
+	for _, stmt := range SplitSQL(sqlText) {
+		if _, err := tx.Exec(ctx, stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SplitSQL breaks a migration file into statements. Comments-only chunks are dropped.
+func SplitSQL(sqlText string) []string {
+	var out []string
+	for _, part := range strings.Split(sqlText, ";") {
+		stmt := strings.TrimSpace(part)
+		if stmt == "" {
+			continue
+		}
+		var kept []string
+		for _, line := range strings.Split(stmt, "\n") {
+			trim := strings.TrimSpace(line)
+			if trim == "" || strings.HasPrefix(trim, "--") {
+				continue
+			}
+			kept = append(kept, line)
+		}
+		if len(kept) == 0 {
+			continue
+		}
+		out = append(out, strings.TrimSpace(strings.Join(kept, "\n")))
+	}
+	return out
 }

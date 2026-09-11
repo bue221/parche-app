@@ -54,7 +54,7 @@ type uploadHandler struct {
 func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.access.Authenticate(r)
 	if err != nil {
-		apierr.Write(w, r, apierr.Unauthorized, "", nil)
+		writeAccessError(w, r, err)
 		return
 	}
 	r = r.WithContext(WithUserID(r.Context(), principal.UserID))
