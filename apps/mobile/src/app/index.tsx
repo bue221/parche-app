@@ -79,7 +79,9 @@ export default function AgendaScreen() {
       ) : null}
       <View className="mt-ds-32 gap-ds-24">
         {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-        {events.length === 0 && !error ? <EmptyState title="Aún no hay fechas" /> : null}
+        {events.length === 0 && !error ? (
+          <EmptyState title={filters.q || filters.genre || filters.artistId || filters.from ? 'Nada en esos filtros' : 'Aún no hay fechas'} />
+        ) : null}
         {events.map((event) => (
           <EventCard key={event.id} event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
         ))}
