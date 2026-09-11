@@ -145,6 +145,10 @@ func TestFollowIdempotentAndList(t *testing.T) {
 	if err != nil || got.FollowersCount != 2 {
 		t.Fatalf("count=%v %+v", err, got)
 	}
+	ids, err := svc.FollowerUserIDs(ctx, a.ID)
+	if err != nil || len(ids) != 2 {
+		t.Fatalf("follower ids=%v %v", ids, err)
+	}
 	items, next, err := svc.ListFollowing(ctx, fan.User.ID, FollowFilter{Limit: 20})
 	if err != nil || next != nil || len(items) != 1 || items[0].ID != a.ID {
 		t.Fatalf("following=%v next=%v %v", items, next, err)

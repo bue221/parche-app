@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/nats-io/nats.go"
@@ -57,5 +58,24 @@ func TestDispatchRecsRefresh(t *testing.T) {
 	}
 	if !called {
 		t.Fatal("expected recs.refresh handler")
+	}
+}
+
+func TestDispatchEmailSend(t *testing.T) {
+	var got []byte
+	err := dispatch(context.Background(), Handlers{
+		EmailSend: func(_ context.Context, payload []byte) error {
+			got = payload
+			return nil
+		},
+	}, &nats.Msg{
+		Subject: broker.SubjectEmailSend,
+		Data:    []byte(`{"template":"password_reset","to":"a@example.com"}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "password_reset") {
+		t.Fatalf("%s", got)
 	}
 }

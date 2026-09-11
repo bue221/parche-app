@@ -21,6 +21,7 @@ type Handlers struct {
 	ExpireOrders func(ctx context.Context) (int, error)
 	TicketUsed   func(ctx context.Context, job events.TicketScanJob) error
 	RefreshRecs  func(ctx context.Context) (int, error)
+	EmailSend    func(ctx context.Context, payload []byte) error
 }
 
 // Run subscribes to product subjects and idles until ctx is cancelled.
@@ -126,6 +127,11 @@ func dispatch(ctx context.Context, h Handlers, msg *nats.Msg) error {
 		}
 		_, err := h.RefreshRecs(ctx)
 		return err
+	case broker.SubjectEmailSend:
+		if h.EmailSend == nil {
+			return nil
+		}
+		return h.EmailSend(ctx, msg.Data)
 	default:
 		return nil
 	}

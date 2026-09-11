@@ -40,6 +40,7 @@ type Service struct {
 	Payments  payments.Provider
 	Tickets   ticketsign.Keys
 	Publisher Queue
+	Followers ArtistFollowers
 	Now       func() time.Time
 }
 
@@ -253,6 +254,7 @@ func (s *Service) Publish(ctx context.Context, id string) (Event, error) {
 		return Event{}, err
 	}
 	s.invalidateList(ctx)
+	s.notifyArtistNewEvent(ctx, e)
 	return s.loaded(ctx, e.CreatedBy, id)
 }
 
@@ -282,6 +284,7 @@ func (s *Service) Cancel(ctx context.Context, userID, id string) error {
 		return err
 	}
 	s.invalidateList(ctx)
+	s.notifyEventCancelled(ctx, e)
 	return nil
 }
 

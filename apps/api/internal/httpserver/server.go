@@ -157,6 +157,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if artistSvc != nil && eventSvc != nil {
 		eventSvc.Lineup = artistSvc
 		artistSvc.Catalog = eventSvc
+		eventSvc.Followers = artistSvc
 	}
 	var recSvc *recs.Service
 	if eventSvc != nil && artistSvc != nil {
@@ -182,19 +183,27 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 			mediaSvc.Posts = postSvc
 			postSvc.Covers = mediaSvc
 		}
-		if cfg.BrokerURL != "" {
-			if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
-				log.Error("broker publisher", "err", err)
-			} else {
-				mediaSvc.Publisher = broker.Publisher{JS: js}
-				if eventSvc != nil {
-					eventSvc.Publisher = broker.Publisher{JS: js}
-				}
-				go func() {
-					<-ctx.Done()
-					nc.Close()
-				}()
+	}
+	if cfg.BrokerURL != "" {
+		if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
+			log.Error("broker publisher", "err", err)
+		} else {
+			pub := broker.Publisher{JS: js}
+			q := mailer.Queue{Pub: pub, Outbox: mailer.NewPG(pool)}
+			if sessions != nil {
+				sessions.Mailer = q
 			}
+			if eventSvc != nil {
+				eventSvc.Publisher = pub
+				eventSvc.Mailer = q
+			}
+			if mediaSvc != nil {
+				mediaSvc.Publisher = pub
+			}
+			go func() {
+				<-ctx.Done()
+				nc.Close()
+			}()
 		}
 	}
 	var pay payments.Provider

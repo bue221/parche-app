@@ -12,6 +12,7 @@ import (
 	"github.com/parche-app/backend/internal/config"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/httpserver"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 	"github.com/parche-app/backend/internal/postgres"
@@ -86,7 +87,16 @@ func main() {
 		refreshRecs := func(ctx context.Context) (int, error) {
 			return recSvc.RefreshAll(ctx)
 		}
-		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed, RefreshRecs: refreshRecs}); err != nil {
+		tr, err := mailer.NewTransport(cfg, log)
+		if err != nil {
+			log.Error("email transport", "err", err)
+			os.Exit(1)
+		}
+		outbox := mailer.NewPG(pool)
+		emailSend := func(ctx context.Context, payload []byte) error {
+			return mailer.Consume(ctx, outbox, tr, payload)
+		}
+		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed, RefreshRecs: refreshRecs, EmailSend: emailSend}); err != nil {
 			log.Error("worker stopped", "err", err)
 			os.Exit(1)
 		}

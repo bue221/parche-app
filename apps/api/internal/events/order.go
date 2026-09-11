@@ -323,6 +323,9 @@ func (s *Service) ApplyWebhook(ctx context.Context, ev payments.Event, provider,
 		body, _ := json.Marshal(map[string]string{"order_id": ev.OrderID})
 		_ = s.Publisher.Publish(ctx, broker.SubjectPaymentConfirmed, body)
 	}
+	if applied {
+		s.notifyOrderMail(ctx, ev.OrderID, ev.Status)
+	}
 	return nil
 }
 

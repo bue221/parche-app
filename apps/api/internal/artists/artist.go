@@ -103,6 +103,7 @@ type Store interface {
 	Unfollow(ctx context.Context, userID, artistID string) error
 	CountFollowers(ctx context.Context, artistID string) (int, error)
 	FollowsByUser(ctx context.Context, userID string) ([]Follow, error)
+	FollowsByArtist(ctx context.Context, artistID string) ([]Follow, error)
 }
 
 // Accounts is F06 profiles and tenant membership. auth.Store satisfies it.

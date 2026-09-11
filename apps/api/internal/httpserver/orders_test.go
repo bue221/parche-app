@@ -11,6 +11,7 @@ import (
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
+	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/payments"
 )
 
@@ -126,6 +127,19 @@ func TestCheckoutHTTP(t *testing.T) {
 	mux.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("dup webhook=%d %s", rr.Code, rr.Body.String())
+	}
+	mail, ok := catalog.Mailer.(*mailer.Memory)
+	if !ok {
+		t.Fatal("mailer")
+	}
+	paid := 0
+	for _, msg := range mail.All() {
+		if msg.Template == mailer.TemplateOrderPaid {
+			paid++
+		}
+	}
+	if paid != 1 {
+		t.Fatalf("order_paid count=%d", paid)
 	}
 
 	rr = httptest.NewRecorder()

@@ -155,6 +155,30 @@ func (s *PG) FollowsByUser(ctx context.Context, userID string) ([]Follow, error)
 	return out, rows.Err()
 }
 
+func (s *PG) FollowsByArtist(ctx context.Context, artistID string) ([]Follow, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT user_id, artist_id, created_at
+		FROM artist_follows
+		WHERE artist_id = $1`, artistID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Follow
+	for rows.Next() {
+		var f Follow
+		if err := rows.Scan(&f.UserID, &f.ArtistID, &f.CreatedAt); err != nil {
+			return nil, err
+		}
+		f.CreatedAt = f.CreatedAt.UTC()
+		out = append(out, f)
+	}
+	if out == nil {
+		out = []Follow{}
+	}
+	return out, rows.Err()
+}
+
 const artistSelect = `
 	SELECT id, COALESCE(user_id::text, ''), COALESCE(tenant_id::text, ''), name, bio,
 		COALESCE(avatar_asset_id::text, ''), links, created_at, updated_at

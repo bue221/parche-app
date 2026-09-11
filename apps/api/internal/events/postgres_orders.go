@@ -125,6 +125,30 @@ func (s *PG) ListTicketsByUser(ctx context.Context, userID string) ([]Ticket, er
 	return out, rows.Err()
 }
 
+func (s *PG) ListTicketHolderIDs(ctx context.Context, eventID string) ([]string, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT DISTINCT user_id::text
+		FROM tickets
+		WHERE event_id = $1 AND status IN ($2, $3, $4)
+		ORDER BY 1`, eventID, TicketValid, TicketUsed, TicketReserved)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	if out == nil {
+		out = []string{}
+	}
+	return out, rows.Err()
+}
+
 func (s *PG) SetTicketJTI(ctx context.Context, ticketID, jti string) error {
 	tag, err := s.q.Exec(ctx, `
 		UPDATE tickets SET jti = $2

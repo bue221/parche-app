@@ -313,6 +313,19 @@ func (s *Service) EventIDsByArtist(ctx context.Context, artistID string) ([]stri
 	return out, nil
 }
 
+// FollowerUserIDs implements events.ArtistFollowers for F26 artist_new_event.
+func (s *Service) FollowerUserIDs(ctx context.Context, artistID string) ([]string, error) {
+	rows, err := s.Store.FollowsByArtist(ctx, artistID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(rows))
+	for _, f := range rows {
+		out = append(out, f.UserID)
+	}
+	return out, nil
+}
+
 func (s *Service) ListEvents(ctx context.Context, artistID string, f EventFilter) ([]events.Event, error) {
 	if _, err := s.Store.ByID(ctx, artistID); err != nil {
 		return nil, err

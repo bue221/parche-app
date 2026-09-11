@@ -241,6 +241,7 @@ type Store interface {
 	ListEventOrders(ctx context.Context, eventID, cursor string, limit int) ([]MetricsOrderRow, error)
 	ListEventTicketExport(ctx context.Context, eventID string) ([]TicketExportRow, error)
 	TenantMetricsWindow(ctx context.Context, tenantID string, from, to time.Time) ([]TenantEventMetricRow, int, error)
+	ListTicketHolderIDs(ctx context.Context, eventID string) ([]string, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
@@ -296,6 +297,11 @@ type EventMedia struct {
 type Lineup interface {
 	EventLineup(ctx context.Context, eventID string) ([]LineupSlot, error)
 	EventIDsByArtist(ctx context.Context, artistID string) ([]string, error)
+}
+
+// ArtistFollowers loads F13 followers for artist_new_event mail (F26).
+type ArtistFollowers interface {
+	FollowerUserIDs(ctx context.Context, artistID string) ([]string, error)
 }
 
 // Queue publishes broker subjects. Optional until a worker is connected.

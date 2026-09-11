@@ -231,6 +231,7 @@ func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memo
 	asvc.Catalog = esvc
 	asvc.Avatars = msvc
 	esvc.Lineup = asvc
+	esvc.Followers = asvc
 	esvc.Payments = payments.Fake{}
 	keys, err := ticketsign.Parse("ticket-signing-key-32-bytes-min!!", "")
 	if err != nil {

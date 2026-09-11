@@ -37,7 +37,7 @@ Seguirse a uno mismo: permitido si el user es el artist (no harm). Artist inexis
 - [x] Follow duplicado no 500
 - [x] Unfollow idempotente
 - [x] GET me/following
-- [ ] Job opcional email al publish (F26)
+- [x] Job opcional email al publish (F26)
 
 ## Next step
 

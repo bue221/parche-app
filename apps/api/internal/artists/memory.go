@@ -191,6 +191,21 @@ func (m *Memory) FollowsByUser(_ context.Context, userID string) ([]Follow, erro
 	return out, nil
 }
 
+func (m *Memory) FollowsByArtist(_ context.Context, artistID string) ([]Follow, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Follow
+	for _, f := range m.follows {
+		if f.ArtistID == artistID {
+			out = append(out, f)
+		}
+	}
+	if out == nil {
+		out = []Follow{}
+	}
+	return out, nil
+}
+
 func followKey(userID, artistID string) string {
 	return userID + "/" + artistID
 }

@@ -179,6 +179,30 @@ func (m *Memory) ListTicketsByUser(_ context.Context, userID string) ([]Ticket, 
 	return out, nil
 }
 
+func (m *Memory) ListTicketHolderIDs(_ context.Context, eventID string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	seen := map[string]struct{}{}
+	var out []string
+	for _, t := range m.tix {
+		if t.EventID != eventID {
+			continue
+		}
+		if t.Status != TicketValid && t.Status != TicketUsed && t.Status != TicketReserved {
+			continue
+		}
+		if _, ok := seen[t.UserID]; ok {
+			continue
+		}
+		seen[t.UserID] = struct{}{}
+		out = append(out, t.UserID)
+	}
+	if out == nil {
+		out = []string{}
+	}
+	return out, nil
+}
+
 func (m *Memory) SetTicketJTI(_ context.Context, ticketID, jti string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
