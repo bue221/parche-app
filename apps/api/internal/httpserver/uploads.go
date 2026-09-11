@@ -171,6 +171,7 @@ func (h uploadHandler) directGet(w http.ResponseWriter, r *http.Request) {
 	if ct != "" {
 		w.Header().Set("Content-Type", ct)
 	}
+	w.Header().Set("Content-Disposition", "inline")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, body)
 }

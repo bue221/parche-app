@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -14,10 +15,16 @@ type Memory struct {
 	intents map[string]Intent
 	assets  map[string]Asset
 	byKey   map[string]string
+	tracks  map[string][]Track
 }
 
 func NewMemory() *Memory {
-	return &Memory{intents: map[string]Intent{}, assets: map[string]Asset{}, byKey: map[string]string{}}
+	return &Memory{
+		intents: map[string]Intent{},
+		assets:  map[string]Asset{},
+		byKey:   map[string]string{},
+		tracks:  map[string][]Track{},
+	}
 }
 
 func (m *Memory) SaveIntent(_ context.Context, in Intent) error {
@@ -120,4 +127,47 @@ func (m *Memory) ListEventAssets(_ context.Context, eventID string) ([]Asset, er
 		}
 	}
 	return out, nil
+}
+
+func (m *Memory) ReplaceTracks(_ context.Context, eventID string, tracks []Track) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := make([]Track, len(tracks))
+	copy(cp, tracks)
+	sort.Slice(cp, func(i, j int) bool { return cp[i].Position < cp[j].Position })
+	m.tracks[eventID] = cp
+	return nil
+}
+
+func (m *Memory) ListTracks(_ context.Context, eventID string) ([]Track, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	src := m.tracks[eventID]
+	out := make([]Track, len(src))
+	copy(out, src)
+	return out, nil
+}
+
+func (m *Memory) TrackByID(_ context.Context, eventID, trackID string) (Track, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, tr := range m.tracks[eventID] {
+		if tr.ID == trackID {
+			return tr, nil
+		}
+	}
+	return Track{}, auth.ErrNotFound
+}
+
+func (m *Memory) AssetInTracks(_ context.Context, assetID string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, list := range m.tracks {
+		for _, tr := range list {
+			if tr.AssetID == assetID {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }

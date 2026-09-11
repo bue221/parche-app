@@ -49,6 +49,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerVenueRoutes(mux, routes)
 	registerEventRoutes(mux, routes)
 	registerAssetRoutes(mux, routes)
+	registerTrackRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}

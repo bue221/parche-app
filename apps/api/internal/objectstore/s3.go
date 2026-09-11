@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -150,7 +151,9 @@ func (s *s3Store) GetPresign(ctx context.Context, key string, ttl time.Duration)
 	if ttl < time.Second {
 		ttl = time.Second
 	}
-	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, ttl, nil)
+	params := url.Values{}
+	params.Set("response-content-disposition", "inline")
+	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, ttl, params)
 	if err != nil {
 		return "", err
 	}

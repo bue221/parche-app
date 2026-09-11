@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"strings"
 	"testing"
 
 	"github.com/parche-app/backend/internal/auth"
@@ -87,6 +88,93 @@ func TestProcessStripsGPSAndWritesThumb(t *testing.T) {
 	ok, err := obj.Exists(ctx, got.ThumbKey)
 	if err != nil || !ok {
 		t.Fatalf("thumb exists=%v err=%v", ok, err)
+	}
+}
+
+func TestProcessAudioWritesPreviewNotPublic(t *testing.T) {
+	ctx := context.Background()
+	obj, err := objectstore.NewFS(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewMemory()
+	svc := NewService(store, obj, &stubEvents{})
+	svc.PreviewAudio = func(_ context.Context, src []byte) (PreviewResult, error) {
+		if len(src) == 0 {
+			t.Fatal("empty source")
+		}
+		return PreviewResult{Body: []byte("preview-bytes"), MIME: "audio/mpeg", DurationMS: 45000}, nil
+	}
+	key := "tnt/evt/audio/set.wav"
+	raw := []byte("RIFF-master-wav")
+	if err := obj.Put(ctx, key, "audio/wav", bytes.NewReader(raw), int64(len(raw))); err != nil {
+		t.Fatal(err)
+	}
+	a := Asset{
+		ID: "asset-audio", TenantID: "tnt", OwnerType: OwnerEvent, OwnerID: "evt",
+		Kind: KindAudio, Key: key, MIME: "audio/wav", Bytes: int64(len(raw)),
+		Status: StatusProcessing, TranscodeStatus: TranscodePending, CreatedBy: "user",
+	}
+	if err := store.CreateAsset(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Process(ctx, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.AssetByID(ctx, a.ID)
+	if err != nil || got.TranscodeStatus != TranscodeReady || got.PreviewKey == "" || got.DurationMS > 45000 {
+		t.Fatalf("asset=%+v err=%v", got, err)
+	}
+	if got.PreviewKey == got.Key {
+		t.Fatal("preview key must not be the master key")
+	}
+	if strings.Contains(obj.GetPublicURL(got.Key), got.PreviewKey) && got.Key == got.PreviewKey {
+		t.Fatal("confused public url")
+	}
+	ok, err := obj.Exists(ctx, got.PreviewKey)
+	if err != nil || !ok {
+		t.Fatal("preview object missing")
+	}
+	ok, _ = obj.Exists(ctx, key)
+	if !ok {
+		t.Fatal("master must be kept")
+	}
+}
+
+func TestProcessAudioFailedKeepsMaster(t *testing.T) {
+	ctx := context.Background()
+	obj, err := objectstore.NewFS(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := NewMemory()
+	svc := NewService(store, obj, &stubEvents{})
+	svc.PreviewAudio = func(context.Context, []byte) (PreviewResult, error) {
+		return PreviewResult{}, errors.New("ffmpeg")
+	}
+	key := "tnt/evt/audio/bad.wav"
+	raw := []byte("not-audio")
+	if err := obj.Put(ctx, key, "audio/wav", bytes.NewReader(raw), int64(len(raw))); err != nil {
+		t.Fatal(err)
+	}
+	a := Asset{
+		ID: "asset-bad-audio", TenantID: "tnt", OwnerType: OwnerEvent, OwnerID: "evt",
+		Kind: KindAudio, Key: key, MIME: "audio/wav", Bytes: int64(len(raw)),
+		Status: StatusProcessing, TranscodeStatus: TranscodePending, CreatedBy: "user",
+	}
+	if err := store.CreateAsset(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Process(ctx, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := store.AssetByID(ctx, a.ID)
+	if got.TranscodeStatus != TranscodeFailed || got.PreviewKey != "" {
+		t.Fatalf("got=%+v", got)
+	}
+	ok, err := obj.Exists(ctx, key)
+	if err != nil || !ok {
+		t.Fatal("master must be kept")
 	}
 }
 

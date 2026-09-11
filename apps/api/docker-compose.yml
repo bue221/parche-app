@@ -68,6 +68,8 @@ services:
         condition: service_healthy
       broker:
         condition: service_started
+      minio:
+        condition: service_started
     restart: unless-stopped
 
   postgres:

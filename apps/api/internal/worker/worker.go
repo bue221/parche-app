@@ -41,7 +41,7 @@ func Run(ctx context.Context, js nats.JetStreamContext, log *slog.Logger, h Hand
 			nats.ManualAck(),
 			nats.BindStream(streamName),
 			nats.MaxDeliver(8),
-			nats.AckWait(30*time.Second),
+			nats.AckWait(3*time.Minute),
 		)
 		if err != nil {
 			return fmt.Errorf("subscribe %s: %w", subject, err)

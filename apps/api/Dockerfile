@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/parche-api ./cmd/parche-api
 
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata ffmpeg
 WORKDIR /app
 COPY --from=build /out/parche-api /usr/local/bin/parche-api
 COPY migrations ./migrations

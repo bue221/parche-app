@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"image"
 	"image/png"
@@ -207,6 +208,9 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 		t.Fatal(err)
 	}
 	msvc := media.NewService(media.NewMemory(), obj, esvc)
+	msvc.PreviewAudio = func(_ context.Context, _ []byte) (media.PreviewResult, error) {
+		return media.PreviewResult{Body: []byte("ID3preview"), MIME: "audio/mpeg", DurationMS: 45000}, nil
+	}
 	esvc.Media = msvc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{

@@ -94,7 +94,7 @@ func (h eventHandler) createEvent(w http.ResponseWriter, r *http.Request) {
 		writeEventErr(w, r, err)
 		return
 	}
-	apierr.WriteJSON(w, http.StatusCreated, publicEvent(ev))
+	apierr.WriteJSON(w, http.StatusCreated, publicEventAbs(r, ev))
 }
 
 func (h eventHandler) getEvent(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +111,7 @@ func (h eventHandler) getEvent(w http.ResponseWriter, r *http.Request) {
 		writeEventErr(w, r, err)
 		return
 	}
-	apierr.WriteJSON(w, http.StatusOK, publicEvent(ev))
+	apierr.WriteJSON(w, http.StatusOK, publicEventAbs(r, ev))
 }
 
 func (h eventHandler) patchEvent(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +146,7 @@ func (h eventHandler) patchEvent(w http.ResponseWriter, r *http.Request) {
 		writeEventErr(w, r, err)
 		return
 	}
-	apierr.WriteJSON(w, http.StatusOK, publicEvent(ev))
+	apierr.WriteJSON(w, http.StatusOK, publicEventAbs(r, ev))
 }
 
 func (h eventHandler) submitEvent(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +208,7 @@ func (h eventHandler) listTenantEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	pub := make([]map[string]any, 0, len(items))
 	for _, e := range items {
-		pub = append(pub, publicEvent(e))
+		pub = append(pub, publicEventAbs(r, e))
 	}
 	apierr.WriteJSON(w, http.StatusOK, ListEnvelope[map[string]any]{Items: pub, NextCursor: events.NextCursor(items, page.Limit)})
 }
@@ -306,6 +306,10 @@ func publicEvent(e events.Event) map[string]any {
 	if gallery == nil {
 		gallery = []events.Image{}
 	}
+	tracks := e.Tracks
+	if tracks == nil {
+		tracks = []events.Track{}
+	}
 	out := map[string]any{
 		"id":           e.ID,
 		"tenant_id":    e.TenantID,
@@ -325,6 +329,7 @@ func publicEvent(e events.Event) map[string]any {
 		"address_text": e.AddressText,
 		"venue_name":   e.VenueName,
 		"gallery":      gallery,
+		"tracks":       tracks,
 	}
 	if e.AgePolicy != "" {
 		out["age_policy"] = e.AgePolicy
@@ -335,5 +340,15 @@ func publicEvent(e events.Event) map[string]any {
 	if e.Flyer != nil {
 		out["flyer"] = e.Flyer
 	}
+	return out
+}
+
+func publicEventAbs(r *http.Request, e events.Event) map[string]any {
+	out := publicEvent(e)
+	tracks, _ := out["tracks"].([]events.Track)
+	for i := range tracks {
+		tracks[i].PreviewURL = absoluteUploadURL(r, tracks[i].PreviewURL)
+	}
+	out["tracks"] = tracks
 	return out
 }

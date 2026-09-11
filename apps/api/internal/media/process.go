@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -21,12 +22,14 @@ func init() {
 	image.RegisterFormat("webp", "RIFF????WEBP", webp.Decode, webp.DecodeConfig)
 }
 
-// Process generates a GPS-free original (capped) and a webp thumbnail.
-// Decode failure marks the asset failed and keeps the original object.
+// Process generates image thumbs or a 45s audio preview. Decode/ffmpeg failure marks the asset failed and keeps the original.
 func (s *Service) Process(ctx context.Context, assetID string) error {
 	a, err := s.Store.AssetByID(ctx, assetID)
 	if err != nil {
 		return err
+	}
+	if a.Kind == KindAudio {
+		return s.processAudio(ctx, a)
 	}
 	if a.Kind != KindFlyer && a.Kind != KindGallery {
 		return nil
@@ -81,6 +84,53 @@ func (s *Service) Process(ctx context.Context, assetID string) error {
 	}
 	a.ThumbKey = tk
 	a.Status = StatusReady
+	return s.Store.UpdateAsset(ctx, a)
+}
+
+func (s *Service) processAudio(ctx context.Context, a Asset) error {
+	fail := func(cause error) error {
+		s.log().Error("media audio transcode failed", "asset_id", a.ID, "err", cause)
+		a.Status = StatusFailed
+		a.TranscodeStatus = TranscodeFailed
+		return s.Store.UpdateAsset(ctx, a)
+	}
+	rc, _, err := s.Objects.Get(ctx, a.Key)
+	if err != nil {
+		if errors.Is(err, objectstore.ErrNotFound) {
+			return fail(err)
+		}
+		return err
+	}
+	raw, err := io.ReadAll(rc)
+	_ = rc.Close()
+	if err != nil {
+		return err
+	}
+	preview, err := s.makePreview(ctx, raw)
+	if err != nil {
+		return fail(err)
+	}
+	if len(preview.Body) == 0 || int64(len(preview.Body)) > maxPreviewBytes {
+		return fail(fmt.Errorf("empty or oversized preview"))
+	}
+	pk := previewKey(a.Key)
+	mime := preview.MIME
+	if mime == "" {
+		mime = previewMIME
+	}
+	if err := s.Objects.Put(ctx, pk, mime, bytes.NewReader(preview.Body), int64(len(preview.Body))); err != nil {
+		return err
+	}
+	a.PreviewKey = pk
+	a.DurationMS = preview.DurationMS
+	if a.DurationMS <= 0 {
+		a.DurationMS = previewSeconds * 1000
+	}
+	if a.DurationMS > previewSeconds*1000 {
+		a.DurationMS = previewSeconds * 1000
+	}
+	a.Status = StatusReady
+	a.TranscodeStatus = TranscodeReady
 	return s.Store.UpdateAsset(ctx, a)
 }
 

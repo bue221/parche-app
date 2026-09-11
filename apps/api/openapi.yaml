@@ -241,6 +241,115 @@ paths:
           $ref: "#/components/responses/NotFound"
         "410":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/audio:
+    post:
+      summary: Confirm an uploaded audio master (F10)
+      operationId: confirmEventAudio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEventAudioRequest"
+            example:
+              key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/audio/0199a0c0-0000-7000-8000-000000000040.wav
+      responses:
+        "201":
+          description: Audio asset metadata without public master URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAudioAsset"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/tracks:
+    put:
+      summary: Replace ordered reference tracks (F10)
+      operationId: putEventTracks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutEventTracksRequest"
+            example:
+              tracks:
+                - asset_id: 0199a0c0-0000-7000-8000-000000000041
+                  title: Acid jam
+                  position: 0
+      responses:
+        "200":
+          description: Ordered track list with signed preview URLs when ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTracksResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/tracks/{trackId}/master:
+    get:
+      summary: Short-lived signed URL for an audio master (F10)
+      operationId: getEventTrackMaster
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: trackId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Presigned GET. Never a public CDN URL. Requires event.write.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackMasterResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/events/{id}/assets/{assetId}:
     delete:
       summary: Delete an event image (F09)
@@ -1044,6 +1153,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EventImage"
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventTrack"
     EventAdminList:
       type: object
       required: [items]
@@ -1423,6 +1536,86 @@ components:
         kind:
           type: string
           enum: [flyer, gallery]
+    ConfirmEventAudioRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+    EventAudioAsset:
+      type: object
+      required: [id, kind, transcode_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [audio]
+        mime:
+          type: string
+        bytes:
+          type: integer
+          format: int64
+        duration_ms:
+          type: integer
+        transcode_status:
+          type: string
+          enum: [pending, ready, failed]
+    PutEventTracksRequest:
+      type: object
+      required: [tracks]
+      properties:
+        tracks:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [asset_id, title, position]
+            properties:
+              asset_id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              position:
+                type: integer
+                minimum: 0
+    EventTracksResponse:
+      type: object
+      required: [tracks]
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventTrack"
+    EventTrack:
+      type: object
+      required: [id, title, position]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        position:
+          type: integer
+        duration_ms:
+          type: integer
+        preview_url:
+          type: string
+        preview_expires_at:
+          type: string
+          format: date-time
+    TrackMasterResponse:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
     EventImage:
       type: object
       required: [id, kind, public_url]

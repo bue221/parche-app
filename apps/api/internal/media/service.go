@@ -16,14 +16,15 @@ import (
 	"github.com/parche-app/backend/internal/objectstore"
 )
 
-// Service confirms event image uploads, binds flyers, and processes thumbnails.
+// Service confirms event media, binds flyers, transcodes audio, and orders tracks.
 type Service struct {
-	Store     Store
-	Objects   objectstore.Store
-	Events    EventBinder
-	Publisher Publisher
-	Log       *slog.Logger
-	Now       func() time.Time
+	Store        Store
+	Objects      objectstore.Store
+	Events       EventBinder
+	Publisher    Publisher
+	Log          *slog.Logger
+	Now          func() time.Time
+	PreviewAudio func(ctx context.Context, src []byte) (PreviewResult, error)
 }
 
 func NewService(store Store, objects objectstore.Store, binder EventBinder) *Service {
@@ -54,59 +55,102 @@ func (s *Service) SaveIntent(ctx context.Context, in Intent) error {
 
 func (s *Service) Confirm(ctx context.Context, in ConfirmInput) (events.Image, error) {
 	kind := strings.TrimSpace(in.Kind)
-	key := strings.TrimSpace(in.Key)
 	if kind == KindAudio {
 		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "use_audio_endpoint"}}}
 	}
 	if kind != KindFlyer && kind != KindGallery {
 		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "invalid"}}}
 	}
+	a, err := s.confirmAsset(ctx, in, kind)
+	if err != nil {
+		return events.Image{}, err
+	}
+	if kind == KindFlyer {
+		prev, _, err := s.Events.BindFlyer(ctx, in.EventID, a.ID)
+		if err != nil {
+			return events.Image{}, err
+		}
+		if prev != "" && prev != a.ID {
+			if old, err := s.Store.AssetByID(ctx, prev); err == nil && old.Kind == KindFlyer {
+				old.Kind = KindGallery
+				_ = s.Store.UpdateAsset(ctx, old)
+			}
+		}
+	}
+	if err := s.enqueueProcess(ctx, a.ID); err != nil {
+		s.log().Error("media.process enqueue", "asset_id", a.ID, "err", err)
+	}
+	ready, err := s.Store.AssetByID(ctx, a.ID)
+	if err != nil {
+		ready = a
+	}
+	return s.view(ready), nil
+}
+
+func (s *Service) ConfirmAudio(ctx context.Context, in ConfirmInput) (AudioView, error) {
+	in.Kind = KindAudio
+	a, err := s.confirmAsset(ctx, in, KindAudio)
+	if err != nil {
+		return AudioView{}, err
+	}
+	if err := s.enqueueProcess(ctx, a.ID); err != nil {
+		s.log().Error("media.process enqueue", "asset_id", a.ID, "err", err)
+	}
+	ready, err := s.Store.AssetByID(ctx, a.ID)
+	if err != nil {
+		ready = a
+	}
+	return audioView(ready), nil
+}
+
+func (s *Service) confirmAsset(ctx context.Context, in ConfirmInput, kind string) (Asset, error) {
+	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "key", Issue: "required"}}}
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "key", Issue: "required"}}}
 	}
 
 	intent, err := s.Store.IntentByKey(ctx, key)
 	if err != nil {
 		if errors.Is(err, auth.ErrNotFound) {
-			return events.Image{}, auth.ErrForbidden
+			return Asset{}, auth.ErrForbidden
 		}
-		return events.Image{}, err
+		return Asset{}, err
 	}
 	if intent.UserID != in.UserID {
-		return events.Image{}, auth.ErrForbidden
+		return Asset{}, auth.ErrForbidden
 	}
 	if s.now().After(intent.ExpiresAt) {
-		return events.Image{}, auth.ErrGone
+		return Asset{}, auth.ErrGone
 	}
 	if intent.EventID != "" && intent.EventID != in.EventID {
-		return events.Image{}, auth.ErrForbidden
+		return Asset{}, auth.ErrForbidden
 	}
 	if intent.Kind != "" && intent.Kind != kind {
-		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "mismatch"}}}
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "mismatch"}}}
 	}
 
 	prefix := in.TenantID + "/" + in.EventID + "/"
 	if !strings.HasPrefix(key, prefix) {
-		return events.Image{}, auth.ErrForbidden
+		return Asset{}, auth.ErrForbidden
 	}
 	if !strings.HasPrefix(key, prefix+kind+"/") {
-		return events.Image{}, auth.ErrForbidden
+		return Asset{}, auth.ErrForbidden
 	}
 
 	ok, err := s.Objects.Exists(ctx, key)
 	if err != nil {
-		return events.Image{}, err
+		return Asset{}, err
 	}
 	if !ok {
-		return events.Image{}, auth.ErrNotFound
+		return Asset{}, auth.ErrNotFound
 	}
 
 	head, err := s.Objects.Head(ctx, key)
 	if err != nil {
 		if errors.Is(err, objectstore.ErrNotFound) {
-			return events.Image{}, auth.ErrNotFound
+			return Asset{}, auth.ErrNotFound
 		}
-		return events.Image{}, err
+		return Asset{}, err
 	}
 	mime := head.ContentType
 	if mime == "" || mime == "application/octet-stream" {
@@ -123,7 +167,7 @@ func (s *Service) Confirm(ctx context.Context, in ConfirmInput) (events.Image, e
 
 	id, err := newID()
 	if err != nil {
-		return events.Image{}, err
+		return Asset{}, err
 	}
 	a := Asset{
 		ID:        id,
@@ -138,33 +182,14 @@ func (s *Service) Confirm(ctx context.Context, in ConfirmInput) (events.Image, e
 		CreatedBy: in.UserID,
 		CreatedAt: s.now(),
 	}
+	if kind == KindAudio {
+		a.TranscodeStatus = TranscodePending
+	}
 	if err := s.Store.CreateAsset(ctx, a); err != nil {
-		return events.Image{}, err
+		return Asset{}, err
 	}
 	_ = s.Store.DeleteIntent(ctx, key)
-
-	if kind == KindFlyer {
-		prev, _, err := s.Events.BindFlyer(ctx, in.EventID, a.ID)
-		if err != nil {
-			return events.Image{}, err
-		}
-		if prev != "" && prev != a.ID {
-			if old, err := s.Store.AssetByID(ctx, prev); err == nil && old.Kind == KindFlyer {
-				old.Kind = KindGallery
-				_ = s.Store.UpdateAsset(ctx, old)
-			}
-		}
-	}
-
-	if err := s.enqueueProcess(ctx, a.ID); err != nil {
-		s.log().Error("media.process enqueue", "asset_id", a.ID, "err", err)
-	}
-
-	ready, err := s.Store.AssetByID(ctx, a.ID)
-	if err != nil {
-		ready = a
-	}
-	return s.view(ready), nil
+	return a, nil
 }
 
 func (s *Service) Delete(ctx context.Context, userID, eventID, assetID string) error {
@@ -175,6 +200,13 @@ func (s *Service) Delete(ctx context.Context, userID, eventID, assetID string) e
 	}
 	if a.OwnerType != OwnerEvent || a.OwnerID != eventID {
 		return auth.ErrNotFound
+	}
+	inTracks, err := s.Store.AssetInTracks(ctx, a.ID)
+	if err != nil {
+		return err
+	}
+	if inTracks {
+		return auth.ErrConflict
 	}
 	status, flyerID, err := s.Events.EventStatus(ctx, eventID)
 	if err != nil {
@@ -189,6 +221,9 @@ func (s *Service) Delete(ctx context.Context, userID, eventID, assetID string) e
 	_ = s.Objects.Delete(ctx, a.Key)
 	if a.ThumbKey != "" {
 		_ = s.Objects.Delete(ctx, a.ThumbKey)
+	}
+	if a.PreviewKey != "" {
+		_ = s.Objects.Delete(ctx, a.PreviewKey)
 	}
 	return s.Store.DeleteAsset(ctx, a.ID)
 }

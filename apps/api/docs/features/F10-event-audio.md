@@ -8,12 +8,16 @@ El promoter adjunta canciones o sets de referencia (ordenados). El original se g
 
 ## Quick path
 
-1. Upload kind `audio` (F03), confirm `POST /v1/events/{id}/assets` kind audio **o** este flujo vía tracks.
+1. Upload kind `audio` (F03), confirm `POST /v1/events/{id}/audio`.
 2. `PUT /v1/events/{id}/tracks` reemplaza la lista ordenada.
 3. Worker transcode: preview AAC/MP3 96kbps, **45 segundos**, fade out.
 4. `GET` detalle incluye tracks con `preview_url` (TTL 10 min) y metadatos, no el master público.
 
 ## HTTP
+
+### `POST /v1/events/{id}/audio`
+
+`event.write`. Confirms an F03 audio upload. Returns `{ id, kind, transcode_status }` — **never** `public_url` / master URL. `POST /v1/events/{id}/assets` still rejects `kind=audio` (`VALIDATION_ERROR`).
 
 ### `PUT /v1/events/{id}/tracks`
 
@@ -78,10 +82,10 @@ Sin `master_url` en público. Owner puede `GET /v1/events/{id}/tracks/{id}/maste
 
 ## Checklist
 
-- [ ] Preview ≤ 45s
-- [ ] Público no descarga wav master
-- [ ] Orden PUT es estable
-- [ ] Worker ffmpeg en Docker
+- [x] Preview ≤ 45s
+- [x] Público no descarga wav master
+- [x] Orden PUT es estable
+- [x] Worker ffmpeg en Docker
 
 ## Next step
 

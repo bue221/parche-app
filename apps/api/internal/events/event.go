@@ -56,6 +56,17 @@ type Event struct {
 
 	Flyer   *Image  `json:"flyer,omitempty"`
 	Gallery []Image `json:"gallery,omitempty"`
+	Tracks  []Track `json:"tracks,omitempty"`
+}
+
+// Track is a public reference-audio row. Preview URLs are short-lived; never a master URL.
+type Track struct {
+	ID               string     `json:"id"`
+	Title            string     `json:"title"`
+	Position         int        `json:"position"`
+	DurationMS       int        `json:"duration_ms,omitempty"`
+	PreviewURL       string     `json:"preview_url,omitempty"`
+	PreviewExpiresAt *time.Time `json:"preview_expires_at,omitempty"`
 }
 
 // Image is a public flyer or gallery item (F09). URLs are CDN/public, never object keys.
@@ -168,10 +179,11 @@ type Cache interface {
 	DeletePrefix(ctx context.Context, prefix string) error
 }
 
-// Media is F09 flyers and gallery. Wired after construction to avoid an import cycle.
+// Media is F09 flyers/gallery and F10 tracks. Wired after construction to avoid an import cycle.
 type Media interface {
 	UsableFlyer(ctx context.Context, eventID, assetID string) error
 	EventImages(ctx context.Context, eventIDs ...string) (map[string]EventMedia, error)
+	EventTracks(ctx context.Context, eventIDs ...string) (map[string][]Track, error)
 }
 
 // EventMedia is the public image payload for one event.

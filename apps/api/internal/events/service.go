@@ -110,7 +110,7 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Event, error) {
 	}
 	switch e.Status {
 	case StatusPublished, StatusCancelled:
-		return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
+		return s.attachMedia(ctx, s.attachVenue(ctx, userID, e)), nil
 	}
 	if userID == "" {
 		return Event{}, auth.ErrNotFound
@@ -118,7 +118,7 @@ func (s *Service) Get(ctx context.Context, userID, id string) (Event, error) {
 	if _, err := s.memberRole(ctx, id, userID); err != nil {
 		return Event{}, auth.ErrNotFound
 	}
-	return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
+	return s.attachMedia(ctx, s.attachVenue(ctx, userID, e)), nil
 }
 
 func (s *Service) Patch(ctx context.Context, userID, id string, in PatchInput) (Event, error) {
@@ -402,7 +402,7 @@ func (s *Service) loaded(ctx context.Context, userID, id string) (Event, error) 
 	if err != nil {
 		return Event{}, err
 	}
-	return s.attachImages(ctx, s.attachVenue(ctx, userID, e)), nil
+	return s.attachMedia(ctx, s.attachVenue(ctx, userID, e)), nil
 }
 
 func (s *Service) attachAll(ctx context.Context, userID string, items []Event) []Event {
@@ -459,6 +459,31 @@ func (s *Service) attachImages(ctx context.Context, e Event) Event {
 		e.Gallery = []Image{}
 	}
 	return e
+}
+
+func (s *Service) attachTracks(ctx context.Context, e Event) Event {
+	if s.Media == nil {
+		if e.Tracks == nil {
+			e.Tracks = []Track{}
+		}
+		return e
+	}
+	got, err := s.Media.EventTracks(ctx, e.ID)
+	if err != nil {
+		if e.Tracks == nil {
+			e.Tracks = []Track{}
+		}
+		return e
+	}
+	e.Tracks = got[e.ID]
+	if e.Tracks == nil {
+		e.Tracks = []Track{}
+	}
+	return e
+}
+
+func (s *Service) attachMedia(ctx context.Context, e Event) Event {
+	return s.attachTracks(ctx, s.attachImages(ctx, e))
 }
 
 func (s *Service) lookupVenue(ctx context.Context, userID, id string) (venues.Venue, error) {
