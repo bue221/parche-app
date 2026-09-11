@@ -93,6 +93,27 @@ func BuildKey(kind, tenantID, eventID, userID, contentType string) (string, erro
 	}
 }
 
+// BuildArtistAvatarKey is POST /v1/uploads kind=avatar with artist_id (F12).
+func BuildArtistAvatarKey(artistID, contentType string) (string, error) {
+	if strings.TrimSpace(artistID) == "" {
+		return "", fmt.Errorf("artist_id")
+	}
+	ext, err := extension(KindAvatar, contentType)
+	if err != nil {
+		return "", err
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		id = uuid.New()
+	}
+	file := id.String() + "." + ext
+	key := path.Join("artists", artistID, KindAvatar, file)
+	if strings.Contains(key, "/events/") || strings.HasPrefix(key, "events/") {
+		return "", fmt.Errorf("avatar key must not live under events/")
+	}
+	return key, nil
+}
+
 func extension(kind, contentType string) (string, error) {
 	switch kind {
 	case KindFlyer, KindGallery, KindAvatar:

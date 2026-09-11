@@ -28,26 +28,28 @@ func NewPG(pool *pgxpool.Pool) *PG {
 
 func (s *PG) SaveIntent(ctx context.Context, in Intent) error {
 	_, err := s.q.Exec(ctx, `
-		INSERT INTO upload_intents (key, user_id, kind, event_id, content_type, byte_size, expires_at)
-		VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7)
+		INSERT INTO upload_intents (key, user_id, kind, event_id, artist_id, content_type, byte_size, expires_at)
+		VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),$6,$7,$8)
 		ON CONFLICT (key) DO UPDATE SET
 			user_id = EXCLUDED.user_id,
 			kind = EXCLUDED.kind,
 			event_id = EXCLUDED.event_id,
+			artist_id = EXCLUDED.artist_id,
 			content_type = EXCLUDED.content_type,
 			byte_size = EXCLUDED.byte_size,
 			expires_at = EXCLUDED.expires_at`,
-		in.Key, in.UserID, in.Kind, in.EventID, in.ContentType, in.ByteSize, in.ExpiresAt)
+		in.Key, in.UserID, in.Kind, in.EventID, in.ArtistID, in.ContentType, in.ByteSize, in.ExpiresAt)
 	return err
 }
 
 func (s *PG) IntentByKey(ctx context.Context, key string) (Intent, error) {
 	var in Intent
 	var eventID *string
+	var artistID *string
 	err := s.q.QueryRow(ctx, `
-		SELECT key, user_id, kind, event_id, content_type, byte_size, expires_at
+		SELECT key, user_id, kind, event_id, artist_id, content_type, byte_size, expires_at
 		FROM upload_intents WHERE key = $1`, key).
-		Scan(&in.Key, &in.UserID, &in.Kind, &eventID, &in.ContentType, &in.ByteSize, &in.ExpiresAt)
+		Scan(&in.Key, &in.UserID, &in.Kind, &eventID, &artistID, &in.ContentType, &in.ByteSize, &in.ExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Intent{}, auth.ErrNotFound
 	}
@@ -56,6 +58,9 @@ func (s *PG) IntentByKey(ctx context.Context, key string) (Intent, error) {
 	}
 	if eventID != nil {
 		in.EventID = *eventID
+	}
+	if artistID != nil {
+		in.ArtistID = *artistID
 	}
 	in.ExpiresAt = in.ExpiresAt.UTC()
 	return in, nil
@@ -71,7 +76,7 @@ func (s *PG) CreateAsset(ctx context.Context, a Asset) error {
 		INSERT INTO assets (
 			id, tenant_id, owner_type, owner_id, kind, key, thumb_key, preview_key, mime, bytes,
 			width, height, duration_ms, status, transcode_status, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+		) VALUES ($1,NULLIF($2,'')::uuid,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
 		a.ID, a.TenantID, a.OwnerType, a.OwnerID, a.Kind, a.Key, a.ThumbKey, a.PreviewKey, a.MIME, a.Bytes,
 		a.Width, a.Height, a.DurationMS, a.Status, a.TranscodeStatus, a.CreatedBy)
 	if isUnique(err) {
@@ -199,7 +204,7 @@ func (s *PG) AssetInTracks(ctx context.Context, assetID string) (bool, error) {
 }
 
 const assetSelect = `
-	SELECT id, tenant_id, owner_type, owner_id, kind, key, thumb_key, preview_key, mime, bytes,
+	SELECT id, COALESCE(tenant_id::text, ''), owner_type, owner_id, kind, key, thumb_key, preview_key, mime, bytes,
 		width, height, duration_ms, status, transcode_status, created_by, created_at
 	FROM assets`
 

@@ -1090,6 +1090,216 @@ paths:
           $ref: "#/components/responses/Error"
         "409":
           $ref: "#/components/responses/Error"
+  /v1/events/{id}/artists:
+    post:
+      summary: Add an artist to the event lineup (F12)
+      operationId: addEventArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddEventArtistRequest"
+      responses:
+        "204":
+          description: Linked
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/artists/{artistId}:
+    delete:
+      summary: Remove an artist from the lineup (F12)
+      operationId: removeEventArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed or already absent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists:
+    post:
+      summary: Create a public artist profile or promoter act (F12)
+      operationId: createArtist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateArtistRequest"
+      responses:
+        "201":
+          description: Public artist document (no email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/artists/{id}:
+    get:
+      summary: Public artist profile (F12)
+      operationId: getArtist
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Name, bio, links, upcoming published events. Never email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      summary: Update artist profile (F12)
+      operationId: patchArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchArtistRequest"
+      responses:
+        "200":
+          description: Updated public document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists/{id}/events:
+    get:
+      summary: Published events for an artist (F12)
+      operationId: listArtistEvents
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: when
+          in: query
+          schema:
+            type: string
+            enum: [upcoming, past]
+            default: upcoming
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of published events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists/{id}/assets:
+    post:
+      summary: Confirm an artist avatar upload (F12)
+      operationId: confirmArtistAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmArtistAssetRequest"
+      responses:
+        "201":
+          description: Avatar image with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)
@@ -1359,6 +1569,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EventTrack"
+        lineup:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventLineupSlot"
     EventAdminList:
       type: object
       required: [items]
@@ -1806,6 +2020,113 @@ components:
           type: string
           format: uuid
           nullable: true
+        artist_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required with kind=avatar to upload an artist photo (F12)
+    ConfirmArtistAssetRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [avatar]
+    AddEventArtistRequest:
+      type: object
+      required: [artist_id]
+      properties:
+        artist_id:
+          type: string
+          format: uuid
+        billing_order:
+          type: integer
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+    EventLineupSlot:
+      type: object
+      required: [artist_id, name, billing_order]
+      properties:
+        artist_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        billing_order:
+          type: integer
+        starts_at:
+          type: string
+          format: date-time
+        avatar:
+          $ref: "#/components/schemas/EventImage"
+    CreateArtistRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+        tenant_id:
+          type: string
+          format: uuid
+          description: Required when a promoter creates an unclaimed act
+    PatchArtistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+    ArtistLinks:
+      type: object
+      properties:
+        instagram:
+          type: string
+        soundcloud:
+          type: string
+    Artist:
+      type: object
+      required: [id, name, links, upcoming]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar:
+          $ref: "#/components/schemas/EventImage"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMapItem"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     ConfirmEventAssetRequest:
       type: object
       required: [key, kind]

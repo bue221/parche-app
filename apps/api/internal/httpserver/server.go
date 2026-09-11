@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/parche-app/backend/internal/applog"
+	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
@@ -33,6 +34,7 @@ type Routes struct {
 	Auth    *auth.Service
 	Venues  *venues.Service
 	Media   *media.Service
+	Artists *artists.Service
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -50,6 +52,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerEventRoutes(mux, routes)
 	registerAssetRoutes(mux, routes)
 	registerTrackRoutes(mux, routes)
+	registerArtistRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
 	}
@@ -120,6 +123,14 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		eventSvc.Pepper = []byte(cfg.JWTRefreshSecret)
 		sessions.EventRoles = eventSvc
 	}
+	var artistSvc *artists.Service
+	if sessions != nil {
+		artistSvc = artists.NewService(artists.NewPG(pool), sessions.Store)
+	}
+	if artistSvc != nil && eventSvc != nil {
+		eventSvc.Lineup = artistSvc
+		artistSvc.Catalog = eventSvc
+	}
 	eventWrite := EventWrite(DenyEventWrite{})
 	if eventSvc != nil {
 		eventWrite = eventSvc
@@ -128,6 +139,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if store != nil && eventSvc != nil {
 		mediaSvc = media.NewService(media.NewPG(pool), store, eventSvc)
 		eventSvc.Media = mediaSvc
+		if artistSvc != nil {
+			mediaSvc.Artists = artistSvc
+			artistSvc.Avatars = mediaSvc
+		}
 		if cfg.BrokerURL != "" {
 			if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
 				log.Error("broker publisher", "err", err)
@@ -152,6 +167,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Auth:    sessions,
 		Venues:  venueSvc,
 		Media:   mediaSvc,
+		Artists: artistSvc,
 	})
 
 	srv := &http.Server{

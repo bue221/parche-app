@@ -107,6 +107,7 @@ type Intent struct {
 	UserID      string
 	Kind        string
 	EventID     string
+	ArtistID    string
 	ContentType string
 	ByteSize    int64
 	ExpiresAt   time.Time
@@ -117,6 +118,7 @@ type ConfirmInput struct {
 	UserID   string
 	TenantID string
 	EventID  string
+	ArtistID string
 	Key      string
 	Kind     string
 }
@@ -155,6 +157,11 @@ type EventBinder interface {
 	BindFlyer(ctx context.Context, eventID, assetID string) (previousAssetID string, status string, err error)
 	ClearFlyerIf(ctx context.Context, eventID, assetID string) error
 	EventStatus(ctx context.Context, eventID string) (status, flyerAssetID string, err error)
+}
+
+// ArtistBinder updates artists.avatar_asset_id (implemented by artists.Service).
+type ArtistBinder interface {
+	BindAvatar(ctx context.Context, artistID, assetID string) (previousAssetID string, err error)
 }
 
 // Publisher is NATS (or a test fake). Nil means Process runs in-process.

@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/parche-app/backend/internal/apierr"
+	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 )
@@ -21,6 +22,7 @@ type uploadRequest struct {
 	ContentType string  `json:"content_type"`
 	ByteSize    int64   `json:"byte_size"`
 	EventID     *string `json:"event_id"`
+	ArtistID    *string `json:"artist_id"`
 }
 
 type uploadResponse struct {
@@ -40,17 +42,18 @@ func registerUploadRoutes(mux *http.ServeMux, routes Routes) {
 	if events == nil {
 		events = DenyEventWrite{}
 	}
-	h := uploadHandler{store: routes.Store, access: access, events: events, media: routes.Media}
+	h := uploadHandler{store: routes.Store, access: access, events: events, media: routes.Media, artists: routes.Artists}
 	mux.HandleFunc("POST /v1/uploads", h.create)
 	mux.HandleFunc("PUT /v1/uploads/direct", h.directPut)
 	mux.HandleFunc("GET /v1/uploads/direct", h.directGet)
 }
 
 type uploadHandler struct {
-	store  objectstore.Store
-	access Access
-	events EventWrite
-	media  *media.Service
+	store   objectstore.Store
+	access  Access
+	events  EventWrite
+	media   *media.Service
+	artists *artists.Service
 }
 
 func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +84,10 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 	if req.EventID != nil {
 		eventID = strings.TrimSpace(*req.EventID)
 	}
+	artistID := ""
+	if req.ArtistID != nil {
+		artistID = strings.TrimSpace(*req.ArtistID)
+	}
 
 	var key string
 	switch kind {
@@ -89,8 +96,28 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "event_id", Issue: "must_be_omitted"}})
 			return
 		}
-		key, err = objectstore.BuildKey(kind, "", "", principal.UserID, contentType)
+		if artistID != "" {
+			if _, parseErr := uuid.Parse(artistID); parseErr != nil {
+				apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "artist_id", Issue: "uuid"}})
+				return
+			}
+			if h.artists == nil {
+				apierr.Write(w, r, apierr.Forbidden, "", nil)
+				return
+			}
+			if _, authErr := h.artists.Authorize(r.Context(), principal.UserID, artistID); authErr != nil {
+				writeEventErr(w, r, authErr)
+				return
+			}
+			key, err = objectstore.BuildArtistAvatarKey(artistID, contentType)
+		} else {
+			key, err = objectstore.BuildKey(kind, "", "", principal.UserID, contentType)
+		}
 	default:
+		if artistID != "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "artist_id", Issue: "must_be_omitted"}})
+			return
+		}
 		if eventID == "" {
 			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "event_id", Issue: "required"}})
 			return
@@ -127,6 +154,9 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 		}
 		if kind != objectstore.KindAvatar {
 			intent.EventID = eventID
+		}
+		if artistID != "" {
+			intent.ArtistID = artistID
 		}
 		if err := h.media.SaveIntent(r.Context(), intent); err != nil {
 			apierr.Write(w, r, apierr.Internal, "", nil)

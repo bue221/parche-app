@@ -60,10 +60,10 @@ Avatar: F03 kind avatar con owner artist — permitir `owner_type=artist` en con
 
 ## Checklist
 
-- [ ] Ficha pública sin email
-- [ ] Lineup ordenado en detalle evento
-- [ ] Promoter vincula artist existente
-- [ ] PATCH solo dueño
+- [x] Ficha pública sin email
+- [x] Lineup ordenado en detalle evento
+- [x] Promoter vincula artist existente
+- [x] PATCH solo dueño
 
 ## Next step
 

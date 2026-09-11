@@ -21,6 +21,7 @@ type Service struct {
 	Store        Store
 	Objects      objectstore.Store
 	Events       EventBinder
+	Artists      ArtistBinder
 	Publisher    Publisher
 	Log          *slog.Logger
 	Now          func() time.Time
@@ -87,6 +88,47 @@ func (s *Service) Confirm(ctx context.Context, in ConfirmInput) (events.Image, e
 	return s.view(ready), nil
 }
 
+func (s *Service) ConfirmArtist(ctx context.Context, in ConfirmInput) (events.Image, error) {
+	kind := strings.TrimSpace(in.Kind)
+	if kind == "" {
+		kind = KindAvatar
+	}
+	if kind != KindAvatar {
+		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "invalid"}}}
+	}
+	in.Kind = KindAvatar
+	in.EventID = ""
+	a, err := s.confirmArtistAsset(ctx, in)
+	if err != nil {
+		return events.Image{}, err
+	}
+	if s.Artists != nil {
+		if _, err := s.Artists.BindAvatar(ctx, in.ArtistID, a.ID); err != nil {
+			return events.Image{}, err
+		}
+	}
+	if err := s.enqueueProcess(ctx, a.ID); err != nil {
+		s.log().Error("media.process enqueue", "asset_id", a.ID, "err", err)
+	}
+	ready, err := s.Store.AssetByID(ctx, a.ID)
+	if err != nil {
+		ready = a
+	}
+	return s.view(ready), nil
+}
+
+func (s *Service) Image(ctx context.Context, assetID string) (*events.Image, error) {
+	a, err := s.Store.AssetByID(ctx, assetID)
+	if err != nil {
+		return nil, err
+	}
+	if a.Status == StatusFailed {
+		return nil, auth.ErrNotFound
+	}
+	img := s.view(a)
+	return &img, nil
+}
+
 func (s *Service) ConfirmAudio(ctx context.Context, in ConfirmInput) (AudioView, error) {
 	in.Kind = KindAudio
 	a, err := s.confirmAsset(ctx, in, KindAudio)
@@ -123,6 +165,9 @@ func (s *Service) confirmAsset(ctx context.Context, in ConfirmInput, kind string
 		return Asset{}, auth.ErrGone
 	}
 	if intent.EventID != "" && intent.EventID != in.EventID {
+		return Asset{}, auth.ErrForbidden
+	}
+	if intent.ArtistID != "" && intent.ArtistID != in.ArtistID {
 		return Asset{}, auth.ErrForbidden
 	}
 	if intent.Kind != "" && intent.Kind != kind {
@@ -184,6 +229,94 @@ func (s *Service) confirmAsset(ctx context.Context, in ConfirmInput, kind string
 	}
 	if kind == KindAudio {
 		a.TranscodeStatus = TranscodePending
+	}
+	if err := s.Store.CreateAsset(ctx, a); err != nil {
+		return Asset{}, err
+	}
+	_ = s.Store.DeleteIntent(ctx, key)
+	return a, nil
+}
+
+func (s *Service) confirmArtistAsset(ctx context.Context, in ConfirmInput) (Asset, error) {
+	key := strings.TrimSpace(in.Key)
+	if key == "" {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "key", Issue: "required"}}}
+	}
+	artistID := strings.TrimSpace(in.ArtistID)
+	if artistID == "" {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "artist_id", Issue: "required"}}}
+	}
+
+	intent, err := s.Store.IntentByKey(ctx, key)
+	if err != nil {
+		if errors.Is(err, auth.ErrNotFound) {
+			return Asset{}, auth.ErrForbidden
+		}
+		return Asset{}, err
+	}
+	if intent.UserID != in.UserID {
+		return Asset{}, auth.ErrForbidden
+	}
+	if s.now().After(intent.ExpiresAt) {
+		return Asset{}, auth.ErrGone
+	}
+	if intent.EventID != "" {
+		return Asset{}, auth.ErrForbidden
+	}
+	if intent.ArtistID != "" && intent.ArtistID != artistID {
+		return Asset{}, auth.ErrForbidden
+	}
+	if intent.Kind != "" && intent.Kind != KindAvatar {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "mismatch"}}}
+	}
+
+	prefix := "artists/" + artistID + "/" + KindAvatar + "/"
+	if !strings.HasPrefix(key, prefix) {
+		return Asset{}, auth.ErrForbidden
+	}
+
+	ok, err := s.Objects.Exists(ctx, key)
+	if err != nil {
+		return Asset{}, err
+	}
+	if !ok {
+		return Asset{}, auth.ErrNotFound
+	}
+	head, err := s.Objects.Head(ctx, key)
+	if err != nil {
+		if errors.Is(err, objectstore.ErrNotFound) {
+			return Asset{}, auth.ErrNotFound
+		}
+		return Asset{}, err
+	}
+	mime := head.ContentType
+	if mime == "" || mime == "application/octet-stream" {
+		if intent.ContentType != "" {
+			mime = intent.ContentType
+		} else {
+			mime = objectstore.MIMEFromKey(key)
+		}
+	}
+	bytes := head.Size
+	if bytes <= 0 {
+		bytes = intent.ByteSize
+	}
+	id, err := newID()
+	if err != nil {
+		return Asset{}, err
+	}
+	a := Asset{
+		ID:        id,
+		TenantID:  in.TenantID,
+		OwnerType: OwnerArtist,
+		OwnerID:   artistID,
+		Kind:      KindAvatar,
+		Key:       key,
+		MIME:      mime,
+		Bytes:     bytes,
+		Status:    StatusProcessing,
+		CreatedBy: in.UserID,
+		CreatedAt: s.now(),
 	}
 	if err := s.Store.CreateAsset(ctx, a); err != nil {
 		return Asset{}, err

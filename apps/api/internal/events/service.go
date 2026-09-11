@@ -31,6 +31,7 @@ type Service struct {
 	Lookup    VenueLookup
 	Cache     Cache
 	Media     Media
+	Lineup    Lineup
 	Mailer    mailer.Sender
 	AppOrigin string
 	Pepper    []byte
@@ -487,7 +488,24 @@ func (s *Service) attachTracks(ctx context.Context, e Event) Event {
 }
 
 func (s *Service) attachMedia(ctx context.Context, e Event) Event {
-	return s.attachTracks(ctx, s.attachImages(ctx, e))
+	e = s.attachTracks(ctx, s.attachImages(ctx, e))
+	return s.attachLineup(ctx, e)
+}
+
+func (s *Service) attachLineup(ctx context.Context, e Event) Event {
+	if s.Lineup == nil {
+		if e.Lineup == nil {
+			e.Lineup = []LineupSlot{}
+		}
+		return e
+	}
+	slots, err := s.Lineup.EventLineup(ctx, e.ID)
+	if err != nil || slots == nil {
+		e.Lineup = []LineupSlot{}
+		return e
+	}
+	e.Lineup = slots
+	return e
 }
 
 func (s *Service) lookupVenue(ctx context.Context, userID, id string) (venues.Venue, error) {

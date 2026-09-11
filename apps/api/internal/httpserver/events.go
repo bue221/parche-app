@@ -317,6 +317,10 @@ func publicEvent(e events.Event) map[string]any {
 	if tracks == nil {
 		tracks = []events.Track{}
 	}
+	lineup := e.Lineup
+	if lineup == nil {
+		lineup = []events.LineupSlot{}
+	}
 	out := map[string]any{
 		"id":           e.ID,
 		"tenant_id":    e.TenantID,
@@ -337,6 +341,7 @@ func publicEvent(e events.Event) map[string]any {
 		"venue_name":   e.VenueName,
 		"gallery":      gallery,
 		"tracks":       tracks,
+		"lineup":       lineup,
 	}
 	if e.AgePolicy != "" {
 		out["age_policy"] = e.AgePolicy

@@ -54,9 +54,19 @@ type Event struct {
 	AddressText string  `json:"address_text,omitempty"`
 	VenueName   string  `json:"venue_name,omitempty"`
 
-	Flyer   *Image  `json:"flyer,omitempty"`
-	Gallery []Image `json:"gallery,omitempty"`
-	Tracks  []Track `json:"tracks,omitempty"`
+	Flyer   *Image       `json:"flyer,omitempty"`
+	Gallery []Image      `json:"gallery,omitempty"`
+	Tracks  []Track      `json:"tracks,omitempty"`
+	Lineup  []LineupSlot `json:"lineup,omitempty"`
+}
+
+// LineupSlot is one billed artist on an event (F12).
+type LineupSlot struct {
+	ArtistID     string     `json:"artist_id"`
+	Name         string     `json:"name"`
+	BillingOrder int        `json:"billing_order"`
+	StartsAt     *time.Time `json:"starts_at,omitempty"`
+	Avatar       *Image     `json:"avatar,omitempty"`
 }
 
 // Track is a public reference-audio row. Preview URLs are short-lived; never a master URL.
@@ -237,6 +247,11 @@ type Media interface {
 type EventMedia struct {
 	Flyer   *Image
 	Gallery []Image
+}
+
+// Lineup loads billed artists for GET event detail (F12).
+type Lineup interface {
+	EventLineup(ctx context.Context, eventID string) ([]LineupSlot, error)
 }
 
 // FlyerBinder is implemented by Service for media.Confirm (F09).

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/parche-app/backend/internal/apierr"
+	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/mailer"
@@ -217,6 +218,11 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 		return media.PreviewResult{Body: []byte("ID3preview"), MIME: "audio/mpeg", DurationMS: 45000}, nil
 	}
 	esvc.Media = msvc
+	asvc := artists.NewService(artists.NewMemory(), store)
+	asvc.Catalog = esvc
+	asvc.Avatars = msvc
+	esvc.Lineup = asvc
+	msvc.Artists = asvc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
 		Store:   obj,
@@ -226,6 +232,7 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 		Auth:    svc,
 		Venues:  vsvc,
 		Media:   msvc,
+		Artists: asvc,
 	})
 	return mux, esvc
 }
