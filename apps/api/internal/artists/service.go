@@ -112,7 +112,76 @@ func (s *Service) Get(ctx context.Context, id string) (Artist, error) {
 		return Artist{}, err
 	}
 	a.Upcoming = s.upcoming(ctx, a.ID)
+	a.FollowersCount = s.followers(ctx, a.ID)
 	return a, nil
+}
+
+func (s *Service) Follow(ctx context.Context, userID, artistID string) error {
+	artistID, err := parseArtistID(artistID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.Store.ByID(ctx, artistID); err != nil {
+		return err
+	}
+	return s.Store.Follow(ctx, Follow{UserID: userID, ArtistID: artistID, CreatedAt: s.now()})
+}
+
+func (s *Service) Unfollow(ctx context.Context, userID, artistID string) error {
+	artistID, err := parseArtistID(artistID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.Store.ByID(ctx, artistID); err != nil {
+		return err
+	}
+	return s.Store.Unfollow(ctx, userID, artistID)
+}
+
+func (s *Service) ListFollowing(ctx context.Context, userID string, f FollowFilter) ([]Artist, *string, error) {
+	rows, err := s.Store.FollowsByUser(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	curAt, curID, err := events.DecodeCursor(f.Cursor)
+	if err != nil {
+		return nil, nil, err
+	}
+	limit := f.Limit
+	if limit < 1 {
+		limit = 20
+	}
+	out := make([]Artist, 0)
+	var last Follow
+	for _, row := range rows {
+		if !afterFollowCursor(row, curAt, curID) {
+			continue
+		}
+		a, err := s.profile(ctx, row.ArtistID)
+		if err != nil {
+			continue
+		}
+		a.FollowersCount = s.followers(ctx, a.ID)
+		out = append(out, a)
+		last = row
+		if len(out) == limit {
+			break
+		}
+	}
+	var next *string
+	if limit > 0 && len(out) == limit {
+		c := events.EncodeCursor(last.CreatedAt, last.ArtistID)
+		next = &c
+	}
+	return out, next, nil
+}
+
+func (s *Service) followers(ctx context.Context, artistID string) int {
+	n, err := s.Store.CountFollowers(ctx, artistID)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 func (s *Service) Patch(ctx context.Context, userID, id string, in PatchInput) (Artist, error) {
@@ -390,6 +459,27 @@ func hasProfile(profiles []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func parseArtistID(id string) (string, error) {
+	id = strings.TrimSpace(id)
+	if _, err := uuid.Parse(id); err != nil {
+		return "", auth.ErrNotFound
+	}
+	return id, nil
+}
+
+func afterFollowCursor(f Follow, curAt time.Time, curID string) bool {
+	if curID == "" {
+		return true
+	}
+	if f.CreatedAt.After(curAt) {
+		return false
+	}
+	if f.CreatedAt.Equal(curAt) && f.ArtistID >= curID {
+		return false
+	}
+	return true
 }
 
 func afterEventCursor(e events.Event, when string, curStarts time.Time, curID string) bool {

@@ -877,6 +877,28 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /v1/me/following:
+    get:
+      summary: Artists the caller follows (F13)
+      operationId: listMyFollowing
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of public artist documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtistList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /v1/me/profiles/artist:
     post:
       summary: Add artist platform profile (F06)
@@ -1179,7 +1201,7 @@ paths:
           $ref: "#/components/responses/Error"
   /v1/artists/{id}:
     get:
-      summary: Public artist profile (F12)
+      summary: Public artist profile (F12, F13)
       operationId: getArtist
       security: []
       parameters:
@@ -1191,7 +1213,7 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Name, bio, links, upcoming published events. Never email.
+          description: Name, bio, links, upcoming published events, followers_count. Never email.
           content:
             application/json:
               schema:
@@ -1300,6 +1322,45 @@ paths:
           $ref: "#/components/responses/NotFound"
         "410":
           $ref: "#/components/responses/Error"
+  /v1/artists/{id}/follow:
+    post:
+      summary: Follow an artist (F13)
+      operationId: followArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Followed or already following
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Unfollow an artist (F13)
+      operationId: unfollowArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Unfollowed or was not following
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)
@@ -2095,7 +2156,7 @@ components:
           type: string
     Artist:
       type: object
-      required: [id, name, links, upcoming]
+      required: [id, name, links, upcoming, followers_count]
       properties:
         id:
           type: string
@@ -2121,12 +2182,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EventMapItem"
+        followers_count:
+          type: integer
+          minimum: 0
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+    ArtistList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Artist"
+        next_cursor:
+          type: string
+          nullable: true
     ConfirmEventAssetRequest:
       type: object
       required: [key, kind]

@@ -45,6 +45,8 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"/v1/artists/{id}",
 		"/v1/artists/{id}/events",
 		"/v1/artists/{id}/assets",
+		"/v1/artists/{id}/follow",
+		"/v1/me/following",
 		"/v1/events/{id}/transfer-ownership",
 		"/v1/invites/{token}/accept",
 		"/v1/me/memberships",

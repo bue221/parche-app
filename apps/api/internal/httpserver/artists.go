@@ -43,6 +43,9 @@ func registerArtistRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("PATCH /v1/artists/{id}", h.patch)
 	mux.HandleFunc("GET /v1/artists/{id}/events", h.listEvents)
 	mux.HandleFunc("POST /v1/artists/{id}/assets", h.confirmAsset)
+	mux.HandleFunc("POST /v1/artists/{id}/follow", h.follow)
+	mux.HandleFunc("DELETE /v1/artists/{id}/follow", h.unfollow)
+	mux.HandleFunc("GET /v1/me/following", h.following)
 	mux.HandleFunc("POST /v1/events/{id}/artists", h.addLineup)
 	mux.HandleFunc("DELETE /v1/events/{id}/artists/{artistId}", h.removeLineup)
 }
@@ -215,19 +218,72 @@ func (h artistHandler) removeLineup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h artistHandler) follow(w http.ResponseWriter, r *http.Request) {
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	if err := h.svc.Follow(r.Context(), p.UserID, r.PathValue("id")); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h artistHandler) unfollow(w http.ResponseWriter, r *http.Request) {
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	if err := h.svc.Unfollow(r.Context(), p.UserID, r.PathValue("id")); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h artistHandler) following(w http.ResponseWriter, r *http.Request) {
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	page, details := ParsePage(r)
+	if len(details) > 0 {
+		apierr.Write(w, r, apierr.Validation, "", details)
+		return
+	}
+	items, next, err := h.svc.ListFollowing(r.Context(), p.UserID, artists.FollowFilter{
+		Cursor: page.Cursor,
+		Limit:  page.Limit,
+	})
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	pub := make([]map[string]any, 0, len(items))
+	for _, a := range items {
+		pub = append(pub, publicArtist(r, a))
+	}
+	apierr.WriteJSON(w, http.StatusOK, ListEnvelope[map[string]any]{Items: pub, NextCursor: next})
+}
+
 func publicArtist(r *http.Request, a artists.Artist) map[string]any {
 	upcoming := a.Upcoming
 	if upcoming == nil {
 		upcoming = []events.PublicItem{}
 	}
 	out := map[string]any{
-		"id":         a.ID,
-		"name":       a.Name,
-		"bio":        a.Bio,
-		"links":      a.Links,
-		"created_at": a.CreatedAt,
-		"updated_at": a.UpdatedAt,
-		"upcoming":   upcoming,
+		"id":              a.ID,
+		"name":            a.Name,
+		"bio":             a.Bio,
+		"links":           a.Links,
+		"created_at":      a.CreatedAt,
+		"updated_at":      a.UpdatedAt,
+		"upcoming":        upcoming,
+		"followers_count": a.FollowersCount,
 	}
 	if a.UserID != "" {
 		out["user_id"] = a.UserID

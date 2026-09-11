@@ -243,3 +243,166 @@ func TestArtistsAndLineupHTTP(t *testing.T) {
 
 	_ = events.StatusPublished
 }
+
+func TestArtistFollowsHTTP(t *testing.T) {
+	mux, _ := testEventStack(t)
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"dj@example.com","password":"correct-horse","display_name":"Norte","profile":"attendee"}`)))
+	var dj sessionBody
+	_ = json.Unmarshal(rr.Body.Bytes(), &dj)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"fan@example.com","password":"correct-horse","display_name":"Fan","profile":"attendee"}`)))
+	var fan sessionBody
+	_ = json.Unmarshal(rr.Body.Bytes(), &fan)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"p@example.com","password":"correct-horse","display_name":"Pez","profile":"promoter"}`)))
+	var promoter sessionBody
+	_ = json.Unmarshal(rr.Body.Bytes(), &promoter)
+
+	rr = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/me/profiles/artist", nil)
+	req.Header.Set("Authorization", "Bearer "+dj.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("artist profile=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists", strings.NewReader(`{"name":"Norte Bass"}`))
+	req.Header.Set("Authorization", "Bearer "+dj.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("create artist=%d %s", rr.Code, rr.Body.String())
+	}
+	var created map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &created)
+	artistID, _ := created["id"].(string)
+	if created["followers_count"] != float64(0) {
+		t.Fatalf("created count=%v", created["followers_count"])
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer "+promoter.AccessToken)
+	mux.ServeHTTP(rr, req)
+	var me auth.Me
+	_ = json.Unmarshal(rr.Body.Bytes(), &me)
+	tid := me.Tenants[0].ID
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists", strings.NewReader(`{"name":"Tenant Act","tenant_id":"`+tid+`"}`))
+	req.Header.Set("Authorization", "Bearer "+promoter.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("act=%d %s", rr.Code, rr.Body.String())
+	}
+	var act map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &act)
+	actID, _ := act["id"].(string)
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/artists/"+artistID+"/follow", nil))
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists/11111111-1111-4111-8111-111111111111/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusNotFound, apierr.NotFound)
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists/"+artistID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("follow=%d %s", rr.Code, rr.Body.String())
+	}
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists/"+artistID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("dup follow=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists/"+actID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("follow act=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/artists/"+artistID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+dj.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("self follow=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/artists/"+artistID, nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("get=%d %s", rr.Code, rr.Body.String())
+	}
+	var profile map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &profile)
+	if profile["followers_count"] != float64(2) {
+		t.Fatalf("followers_count=%v body=%s", profile["followers_count"], rr.Body.String())
+	}
+	if strings.Contains(rr.Body.String(), "fan@example.com") {
+		t.Fatalf("follower PII leaked: %s", rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/v1/me/following?limit=1", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("following=%d %s", rr.Code, rr.Body.String())
+	}
+	var page map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &page)
+	items, _ := page["items"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("page items=%v", page)
+	}
+	next, _ := page["next_cursor"].(string)
+	if next == "" {
+		t.Fatalf("expected next_cursor: %v", page)
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/v1/me/following?limit=1&cursor="+next, nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"items"`) {
+		t.Fatalf("page2=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodDelete, "/v1/artists/"+artistID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("unfollow=%d %s", rr.Code, rr.Body.String())
+	}
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodDelete, "/v1/artists/"+artistID+"/follow", nil)
+	req.Header.Set("Authorization", "Bearer "+fan.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("dup unfollow=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/artists/"+artistID, nil))
+	_ = json.Unmarshal(rr.Body.Bytes(), &profile)
+	if profile["followers_count"] != float64(1) {
+		t.Fatalf("after unfollow count=%v", profile["followers_count"])
+	}
+}

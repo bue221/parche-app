@@ -31,8 +31,16 @@ type Artist struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 
-	Avatar   *events.Image       `json:"avatar,omitempty"`
-	Upcoming []events.PublicItem `json:"upcoming,omitempty"`
+	Avatar         *events.Image       `json:"avatar,omitempty"`
+	Upcoming       []events.PublicItem `json:"upcoming,omitempty"`
+	FollowersCount int                 `json:"followers_count"`
+}
+
+// Follow is one artist_follows row (F13).
+type Follow struct {
+	UserID    string
+	ArtistID  string
+	CreatedAt time.Time
 }
 
 // Slot is one lineup row (event_artists).
@@ -75,7 +83,13 @@ type EventFilter struct {
 	Now    time.Time
 }
 
-// Store persists artists and lineup slots.
+// FollowFilter is GET /v1/me/following.
+type FollowFilter struct {
+	Cursor string
+	Limit  int
+}
+
+// Store persists artists, lineup slots, and follows.
 type Store interface {
 	Create(ctx context.Context, a Artist) error
 	ByID(ctx context.Context, id string) (Artist, error)
@@ -85,6 +99,10 @@ type Store interface {
 	RemoveSlot(ctx context.Context, eventID, artistID string) error
 	SlotsByEvent(ctx context.Context, eventID string) ([]Slot, error)
 	SlotsByArtist(ctx context.Context, artistID string) ([]Slot, error)
+	Follow(ctx context.Context, f Follow) error
+	Unfollow(ctx context.Context, userID, artistID string) error
+	CountFollowers(ctx context.Context, artistID string) (int, error)
+	FollowsByUser(ctx context.Context, userID string) ([]Follow, error)
 }
 
 // Accounts is F06 profiles and tenant membership. auth.Store satisfies it.

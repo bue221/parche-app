@@ -107,3 +107,64 @@ func TestPatchOwnerOnly(t *testing.T) {
 		t.Fatalf("owner patch=%v %+v", err, got)
 	}
 }
+
+func TestFollowIdempotentAndList(t *testing.T) {
+	ctx := context.Background()
+	users := auth.NewMemory()
+	tokens := &auth.Tokens{AccessSecret: []byte("0123456789abcdef0123456789abcdef"), RefreshPepper: []byte("pepper-secret")}
+	asvc, err := auth.NewService(users, tokens, auth.FastArgon2(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dj, err := asvc.Register(ctx, auth.RegisterInput{Email: "dj@example.com", Password: "correct-horse", DisplayName: "DJ", Profile: "attendee"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fan, err := asvc.Register(ctx, auth.RegisterInput{Email: "fan@example.com", Password: "correct-horse", DisplayName: "Fan", Profile: "attendee"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := asvc.AddArtistProfile(ctx, dj.User.ID); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewService(NewMemory(), users)
+	a, err := svc.Create(ctx, dj.User.ID, CreateInput{Name: "Norte Bass"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Follow(ctx, fan.User.ID, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Follow(ctx, fan.User.ID, a.ID); err != nil {
+		t.Fatalf("dup follow=%v", err)
+	}
+	if err := svc.Follow(ctx, dj.User.ID, a.ID); err != nil {
+		t.Fatalf("self follow=%v", err)
+	}
+	got, err := svc.Get(ctx, a.ID)
+	if err != nil || got.FollowersCount != 2 {
+		t.Fatalf("count=%v %+v", err, got)
+	}
+	items, next, err := svc.ListFollowing(ctx, fan.User.ID, FollowFilter{Limit: 20})
+	if err != nil || next != nil || len(items) != 1 || items[0].ID != a.ID {
+		t.Fatalf("following=%v next=%v %v", items, next, err)
+	}
+	if err := svc.Unfollow(ctx, fan.User.ID, a.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Unfollow(ctx, fan.User.ID, a.ID); err != nil {
+		t.Fatalf("dup unfollow=%v", err)
+	}
+	got, err = svc.Get(ctx, a.ID)
+	if err != nil || got.FollowersCount != 1 {
+		t.Fatalf("after unfollow count=%v %+v", err, got)
+	}
+	items, _, err = svc.ListFollowing(ctx, fan.User.ID, FollowFilter{Limit: 20})
+	if err != nil || len(items) != 0 {
+		t.Fatalf("empty following=%v %v", items, err)
+	}
+	missing := "11111111-1111-4111-8111-111111111111"
+	if err := svc.Follow(ctx, fan.User.ID, missing); !errors.Is(err, auth.ErrNotFound) {
+		t.Fatalf("missing=%v", err)
+	}
+}

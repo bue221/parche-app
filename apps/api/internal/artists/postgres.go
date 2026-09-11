@@ -107,6 +107,54 @@ func (s *PG) SlotsByArtist(ctx context.Context, artistID string) ([]Slot, error)
 	return scanSlots(rows)
 }
 
+func (s *PG) Follow(ctx context.Context, f Follow) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO artist_follows (user_id, artist_id, created_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, artist_id) DO NOTHING`,
+		f.UserID, f.ArtistID, f.CreatedAt)
+	if isFK(err) {
+		return auth.ErrNotFound
+	}
+	return err
+}
+
+func (s *PG) Unfollow(ctx context.Context, userID, artistID string) error {
+	_, err := s.q.Exec(ctx, `DELETE FROM artist_follows WHERE user_id = $1 AND artist_id = $2`, userID, artistID)
+	return err
+}
+
+func (s *PG) CountFollowers(ctx context.Context, artistID string) (int, error) {
+	var n int
+	err := s.q.QueryRow(ctx, `SELECT COUNT(*) FROM artist_follows WHERE artist_id = $1`, artistID).Scan(&n)
+	return n, err
+}
+
+func (s *PG) FollowsByUser(ctx context.Context, userID string) ([]Follow, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT user_id, artist_id, created_at
+		FROM artist_follows
+		WHERE user_id = $1
+		ORDER BY created_at DESC, artist_id DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Follow
+	for rows.Next() {
+		var f Follow
+		if err := rows.Scan(&f.UserID, &f.ArtistID, &f.CreatedAt); err != nil {
+			return nil, err
+		}
+		f.CreatedAt = f.CreatedAt.UTC()
+		out = append(out, f)
+	}
+	if out == nil {
+		out = []Follow{}
+	}
+	return out, rows.Err()
+}
+
 const artistSelect = `
 	SELECT id, COALESCE(user_id::text, ''), COALESCE(tenant_id::text, ''), name, bio,
 		COALESCE(avatar_asset_id::text, ''), links, created_at, updated_at
@@ -152,4 +200,9 @@ func scanSlots(rows pgx.Rows) ([]Slot, error) {
 func isUnique(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func isFK(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }

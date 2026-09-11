@@ -11,17 +11,19 @@ import (
 
 // Memory is an in-process Store for tests.
 type Memory struct {
-	mu     sync.Mutex
-	byID   map[string]Artist
-	byUser map[string]string
-	slots  map[string]Slot // eventID+"/"+artistID
+	mu      sync.Mutex
+	byID    map[string]Artist
+	byUser  map[string]string
+	slots   map[string]Slot // eventID+"/"+artistID
+	follows map[string]Follow
 }
 
 func NewMemory() *Memory {
 	return &Memory{
-		byID:   map[string]Artist{},
-		byUser: map[string]string{},
-		slots:  map[string]Slot{},
+		byID:    map[string]Artist{},
+		byUser:  map[string]string{},
+		slots:   map[string]Slot{},
+		follows: map[string]Follow{},
 	}
 }
 
@@ -130,6 +132,67 @@ func (m *Memory) SlotsByArtist(_ context.Context, artistID string) ([]Slot, erro
 		}
 	}
 	return out, nil
+}
+
+func (m *Memory) Follow(_ context.Context, f Follow) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.byID[f.ArtistID]; !ok {
+		return auth.ErrNotFound
+	}
+	key := followKey(f.UserID, f.ArtistID)
+	if _, ok := m.follows[key]; ok {
+		return nil
+	}
+	if f.CreatedAt.IsZero() {
+		f.CreatedAt = time.Now().UTC()
+	}
+	m.follows[key] = f
+	return nil
+}
+
+func (m *Memory) Unfollow(_ context.Context, userID, artistID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.follows, followKey(userID, artistID))
+	return nil
+}
+
+func (m *Memory) CountFollowers(_ context.Context, artistID string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n := 0
+	for _, f := range m.follows {
+		if f.ArtistID == artistID {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (m *Memory) FollowsByUser(_ context.Context, userID string) ([]Follow, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []Follow
+	for _, f := range m.follows {
+		if f.UserID == userID {
+			out = append(out, f)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].CreatedAt.After(out[j].CreatedAt)
+		}
+		return out[i].ArtistID > out[j].ArtistID
+	})
+	if out == nil {
+		out = []Follow{}
+	}
+	return out, nil
+}
+
+func followKey(userID, artistID string) string {
+	return userID + "/" + artistID
 }
 
 func cloneArtist(a Artist) Artist {
