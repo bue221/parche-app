@@ -14,6 +14,7 @@ import (
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
+	"github.com/parche-app/backend/internal/editorial"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/health"
 	"github.com/parche-app/backend/internal/mailer"
@@ -37,6 +38,7 @@ type Routes struct {
 	Venues        *venues.Service
 	Media         *media.Service
 	Artists       *artists.Service
+	Posts         *editorial.Service
 	Payments      payments.Provider
 	WebhookSecret string
 	AppEnv        string
@@ -58,6 +60,7 @@ func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 	registerAssetRoutes(mux, routes)
 	registerTrackRoutes(mux, routes)
 	registerArtistRoutes(mux, routes)
+	registerPostRoutes(mux, routes)
 	registerOrderRoutes(mux, routes)
 	if extra != nil {
 		extra(mux)
@@ -143,6 +146,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if sessions != nil {
 		artistSvc = artists.NewService(artists.NewPG(pool), sessions.Store)
 	}
+	var postSvc *editorial.Service
+	if sessions != nil {
+		postSvc = editorial.NewService(editorial.NewPG(pool), sessions.Store)
+	}
 	if artistSvc != nil && eventSvc != nil {
 		eventSvc.Lineup = artistSvc
 		artistSvc.Catalog = eventSvc
@@ -161,6 +168,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		}
 		if sessions != nil {
 			mediaSvc.Users = sessions
+		}
+		if postSvc != nil {
+			mediaSvc.Posts = postSvc
+			postSvc.Covers = mediaSvc
 		}
 		if cfg.BrokerURL != "" {
 			if nc, js, err := broker.Connect(cfg.BrokerURL); err != nil {
@@ -194,6 +205,7 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Venues:        venueSvc,
 		Media:         mediaSvc,
 		Artists:       artistSvc,
+		Posts:         postSvc,
 		Payments:      pay,
 		WebhookSecret: cfg.PaymentWebhookSecret,
 		AppEnv:        cfg.AppEnv,

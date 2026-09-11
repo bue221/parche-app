@@ -188,6 +188,22 @@ func TestValidateUploadRejects(t *testing.T) {
 	if err := ValidateUpload(KindAudio, "audio/mpeg", 100); err != nil {
 		t.Fatal(err)
 	}
+	if err := ValidateUpload(KindCover, "image/png", 100); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildPostCoverKey(t *testing.T) {
+	key, err := BuildPostCoverKey("11111111-1111-1111-1111-111111111111", "image/webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(key, "posts/11111111-1111-1111-1111-111111111111/cover/") {
+		t.Fatalf("key=%s", key)
+	}
+	if strings.Contains(key, "events/") {
+		t.Fatalf("cover under events: %s", key)
+	}
 }
 
 func tokenFromDirectURL(t *testing.T, raw string) string {

@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/artists"
+	"github.com/parche-app/backend/internal/auth"
+	"github.com/parche-app/backend/internal/editorial"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
 )
@@ -23,6 +26,7 @@ type uploadRequest struct {
 	ByteSize    int64   `json:"byte_size"`
 	EventID     *string `json:"event_id"`
 	ArtistID    *string `json:"artist_id"`
+	PostID      *string `json:"post_id"`
 }
 
 type uploadResponse struct {
@@ -42,18 +46,31 @@ func registerUploadRoutes(mux *http.ServeMux, routes Routes) {
 	if events == nil {
 		events = DenyEventWrite{}
 	}
-	h := uploadHandler{store: routes.Store, access: access, events: events, media: routes.Media, artists: routes.Artists}
+	h := uploadHandler{
+		store:    routes.Store,
+		access:   access,
+		events:   events,
+		media:    routes.Media,
+		artists:  routes.Artists,
+		posts:    routes.Posts,
+		profiles: nil,
+	}
+	if routes.Auth != nil {
+		h.profiles = routes.Auth.Store.Profiles
+	}
 	mux.HandleFunc("POST /v1/uploads", h.create)
 	mux.HandleFunc("PUT /v1/uploads/direct", h.directPut)
 	mux.HandleFunc("GET /v1/uploads/direct", h.directGet)
 }
 
 type uploadHandler struct {
-	store   objectstore.Store
-	access  Access
-	events  EventWrite
-	media   *media.Service
-	artists *artists.Service
+	store    objectstore.Store
+	access   Access
+	events   EventWrite
+	media    *media.Service
+	artists  *artists.Service
+	posts    *editorial.Service
+	profiles func(context.Context, string) ([]string, error)
 }
 
 func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -88,12 +105,20 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 	if req.ArtistID != nil {
 		artistID = strings.TrimSpace(*req.ArtistID)
 	}
+	postID := ""
+	if req.PostID != nil {
+		postID = strings.TrimSpace(*req.PostID)
+	}
 
 	var key string
 	switch kind {
 	case objectstore.KindAvatar:
 		if eventID != "" {
 			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "event_id", Issue: "must_be_omitted"}})
+			return
+		}
+		if postID != "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "post_id", Issue: "must_be_omitted"}})
 			return
 		}
 		if artistID != "" {
@@ -113,9 +138,48 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 		} else {
 			key, err = objectstore.BuildKey(kind, "", "", principal.UserID, contentType)
 		}
+	case objectstore.KindCover:
+		if eventID != "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "event_id", Issue: "must_be_omitted"}})
+			return
+		}
+		if artistID != "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "artist_id", Issue: "must_be_omitted"}})
+			return
+		}
+		if postID == "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "post_id", Issue: "required"}})
+			return
+		}
+		if _, parseErr := uuid.Parse(postID); parseErr != nil {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "post_id", Issue: "uuid"}})
+			return
+		}
+		if h.profiles == nil || h.posts == nil {
+			apierr.Write(w, r, apierr.Forbidden, "", nil)
+			return
+		}
+		got, profErr := h.profiles(r.Context(), principal.UserID)
+		if profErr != nil {
+			writeAccessError(w, r, profErr)
+			return
+		}
+		if !containsProfile(got, auth.ProfilePlatformAdmin) {
+			apierr.Write(w, r, apierr.Forbidden, "", nil)
+			return
+		}
+		if _, getErr := h.posts.GetAdmin(r.Context(), postID); getErr != nil {
+			writeEventErr(w, r, getErr)
+			return
+		}
+		key, err = objectstore.BuildPostCoverKey(postID, contentType)
 	default:
 		if artistID != "" {
 			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "artist_id", Issue: "must_be_omitted"}})
+			return
+		}
+		if postID != "" {
+			apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "post_id", Issue: "must_be_omitted"}})
 			return
 		}
 		if eventID == "" {
@@ -152,11 +216,14 @@ func (h uploadHandler) create(w http.ResponseWriter, r *http.Request) {
 			ByteSize:    req.ByteSize,
 			ExpiresAt:   grant.ExpiresAt.Add(10 * time.Minute),
 		}
-		if kind != objectstore.KindAvatar {
+		if kind != objectstore.KindAvatar && kind != objectstore.KindCover {
 			intent.EventID = eventID
 		}
 		if artistID != "" {
 			intent.ArtistID = artistID
+		}
+		if postID != "" {
+			intent.PostID = postID
 		}
 		if err := h.media.SaveIntent(r.Context(), intent); err != nil {
 			apierr.Write(w, r, apierr.Internal, "", nil)

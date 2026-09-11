@@ -23,6 +23,7 @@ type Service struct {
 	Events       EventBinder
 	Artists      ArtistBinder
 	Users        UserBinder
+	Posts        PostBinder
 	Publisher    Publisher
 	Log          *slog.Logger
 	Now          func() time.Time
@@ -105,6 +106,36 @@ func (s *Service) ConfirmArtist(ctx context.Context, in ConfirmInput) (events.Im
 	}
 	if s.Artists != nil {
 		if _, err := s.Artists.BindAvatar(ctx, in.ArtistID, a.ID); err != nil {
+			return events.Image{}, err
+		}
+	}
+	if err := s.enqueueProcess(ctx, a.ID); err != nil {
+		s.log().Error("media.process enqueue", "asset_id", a.ID, "err", err)
+	}
+	ready, err := s.Store.AssetByID(ctx, a.ID)
+	if err != nil {
+		ready = a
+	}
+	return s.view(ready), nil
+}
+
+func (s *Service) ConfirmPost(ctx context.Context, in ConfirmInput) (events.Image, error) {
+	kind := strings.TrimSpace(in.Kind)
+	if kind == "" {
+		kind = KindCover
+	}
+	if kind != KindCover {
+		return events.Image{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "invalid"}}}
+	}
+	in.Kind = KindCover
+	in.EventID = ""
+	in.ArtistID = ""
+	a, err := s.confirmPostAsset(ctx, in)
+	if err != nil {
+		return events.Image{}, err
+	}
+	if s.Posts != nil {
+		if _, err := s.Posts.BindCover(ctx, in.PostID, a.ID); err != nil {
 			return events.Image{}, err
 		}
 	}
@@ -201,6 +232,9 @@ func (s *Service) confirmAsset(ctx context.Context, in ConfirmInput, kind string
 	if intent.ArtistID != "" && intent.ArtistID != in.ArtistID {
 		return Asset{}, auth.ErrForbidden
 	}
+	if intent.PostID != "" {
+		return Asset{}, auth.ErrForbidden
+	}
 	if intent.Kind != "" && intent.Kind != kind {
 		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "mismatch"}}}
 	}
@@ -291,7 +325,7 @@ func (s *Service) confirmArtistAsset(ctx context.Context, in ConfirmInput) (Asse
 	if s.now().After(intent.ExpiresAt) {
 		return Asset{}, auth.ErrGone
 	}
-	if intent.EventID != "" {
+	if intent.EventID != "" || intent.PostID != "" {
 		return Asset{}, auth.ErrForbidden
 	}
 	if intent.ArtistID != "" && intent.ArtistID != artistID {
@@ -379,7 +413,7 @@ func (s *Service) confirmUserAsset(ctx context.Context, in ConfirmInput) (Asset,
 	if s.now().After(intent.ExpiresAt) {
 		return Asset{}, auth.ErrGone
 	}
-	if intent.EventID != "" || intent.ArtistID != "" {
+	if intent.EventID != "" || intent.ArtistID != "" || intent.PostID != "" {
 		return Asset{}, auth.ErrForbidden
 	}
 	if intent.Kind != "" && intent.Kind != KindAvatar {
@@ -431,6 +465,93 @@ func (s *Service) confirmUserAsset(ctx context.Context, in ConfirmInput) (Asset,
 		Bytes:     bytes,
 		Status:    StatusProcessing,
 		CreatedBy: userID,
+		CreatedAt: s.now(),
+	}
+	if err := s.Store.CreateAsset(ctx, a); err != nil {
+		return Asset{}, err
+	}
+	_ = s.Store.DeleteIntent(ctx, key)
+	return a, nil
+}
+
+func (s *Service) confirmPostAsset(ctx context.Context, in ConfirmInput) (Asset, error) {
+	key := strings.TrimSpace(in.Key)
+	if key == "" {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "key", Issue: "required"}}}
+	}
+	postID := strings.TrimSpace(in.PostID)
+	if postID == "" {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "post_id", Issue: "required"}}}
+	}
+
+	intent, err := s.Store.IntentByKey(ctx, key)
+	if err != nil {
+		if errors.Is(err, auth.ErrNotFound) {
+			return Asset{}, auth.ErrForbidden
+		}
+		return Asset{}, err
+	}
+	if intent.UserID != in.UserID {
+		return Asset{}, auth.ErrForbidden
+	}
+	if s.now().After(intent.ExpiresAt) {
+		return Asset{}, auth.ErrGone
+	}
+	if intent.EventID != "" || intent.ArtistID != "" {
+		return Asset{}, auth.ErrForbidden
+	}
+	if intent.PostID != "" && intent.PostID != postID {
+		return Asset{}, auth.ErrForbidden
+	}
+	if intent.Kind != "" && intent.Kind != KindCover {
+		return Asset{}, auth.Invalid{Fields: []auth.Field{{Name: "kind", Issue: "mismatch"}}}
+	}
+
+	prefix := "posts/" + postID + "/" + KindCover + "/"
+	if !strings.HasPrefix(key, prefix) {
+		return Asset{}, auth.ErrForbidden
+	}
+
+	ok, err := s.Objects.Exists(ctx, key)
+	if err != nil {
+		return Asset{}, err
+	}
+	if !ok {
+		return Asset{}, auth.ErrNotFound
+	}
+	head, err := s.Objects.Head(ctx, key)
+	if err != nil {
+		if errors.Is(err, objectstore.ErrNotFound) {
+			return Asset{}, auth.ErrNotFound
+		}
+		return Asset{}, err
+	}
+	mime := head.ContentType
+	if mime == "" || mime == "application/octet-stream" {
+		if intent.ContentType != "" {
+			mime = intent.ContentType
+		} else {
+			mime = objectstore.MIMEFromKey(key)
+		}
+	}
+	bytes := head.Size
+	if bytes <= 0 {
+		bytes = intent.ByteSize
+	}
+	id, err := newID()
+	if err != nil {
+		return Asset{}, err
+	}
+	a := Asset{
+		ID:        id,
+		OwnerType: OwnerPost,
+		OwnerID:   postID,
+		Kind:      KindCover,
+		Key:       key,
+		MIME:      mime,
+		Bytes:     bytes,
+		Status:    StatusProcessing,
+		CreatedBy: in.UserID,
 		CreatedAt: s.now(),
 	}
 	if err := s.Store.CreateAsset(ctx, a); err != nil {

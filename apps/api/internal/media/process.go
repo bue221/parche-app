@@ -31,7 +31,7 @@ func (s *Service) Process(ctx context.Context, assetID string) error {
 	if a.Kind == KindAudio {
 		return s.processAudio(ctx, a)
 	}
-	if a.Kind != KindFlyer && a.Kind != KindGallery && a.Kind != KindAvatar {
+	if a.Kind != KindFlyer && a.Kind != KindGallery && a.Kind != KindAvatar && a.Kind != KindCover {
 		return nil
 	}
 	rc, _, err := s.Objects.Get(ctx, a.Key)

@@ -14,6 +14,7 @@ const (
 	KindGallery = "gallery"
 	KindAvatar  = "avatar"
 	KindAudio   = "audio"
+	KindCover   = "cover"
 )
 
 const (
@@ -42,7 +43,7 @@ func ValidateUpload(kind, contentType string, byteSize int64) error {
 		return fmt.Errorf("byte_size")
 	}
 	switch kind {
-	case KindFlyer, KindGallery, KindAvatar:
+	case KindFlyer, KindGallery, KindAvatar, KindCover:
 		if _, ok := imageMIME[contentType]; !ok {
 			return fmt.Errorf("content_type")
 		}
@@ -114,9 +115,30 @@ func BuildArtistAvatarKey(artistID, contentType string) (string, error) {
 	return key, nil
 }
 
+// BuildPostCoverKey is POST /v1/uploads kind=cover with post_id (F23).
+func BuildPostCoverKey(postID, contentType string) (string, error) {
+	if strings.TrimSpace(postID) == "" {
+		return "", fmt.Errorf("post_id")
+	}
+	ext, err := extension(KindCover, contentType)
+	if err != nil {
+		return "", err
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		id = uuid.New()
+	}
+	file := id.String() + "." + ext
+	key := path.Join("posts", postID, KindCover, file)
+	if strings.Contains(key, "/events/") || strings.HasPrefix(key, "events/") {
+		return "", fmt.Errorf("cover key must not live under events/")
+	}
+	return key, nil
+}
+
 func extension(kind, contentType string) (string, error) {
 	switch kind {
-	case KindFlyer, KindGallery, KindAvatar:
+	case KindFlyer, KindGallery, KindAvatar, KindCover:
 		ext, ok := imageMIME[contentType]
 		if !ok {
 			return "", fmt.Errorf("content_type")

@@ -16,6 +16,7 @@ import (
 	"github.com/parche-app/backend/internal/apierr"
 	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
+	"github.com/parche-app/backend/internal/editorial"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/mailer"
 	"github.com/parche-app/backend/internal/media"
@@ -197,6 +198,11 @@ func TestEventsLifecycleHTTP(t *testing.T) {
 }
 
 func testEventStack(t *testing.T) (http.Handler, *events.Service) {
+	mux, esvc, _ := testEventStackFull(t)
+	return mux, esvc
+}
+
+func testEventStackFull(t *testing.T) (http.Handler, *events.Service, *auth.Memory) {
 	t.Helper()
 	store := auth.NewMemory()
 	tokens := testTokens()
@@ -232,6 +238,9 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 	esvc.Tickets = keys
 	msvc.Artists = asvc
 	msvc.Users = svc
+	psvc := editorial.NewService(editorial.NewMemory(), store)
+	msvc.Posts = psvc
+	psvc.Covers = msvc
 	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
 	mux := newMux(testLogger(), configCORS(), nil, nil, nil, Routes{
 		Store:         obj,
@@ -242,11 +251,12 @@ func testEventStack(t *testing.T) (http.Handler, *events.Service) {
 		Venues:        vsvc,
 		Media:         msvc,
 		Artists:       asvc,
+		Posts:         psvc,
 		Payments:      payments.Fake{},
 		WebhookSecret: "test-webhook-secret",
 		AppEnv:        "dev",
 	})
-	return mux, esvc
+	return mux, esvc, store
 }
 
 func attachFlyer(t *testing.T, mux http.Handler, accessToken, eventID string) {

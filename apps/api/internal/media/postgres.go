@@ -28,17 +28,18 @@ func NewPG(pool *pgxpool.Pool) *PG {
 
 func (s *PG) SaveIntent(ctx context.Context, in Intent) error {
 	_, err := s.q.Exec(ctx, `
-		INSERT INTO upload_intents (key, user_id, kind, event_id, artist_id, content_type, byte_size, expires_at)
-		VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),$6,$7,$8)
+		INSERT INTO upload_intents (key, user_id, kind, event_id, artist_id, post_id, content_type, byte_size, expires_at)
+		VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),NULLIF($6,''),$7,$8,$9)
 		ON CONFLICT (key) DO UPDATE SET
 			user_id = EXCLUDED.user_id,
 			kind = EXCLUDED.kind,
 			event_id = EXCLUDED.event_id,
 			artist_id = EXCLUDED.artist_id,
+			post_id = EXCLUDED.post_id,
 			content_type = EXCLUDED.content_type,
 			byte_size = EXCLUDED.byte_size,
 			expires_at = EXCLUDED.expires_at`,
-		in.Key, in.UserID, in.Kind, in.EventID, in.ArtistID, in.ContentType, in.ByteSize, in.ExpiresAt)
+		in.Key, in.UserID, in.Kind, in.EventID, in.ArtistID, in.PostID, in.ContentType, in.ByteSize, in.ExpiresAt)
 	return err
 }
 
@@ -46,10 +47,11 @@ func (s *PG) IntentByKey(ctx context.Context, key string) (Intent, error) {
 	var in Intent
 	var eventID *string
 	var artistID *string
+	var postID *string
 	err := s.q.QueryRow(ctx, `
-		SELECT key, user_id, kind, event_id, artist_id, content_type, byte_size, expires_at
+		SELECT key, user_id, kind, event_id, artist_id, post_id, content_type, byte_size, expires_at
 		FROM upload_intents WHERE key = $1`, key).
-		Scan(&in.Key, &in.UserID, &in.Kind, &eventID, &artistID, &in.ContentType, &in.ByteSize, &in.ExpiresAt)
+		Scan(&in.Key, &in.UserID, &in.Kind, &eventID, &artistID, &postID, &in.ContentType, &in.ByteSize, &in.ExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Intent{}, auth.ErrNotFound
 	}
@@ -61,6 +63,9 @@ func (s *PG) IntentByKey(ctx context.Context, key string) (Intent, error) {
 	}
 	if artistID != nil {
 		in.ArtistID = *artistID
+	}
+	if postID != nil {
+		in.PostID = *postID
 	}
 	in.ExpiresAt = in.ExpiresAt.UTC()
 	return in, nil

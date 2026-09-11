@@ -28,9 +28,9 @@ Contenido de cultura techno y novedades, no es el feed de eventos.
 
 ## Checklist
 
-- [ ] Draft no público
-- [ ] XSS: sanitizar HTML generado
-- [ ] Cover por F03
+- [x] Draft no público
+- [x] XSS: sanitizar HTML generado
+- [x] Cover por F03
 
 ## Next step
 

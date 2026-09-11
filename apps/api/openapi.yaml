@@ -1845,6 +1845,177 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/posts:
+    get:
+      summary: Public published editorial posts (F23)
+      operationId: listPosts
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Newest published first. Drafts are never included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/posts/{slug}:
+    get:
+      summary: Public published post by slug (F23)
+      operationId: getPost
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Markdown plus sanitized body_html. Draft slugs are 404.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/admin/posts:
+    post:
+      summary: Create an editorial draft (F23)
+      operationId: createPost
+      security:
+        - bearerAuth: []
+      description: Requires platform_admin (database profile, not only JWT).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostRequest"
+      responses:
+        "201":
+          description: Draft post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}:
+    patch:
+      summary: Update a draft or published post (F23)
+      operationId: patchPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchPostRequest"
+      responses:
+        "200":
+          description: Updated post. Slug cannot change after publish.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}/publish:
+    post:
+      summary: Publish a draft post (F23)
+      operationId: publishPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Status is published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}/assets:
+    post:
+      summary: Confirm a post cover object (F03, F23)
+      operationId: confirmPostCover
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmPostCoverRequest"
+      responses:
+        "201":
+          description: Cover image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
   /v1/uploads:
     post:
       summary: Issue a short-lived PUT presign (F03)
@@ -3112,7 +3283,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [flyer, gallery, avatar, audio]
+          enum: [flyer, gallery, avatar, audio, cover]
         content_type:
           type: string
         byte_size:
@@ -3127,6 +3298,11 @@ components:
           format: uuid
           nullable: true
           description: With kind=avatar, artist photo (F12). Omit event_id and artist_id for the caller's avatar (F14)
+        post_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required with kind=cover (F23). platform_admin only.
     PatchMeRequest:
       type: object
       properties:
@@ -3388,11 +3564,91 @@ components:
           format: uuid
         kind:
           type: string
-          enum: [flyer, gallery]
+          enum: [flyer, gallery, avatar, cover]
         public_url:
           type: string
         thumb_url:
           type: string
+    Post:
+      type: object
+      required: [id, slug, title, body_md, body_html, author_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        body_md:
+          type: string
+        body_html:
+          type: string
+          description: Generated from body_md with an HTML tag allowlist
+        cover_asset_id:
+          type: string
+          format: uuid
+        cover:
+          $ref: "#/components/schemas/EventImage"
+        status:
+          type: string
+          enum: [draft, published]
+          description: Present on admin responses only
+        author_id:
+          type: string
+          format: uuid
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PostList:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        next_cursor:
+          type: string
+          nullable: true
+    CreatePostRequest:
+      type: object
+      required: [title]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+          maxLength: 120
+        body_md:
+          type: string
+          maxLength: 50000
+    PatchPostRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+          maxLength: 120
+        body_md:
+          type: string
+          maxLength: 50000
+    ConfirmPostCoverRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [cover]
     UploadResponse:
       type: object
       required: [key, upload]

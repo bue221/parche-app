@@ -12,11 +12,13 @@ const (
 	OwnerEvent  = "event"
 	OwnerUser   = "user"
 	OwnerArtist = "artist"
+	OwnerPost   = "post"
 
 	KindFlyer   = objectstore.KindFlyer
 	KindGallery = objectstore.KindGallery
 	KindAvatar  = objectstore.KindAvatar
 	KindAudio   = objectstore.KindAudio
+	KindCover   = objectstore.KindCover
 
 	StatusProcessing = "processing"
 	StatusReady      = "ready"
@@ -108,6 +110,7 @@ type Intent struct {
 	Kind        string
 	EventID     string
 	ArtistID    string
+	PostID      string
 	ContentType string
 	ByteSize    int64
 	ExpiresAt   time.Time
@@ -119,6 +122,7 @@ type ConfirmInput struct {
 	TenantID string
 	EventID  string
 	ArtistID string
+	PostID   string
 	Key      string
 	Kind     string
 }
@@ -167,6 +171,11 @@ type ArtistBinder interface {
 // UserBinder updates users.avatar_asset_id (implemented by auth.Service).
 type UserBinder interface {
 	BindAvatar(ctx context.Context, userID, assetID string) (previousAssetID string, err error)
+}
+
+// PostBinder updates posts.cover_asset_id (implemented by editorial.Service).
+type PostBinder interface {
+	BindCover(ctx context.Context, postID, assetID string) (previousAssetID string, err error)
 }
 
 // Publisher is NATS (or a test fake). Nil means Process runs in-process.
