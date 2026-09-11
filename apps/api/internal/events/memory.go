@@ -23,6 +23,7 @@ type Memory struct {
 	payments    map[string]PaymentTx // provider_event_id
 	claims      map[string]TicketClaim
 	claimHashes map[string]string // token_hash → id
+	scanLogs    []TicketScanLog
 	order       []string
 }
 

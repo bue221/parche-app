@@ -64,7 +64,10 @@ func main() {
 		expire := func(ctx context.Context) (int, error) {
 			return eventStore.ExpirePendingOrders(ctx, time.Now().UTC())
 		}
-		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire}); err != nil {
+		ticketUsed := func(ctx context.Context, job events.TicketScanJob) error {
+			return events.PersistTicketScan(ctx, eventStore, job)
+		}
+		if err := worker.Run(ctx, js, log, worker.Handlers{MediaProcess: mediaSvc.Process, ExpireOrders: expire, TicketUsed: ticketUsed}); err != nil {
 			log.Error("worker stopped", "err", err)
 			os.Exit(1)
 		}

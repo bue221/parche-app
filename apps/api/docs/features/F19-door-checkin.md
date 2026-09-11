@@ -81,11 +81,11 @@ Dos doors, mismo QR: un SETNX gana. El otro duplicate. Ambos loguean.
 
 ## Checklist
 
-- [ ] Postgres down: approved igual si Redis up (worker reintenta)
-- [ ] Dos scanners mismo ticket
-- [ ] Door no ve ingresos (eso es F20)
-- [ ] Live counts
-- [ ] Tests de firma / wrong event / duplicate
+- [x] Postgres down: approved igual si Redis up (worker reintenta)
+- [x] Dos scanners mismo ticket
+- [x] Door no ve ingresos (eso es F20)
+- [x] Live counts
+- [x] Tests de firma / wrong event / duplicate
 
 ## Next step
 

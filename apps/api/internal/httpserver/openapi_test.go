@@ -67,6 +67,7 @@ func TestOpenAPIContractFile(t *testing.T) {
 		"user_pin",
 		"/v1/uploads",
 		"/v1/events/{eventId}/check-in",
+		"/v1/events/{eventId}/door/live",
 		"VALIDATION_ERROR",
 		"UNAUTHORIZED",
 		"FORBIDDEN",

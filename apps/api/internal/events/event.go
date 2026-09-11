@@ -222,6 +222,10 @@ type Store interface {
 	AcceptTicketClaim(ctx context.Context, claimID, toUserID, newJTI string, now time.Time) (Ticket, error)
 	ApplyPayment(ctx context.Context, orderID string, tx PaymentTx, success bool) (applied bool, err error)
 	ExpirePendingOrders(ctx context.Context, now time.Time) (int, error)
+	MarkTicketUsed(ctx context.Context, ticketID string, now time.Time) error
+	InsertScanLog(ctx context.Context, row TicketScanLog) error
+	DoorInventory(ctx context.Context, eventID string) (sold, capacity, used int, err error)
+	ListRecentScanLogs(ctx context.Context, eventID string, limit int) ([]TicketScanLog, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.
@@ -246,10 +250,14 @@ type VenueLookup interface {
 	ByID(ctx context.Context, id string) (venues.Venue, error)
 }
 
-// Cache is Redis (or memory) for the public list and event ACL hashes.
+// Cache is Redis (or memory) for the public list, event ACL hashes, and F19 SETNX.
 type Cache interface {
 	Get(ctx context.Context, key string) (string, bool, error)
 	Set(ctx context.Context, key, val string, ttl time.Duration) error
+	SetNX(ctx context.Context, key, val string, ttl time.Duration) (bool, error)
+	Incr(ctx context.Context, key string, ttl time.Duration) (int64, error)
+	LPushTrim(ctx context.Context, key, val string, max int, ttl time.Duration) error
+	LRange(ctx context.Context, key string, start, stop int64) ([]string, error)
 	DeletePrefix(ctx context.Context, prefix string) error
 	HashGet(ctx context.Context, key, field string) (string, bool, error)
 	HashSet(ctx context.Context, key, field, val string, ttl time.Duration) error

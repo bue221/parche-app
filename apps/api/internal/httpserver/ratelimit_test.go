@@ -75,18 +75,14 @@ func TestRateLimitPasswordForgot(t *testing.T) {
 
 func TestRateLimitCheckIn(t *testing.T) {
 	limiter := ratelimit.NewMemory()
-	mux := newMux(testLogger(), configCORS(), limiter, nil, func(mux *http.ServeMux) {
-		mux.HandleFunc("POST /v1/events/{eventId}/check-in", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		})
-	}, Routes{})
+	mux := newMux(testLogger(), configCORS(), limiter, nil, nil, Routes{})
 	for i := 0; i < 30; i++ {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/v1/events/11111111-1111-1111-1111-111111111111/check-in", nil)
 		req = req.WithContext(WithUserID(req.Context(), "staff-1"))
 		mux.ServeHTTP(rr, req)
-		if rr.Code != http.StatusNoContent {
-			t.Fatalf("hit %d status=%d", i+1, rr.Code)
+		if rr.Code == http.StatusTooManyRequests {
+			t.Fatalf("hit %d limited early status=%d", i+1, rr.Code)
 		}
 	}
 	rr := httptest.NewRecorder()

@@ -337,6 +337,77 @@ func (m *Memory) releaseReservedLocked(orderID string, now time.Time) {
 	}
 }
 
+func (m *Memory) MarkTicketUsed(_ context.Context, ticketID string, now time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.tix[ticketID]
+	if !ok {
+		return auth.ErrNotFound
+	}
+	if t.Status == TicketUsed {
+		return nil
+	}
+	if t.Status != TicketValid {
+		return nil
+	}
+	t.Status = TicketUsed
+	t.UpdatedAt = now
+	m.tix[ticketID] = t
+	return nil
+}
+
+func (m *Memory) InsertScanLog(_ context.Context, row TicketScanLog) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.scanLogs = append(m.scanLogs, row)
+	return nil
+}
+
+func (m *Memory) DoorInventory(_ context.Context, eventID string) (sold, capacity, used int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, tt := range m.tickets {
+		if tt.EventID != eventID || tt.Status == TicketDraft {
+			continue
+		}
+		sold += tt.SoldCount
+		capacity += tt.Capacity
+	}
+	for _, t := range m.tix {
+		if t.EventID == eventID && t.Status == TicketUsed {
+			used++
+		}
+	}
+	return sold, capacity, used, nil
+}
+
+func (m *Memory) ListRecentScanLogs(_ context.Context, eventID string, limit int) ([]TicketScanLog, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if limit <= 0 {
+		limit = doorRecentMax
+	}
+	var matching []TicketScanLog
+	for _, row := range m.scanLogs {
+		if row.EventID == eventID {
+			matching = append(matching, row)
+		}
+	}
+	sort.Slice(matching, func(i, j int) bool {
+		if matching[i].CreatedAt.Equal(matching[j].CreatedAt) {
+			return matching[i].ID > matching[j].ID
+		}
+		return matching[i].CreatedAt.After(matching[j].CreatedAt)
+	})
+	if len(matching) > limit {
+		matching = matching[:limit]
+	}
+	if matching == nil {
+		matching = []TicketScanLog{}
+	}
+	return matching, nil
+}
+
 func (m *Memory) moveReservedToSoldLocked(orderID string, now time.Time) {
 	for id, qty := range m.qtyByTypeLocked(orderID) {
 		tt, ok := m.tickets[id]

@@ -10,6 +10,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/parche-app/backend/internal/broker"
+	"github.com/parche-app/backend/internal/events"
 )
 
 const streamName = "PARCHE"
@@ -18,6 +19,7 @@ const streamName = "PARCHE"
 type Handlers struct {
 	MediaProcess func(ctx context.Context, assetID string) error
 	ExpireOrders func(ctx context.Context) (int, error)
+	TicketUsed   func(ctx context.Context, job events.TicketScanJob) error
 }
 
 // Run subscribes to product subjects and idles until ctx is cancelled.
@@ -105,6 +107,15 @@ func dispatch(ctx context.Context, h Handlers, msg *nats.Msg) error {
 			return nil
 		}
 		return h.MediaProcess(ctx, body.AssetID)
+	case broker.SubjectTicketUsed:
+		if h.TicketUsed == nil {
+			return nil
+		}
+		var job events.TicketScanJob
+		if err := json.Unmarshal(msg.Data, &job); err != nil {
+			return err
+		}
+		return h.TicketUsed(ctx, job)
 	default:
 		return nil
 	}

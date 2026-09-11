@@ -113,6 +113,51 @@ func (h eventHandler) transferTicket(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type checkInBody struct {
+	QRToken string `json:"qr_token"`
+}
+
+func (h eventHandler) checkIn(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	var req checkInBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	out, err := h.svc.CheckIn(r.Context(), p.UserID, r.PathValue("eventId"), req.QRToken)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h eventHandler) doorLive(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	include := strings.TrimSpace(r.URL.Query().Get("include"))
+	out, err := h.svc.DoorLive(r.Context(), p.UserID, r.PathValue("eventId"), include == events.IncludeGuestName)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, out)
+}
+
 func (h eventHandler) acceptTicketClaim(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil {
 		apierr.Write(w, r, apierr.Internal, "", nil)
