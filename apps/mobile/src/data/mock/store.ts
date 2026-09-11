@@ -1,16 +1,18 @@
 import { create } from 'zustand';
 
 import { createSeed } from '@/data/mock/seed';
-import type { MockSnapshot, Session } from '@/data/types';
+import type { EventFilters, MockSnapshot, Session } from '@/data/types';
 
 type MockStore = {
   data: MockSnapshot;
   session: Session | null;
   pendingPath: string | null;
+  filters: EventFilters;
   revision: number;
   setData: (recipe: (draft: MockSnapshot) => void) => void;
   setSession: (session: Session | null) => void;
   setPendingPath: (path: string | null) => void;
+  setFilters: (filters: EventFilters) => void;
   reset: () => void;
 };
 
@@ -22,6 +24,7 @@ export const useMockStore = create<MockStore>((set, get) => ({
   data: createSeed(),
   session: null,
   pendingPath: null,
+  filters: {},
   revision: 0,
   setData: (recipe) => {
     const draft = cloneSnapshot(get().data);
@@ -30,11 +33,13 @@ export const useMockStore = create<MockStore>((set, get) => ({
   },
   setSession: (session) => set({ session }),
   setPendingPath: (pendingPath) => set({ pendingPath }),
+  setFilters: (filters) => set({ filters, revision: get().revision + 1 }),
   reset: () =>
     set({
       data: createSeed(),
       session: null,
       pendingPath: null,
+      filters: {},
       revision: 0,
     }),
 }));
