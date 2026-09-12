@@ -5,7 +5,7 @@ import { Platform, Pressable } from 'react-native';
 
 const buttonVariants = cva(
   cn(
-    'group shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3 shadow-none',
+    'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3 shadow-none',
     Platform.select({
       web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none',
     })
@@ -13,30 +13,25 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: cn(
-          'bg-primary active:opacity-80',
-          Platform.select({ web: 'hover:opacity-90' })
-        ),
+        default: cn('bg-primary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
+        confirm: cn('bg-confirm active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
         outline: cn(
           'border border-foreground bg-transparent active:bg-muted',
           Platform.select({ web: 'hover:bg-muted' })
         ),
-        secondary: cn(
-          'bg-secondary active:opacity-80',
-          Platform.select({ web: 'hover:opacity-90' })
-        ),
+        secondary: cn('bg-secondary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
         ghost: cn('bg-transparent active:bg-muted', Platform.select({ web: 'hover:bg-muted' })),
-        link: 'bg-transparent px-0 py-0',
+        link: 'min-h-0 bg-transparent px-0 py-0',
         destructive: cn(
-          'bg-destructive active:opacity-80',
-          Platform.select({ web: 'hover:opacity-90' })
+          'border border-foreground bg-transparent active:bg-muted',
+          Platform.select({ web: 'hover:bg-muted' })
         ),
       },
       size: {
         default: '',
-        sm: 'px-4 py-2',
+        sm: 'min-h-10 px-4 py-2',
         lg: 'px-8 py-4',
-        icon: 'size-10 px-0 py-0',
+        icon: 'size-11 px-0 py-0',
       },
     },
     defaultVariants: {
@@ -55,11 +50,12 @@ const buttonTextVariants = cva(
     variants: {
       variant: {
         default: 'text-primary-foreground',
+        confirm: 'text-pitch-black',
         outline: 'text-foreground',
         secondary: 'text-secondary-foreground',
         ghost: 'text-foreground',
         link: 'text-foreground normal-case',
-        destructive: 'text-destructive-foreground',
+        destructive: 'text-foreground',
       },
       size: {
         default: '',

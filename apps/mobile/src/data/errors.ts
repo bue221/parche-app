@@ -24,5 +24,8 @@ export function userMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
   }
+  if (error instanceof Error && /network|fetch|failed/i.test(error.message)) {
+    return 'No hay conexión con Parche. Revisa el servidor e intenta de nuevo.';
+  }
   return 'Algo falló. Intenta de nuevo.';
 }

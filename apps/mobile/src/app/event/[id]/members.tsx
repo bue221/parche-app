@@ -2,13 +2,17 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
+import { FormSection } from '@/components/form-section';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
+import { PendingAuth } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { statusLabel } from '@/lib/format';
 import type { Membership, MembershipRole } from '@/data/types';
@@ -36,7 +40,7 @@ export default function EventMembersScreen() {
   }, [load]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (user && !api.helpers.can(user.id, id, 'event.members.manage')) {
     return (
@@ -48,7 +52,8 @@ export default function EventMembersScreen() {
 
   return (
     <Screen>
-      <Text variant="heading">Equipo</Text>
+      <BackBar />
+      <PageHeader title="Equipo" lead="Invita a quien cubre la puerta." />
       {rows.length === 0 ? <Text variant="muted">Invita a quien cubre la puerta</Text> : null}
       {rows.map((row) => (
         <View key={row.id} className="mt-ds-12 gap-ds-8">
@@ -67,25 +72,30 @@ export default function EventMembersScreen() {
           ) : null}
         </View>
       ))}
-      <Field label="Email" autoCapitalize="none" value={email} onChangeText={setEmail} />
-      <View className="mt-ds-8 flex-row flex-wrap gap-ds-8">
-        {(['manager', 'door', 'metrics'] as const).map((r) => (
-          <Button key={r} variant={role === r ? 'default' : 'outline'} onPress={() => setRole(r)}>
-            <Text>{r}</Text>
-          </Button>
-        ))}
-      </View>
-      {error ? <Text>{error}</Text> : null}
-      <Button
-        className="mt-ds-16"
-        onPress={() => {
-          void api.members
-            .invite(id, email, role)
-            .then(load)
-            .catch((err) => setError(userMessage(err)));
-        }}>
-        <Text>Invitar</Text>
-      </Button>
+      <FormSection title="Invitar" className="mt-ds-24">
+        <Field label="Email" autoCapitalize="none" value={email} onChangeText={setEmail} />
+        <View className="flex-row flex-wrap gap-ds-8">
+          {(['manager', 'door', 'metrics'] as const).map((r) => (
+            <Button key={r} variant={role === r ? 'default' : 'outline'} onPress={() => setRole(r)}>
+              <Text>{r}</Text>
+            </Button>
+          ))}
+        </View>
+        {error ? (
+          <Text variant="helper" className="text-foreground">
+            {error}
+          </Text>
+        ) : null}
+        <Button
+          onPress={() => {
+            void api.members
+              .invite(id, email, role)
+              .then(load)
+              .catch((err) => setError(userMessage(err)));
+          }}>
+          <Text>Invitar</Text>
+        </Button>
+      </FormSection>
     </Screen>
   );
 }

@@ -1,11 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { BackBar } from '@/components/back-bar';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
+import { PendingAuth } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export default function DoorLiveScreen() {
@@ -16,7 +19,6 @@ export default function DoorLiveScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
     const tick = () => {
       void api.door
         .live(id)
@@ -24,12 +26,12 @@ export default function DoorLiveScreen() {
         .catch((err) => setError(userMessage(err)));
     };
     tick();
-    timer = setInterval(tick, 2500);
+    const timer = setInterval(tick, 2500);
     return () => clearInterval(timer);
   }, [id]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (user && !api.helpers.can(user.id, id, 'event.door.live') && !api.helpers.can(user.id, id, 'event.metrics.read')) {
     return (
@@ -41,7 +43,8 @@ export default function DoorLiveScreen() {
 
   return (
     <Screen>
-      <Text variant="heading">Aforo</Text>
+      <BackBar />
+      <PageHeader title="Aforo" />
       <Text variant="heading" className="mt-ds-24">
         {live?.checkIns ?? 0}
       </Text>

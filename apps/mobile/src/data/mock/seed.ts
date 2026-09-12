@@ -26,7 +26,6 @@ export const IDS = {
   typeDoor: 'type_selva_door',
   typeBodega: 'type_bodega_ga',
   inviteDoor: 'invite-door-selva',
-  postAcid: 'post_acid',
 } as const;
 
 export function createSeed(): MockSnapshot {
@@ -37,6 +36,7 @@ export function createSeed(): MockSnapshot {
         email: 'ata@parche.test',
         password: DEMO_PASSWORD,
         displayName: 'Ata Rivas',
+        phone: '+573001111111',
         profiles: ['attendee'],
         platformAdmin: false,
       },
@@ -45,6 +45,7 @@ export function createSeed(): MockSnapshot {
         email: 'promoter@parche.test',
         password: DEMO_PASSWORD,
         displayName: 'Nora Promoter',
+        phone: '+573002222222',
         profiles: ['promoter', 'attendee'],
         platformAdmin: false,
       },
@@ -251,21 +252,6 @@ export function createSeed(): MockSnapshot {
     orders: [],
     tickets: [],
     follows: [{ userId: IDS.attendee, artistId: IDS.artistLuna }],
-    posts: [
-      {
-        id: IDS.postAcid,
-        title: 'Por qué el flyer sigue importando',
-        body: 'Una nota corta sobre tinta, papel y la noche. Sin algoritmos, con cola en la puerta.',
-        flyerUrl: 'https://picsum.photos/seed/editorial/800/500',
-        publishedAt: iso(-4 * DAY),
-      },
-      {
-        id: 'post_sistema',
-        title: 'Sistemas en bodegas',
-        body: 'Si el recinto no cabe el stack, no cabe la fiesta.',
-        publishedAt: iso(-12 * DAY),
-      },
-    ],
     scans: [],
     uploads: [],
     permissions: {

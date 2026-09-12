@@ -2,6 +2,7 @@ import { ApiError } from '@/data/errors';
 import { createId } from '@/data/ids';
 import { debugLog } from '@/data/log';
 import { wait } from '@/data/mock/delay';
+import { compactTicketCode } from '@/lib/code128';
 import { DEMO_PASSWORD } from '@/data/mock/seed';
 import { getSession, getSnapshot, useMockStore } from '@/data/mock/store';
 import {
@@ -14,7 +15,6 @@ import type {
   Artist,
   CheckInCode,
   DevicePermission,
-  EditorialPost,
   EventFilters,
   EventTrack,
   Follow,
@@ -208,6 +208,7 @@ export const mockApi = {
       email: string;
       password: string;
       displayName: string;
+      phone?: string;
       initialProfile: 'attendee' | 'promoter';
     }): Promise<Me> {
       await wait();
@@ -227,6 +228,7 @@ export const mockApi = {
         email,
         password: input.password,
         displayName: input.displayName.trim(),
+        phone: input.phone?.trim() || undefined,
         profiles: [input.initialProfile, 'attendee'].filter(
           (v, i, arr) => arr.indexOf(v) === i
         ) as ProfileKind[],
@@ -286,7 +288,7 @@ export const mockApi = {
       };
     },
 
-    async updateMe(patch: { displayName?: string; avatarUrl?: string }): Promise<Me> {
+    async updateMe(patch: { displayName?: string; avatarUrl?: string; phone?: string }): Promise<Me> {
       const session = requireSession();
       useMockStore.getState().setData((d) => {
         const user = d.users.find((u) => u.id === session.userId);
@@ -295,6 +297,9 @@ export const mockApi = {
         }
         if (patch.displayName) {
           user.displayName = patch.displayName;
+        }
+        if (patch.phone !== undefined) {
+          user.phone = patch.phone;
         }
         if (patch.avatarUrl !== undefined) {
           user.avatarUrl = patch.avatarUrl;
@@ -306,6 +311,18 @@ export const mockApi = {
     async memberships(): Promise<Membership[]> {
       const me = await this.me();
       return me.memberships;
+    },
+
+    async activateArtist(): Promise<Me> {
+      await wait();
+      const session = requireSession();
+      useMockStore.getState().setData((d) => {
+        const user = d.users.find((u) => u.id === session.userId);
+        if (user && !user.profiles.includes('artist')) {
+          user.profiles.push('artist');
+        }
+      });
+      return this.me();
     },
   },
 
@@ -489,6 +506,13 @@ export const mockApi = {
     async list(): Promise<Artist[]> {
       await wait(40);
       return getSnapshot().artists;
+    },
+
+    async mine(): Promise<Artist | null> {
+      await wait(40);
+      const session = optionalSession();
+      if (!session) return null;
+      return getSnapshot().artists.find((artist) => artist.userId === session.userId) ?? null;
     },
 
     async upsert(input: { id?: string; stageName: string; bio: string; avatarUrl?: string; guest?: boolean }): Promise<Artist> {
@@ -870,9 +894,13 @@ export const mockApi = {
         return { code: 'forbidden', occupancy: this.occupancy(eventId) };
       }
       const parsed = parseTicketToken(token);
+      const compact = compactTicketCode(token);
       let code: CheckInCode = 'invalid';
       useMockStore.getState().setData((d) => {
-        if (!parsed) {
+        const ticket = parsed
+          ? d.tickets.find((t) => t.id === parsed.ticketId && t.tokenJti === parsed.jti)
+          : d.tickets.find((t) => compactTicketCode(t.tokenJti) === compact);
+        if (!parsed && !ticket) {
           code = 'invalid';
           d.scans.push({
             id: createId('scan'),
@@ -883,28 +911,25 @@ export const mockApi = {
           });
           return;
         }
-        if (parsed.exp < Date.now()) {
+        if (parsed && parsed.exp < Date.now()) {
           code = 'expired';
-        } else if (parsed.eventId !== eventId) {
+        } else if ((parsed && parsed.eventId !== eventId) || (ticket && ticket.eventId !== eventId)) {
           code = 'wrong_event';
+        } else if (!ticket || ticket.status === 'cancelled') {
+          code = 'invalid';
+        } else if (ticket.status === 'used') {
+          code = 'duplicate';
+        } else if (ticket.status !== 'valid') {
+          code = 'invalid';
         } else {
-          const ticket = d.tickets.find((t) => t.id === parsed.ticketId && t.tokenJti === parsed.jti);
-          if (!ticket || ticket.token !== token) {
-            code = 'invalid';
-          } else if (ticket.status === 'used') {
-            code = 'duplicate';
-          } else if (ticket.status !== 'valid') {
-            code = 'invalid';
-          } else {
-            ticket.status = 'used';
-            ticket.token = '';
-            code = 'approved';
-          }
+          ticket.status = 'used';
+          ticket.token = '';
+          code = 'approved';
         }
         d.scans.push({
           id: createId('scan'),
           eventId,
-          ticketId: parsed.ticketId,
+          ticketId: ticket?.id ?? parsed?.ticketId,
           result: code,
           scannerUserId: session.userId,
           at: new Date().toISOString(),
@@ -1024,26 +1049,19 @@ export const mockApi = {
       };
       useMockStore.getState().setData((d) => {
         d.uploads.push(upload);
+        if (kind === 'flyer' && eventId) {
+          const event = d.events.find((item) => item.id === eventId);
+          if (event) {
+            event.flyerUrl = upload.url;
+            event.updatedAt = new Date().toISOString();
+          }
+        }
       });
       return upload;
     },
   },
 
   feed: {
-    async posts(): Promise<EditorialPost[]> {
-      await wait();
-      return [...getSnapshot().posts].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
-    },
-
-    async post(id: string): Promise<EditorialPost> {
-      await wait();
-      const post = getSnapshot().posts.find((p) => p.id === id);
-      if (!post) {
-        throw new ApiError('NOT_FOUND', 'No encontramos esa nota');
-      }
-      return post;
-    },
-
     async recommendations(): Promise<ParcheEvent[]> {
       await wait();
       const session = optionalSession();

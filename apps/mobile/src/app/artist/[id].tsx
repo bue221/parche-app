@@ -1,51 +1,51 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { View } from 'react-native';
 
-import { EventCard } from '@/components/event-card';
-import { EmptyState, ErrorState } from '@/components/feedback';
+import { BackBar } from '@/components/back-bar';
+import { EventCard, EventGrid, EventGridItem } from '@/components/event-card';
+import { EmptyState, ErrorState, ListingSkeleton, Skeleton } from '@/components/feedback';
+import { FadeSlideIn } from '@/components/motion';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { setPendingPath, useAuthSnapshot } from '@/data/session';
-import { useMockStore } from '@/data/mock/store';
-import type { Artist, ParcheEvent } from '@/data/types';
 
 export default function ArtistPublicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const revision = useMockStore((s) => s.revision);
   const { isLoggedIn, user } = useAuthSnapshot();
-  const [artist, setArtist] = useState<(Artist & { upcoming: ParcheEvent[] }) | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: artist, error, refetch, isLoading } = useQuery({
+    queryKey: ['artist', id],
+    queryFn: () => api.artists.get(id),
+  });
   const following = api.artists.isFollowing(id);
-
-  const load = useCallback(async () => {
-    try {
-      setArtist(await api.artists.get(id));
-      setError(null);
-    } catch (err) {
-      setError(userMessage(err));
-    }
-  }, [id, revision]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   if (error) {
     return (
       <Screen>
-        <ErrorState message={error} onRetry={() => void load()} />
+        <BackBar />
+        <ErrorState message={userMessage(error)} onRetry={() => void refetch()} />
       </Screen>
     );
   }
-  if (!artist) {
+  if (!artist || isLoading) {
     return (
       <Screen>
-        <Text variant="muted">Cargando…</Text>
+        <BackBar />
+        <Skeleton className="size-24 rounded-full" />
+        <Skeleton className="mt-ds-16 h-8 w-40" />
+        <View className="mt-ds-24 flex-row justify-between">
+          <View style={{ width: '48%' }}>
+            <ListingSkeleton />
+          </View>
+          <View style={{ width: '48%' }}>
+            <ListingSkeleton />
+          </View>
+        </View>
       </Screen>
     );
   }
@@ -54,41 +54,56 @@ export default function ArtistPublicScreen() {
 
   return (
     <Screen>
-      <View className="gap-ds-16">
+      <BackBar />
+      <View className="items-center gap-ds-12">
         {artist.avatarUrl ? (
-          <Image source={{ uri: artist.avatarUrl }} className="size-32 rounded-cards" />
+          <Image source={{ uri: artist.avatarUrl }} className="size-28 rounded-full bg-muted" />
         ) : (
-          <View className="size-32 items-center justify-center rounded-cards bg-muted">
+          <View className="size-28 items-center justify-center rounded-full bg-muted">
             <Text variant="heading">{artist.stageName.slice(0, 2).toUpperCase()}</Text>
           </View>
         )}
-        <Text variant="heading">{artist.stageName}</Text>
-        <Text variant="muted">{artist.bio || 'Sin bio'}</Text>
+        <Text variant="heading" className="text-center">
+          {artist.stageName}
+        </Text>
+        <Text variant="muted" className="text-center">
+          {artist.bio || 'Sin bio'}
+        </Text>
         {isOwner ? (
           <Button variant="outline" onPress={() => router.push('/artist/edit' as Href)}>
             <Text>Editar</Text>
           </Button>
         ) : (
           <Button
-            variant={following ? 'default' : 'outline'}
+            variant={following ? 'outline' : 'default'}
             onPress={() => {
               if (!isLoggedIn) {
                 setPendingPath(`/artist/${id}`);
                 router.push('/auth/login' as Href);
                 return;
               }
-              void (following ? api.artists.unfollow(id) : api.artists.follow(id));
+              void (following ? api.artists.unfollow(id) : api.artists.follow(id)).then(() =>
+                queryClient.invalidateQueries({ queryKey: ['artist', id] })
+              );
             }}>
             <Text>{following ? 'Siguiendo' : 'Seguir'}</Text>
           </Button>
         )}
+      </View>
+      <View className="mt-ds-32 gap-ds-16">
         <Text variant="headingSm">Próximas fechas</Text>
         {artist.upcoming.length === 0 ? (
-          <EmptyState title="Sin fechas anunciadas" />
+          <EmptyState title="Sin fechas anunciadas" lead="Cuando publique, aparecen aquí." />
         ) : (
-          artist.upcoming.map((event) => (
-            <EventCard key={event.id} event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
-          ))
+          <EventGrid>
+            {artist.upcoming.map((event, index) => (
+              <EventGridItem key={event.id}>
+                <FadeSlideIn index={index}>
+                  <EventCard event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
+                </FadeSlideIn>
+              </EventGridItem>
+            ))}
+          </EventGrid>
         )}
       </View>
     </Screen>

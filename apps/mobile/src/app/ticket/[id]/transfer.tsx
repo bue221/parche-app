@@ -1,12 +1,15 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 
+import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
+import { PendingAuth } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import type { User } from '@/data/types';
 
@@ -19,15 +22,13 @@ export default function TicketTransferScreen() {
   const [confirming, setConfirming] = useState(false);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
 
   return (
     <Screen>
-      <Text variant="heading">Ceder tiquete</Text>
-      <Text variant="muted" className="mt-ds-8">
-        Solo a otra cuenta Parche. El QR viejo deja de valer.
-      </Text>
+      <BackBar />
+      <PageHeader title="Ceder" lead="Solo a otra cuenta. El código viejo deja de valer." />
       <Field label="Email o id" autoCapitalize="none" value={q} onChangeText={setQ} />
       <Button
         className="mt-ds-16"
@@ -52,6 +53,7 @@ export default function TicketTransferScreen() {
           ) : (
             <Button
               className="mt-ds-8"
+              variant="confirm"
               onPress={() => {
                 void api.tickets
                   .transfer(id, found.id)

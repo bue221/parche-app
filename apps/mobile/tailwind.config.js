@@ -129,6 +129,7 @@ module.exports = {
       },
       boxShadow: {
         none: 'none',
+        card: 'var(--shadow-card)',
       },
     },
   },

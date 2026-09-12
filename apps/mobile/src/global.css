@@ -35,7 +35,7 @@
     --text-heading: 28px;
     --leading-heading: 1.22;
     --tracking-heading: 1.68px;
-    --text-display: 106px;
+    --text-display: 72px;
     --leading-display: 0.83;
 
     --font-weight-w350: 350;
@@ -61,17 +61,18 @@
     --element-gap: 8px;
 
     --radius-md: 4px;
-    --radius-lg: 8px;
-    --radius-xl: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 16px;
     --radius-2xl: 20px;
     --radius-3xl: 40px;
     --radius-full: 100px;
     --radius-tags: 100px;
-    --radius-cards: 8px;
+    --radius-cards: 16px;
     --radius-small: 4px;
-    --radius-images: 8px;
+    --radius-images: 16px;
     --radius-buttons: 40px;
     --radius-navelements: 20px;
+    --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.08);
 
     --surface-paper-white: #ffffff;
     --surface-ash-gray: #eeeeee;
@@ -143,6 +144,12 @@
       --color-input: var(--color-charcoal);
       --color-ring: var(--color-paper-white);
     }
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --text-display: 106px;
   }
 }
 

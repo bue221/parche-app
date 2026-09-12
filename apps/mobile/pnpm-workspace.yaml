@@ -1,0 +1,10 @@
+# Layout and install policy live here (pnpm 12+ ignores these keys in .npmrc).
+# Expo Metro expects a flattened node_modules; isolated installs hide
+# react-native-css-interop from Babel's jsxImportSource rewrite.
+nodeLinker: hoisted
+engineStrict: true
+enablePrePostScripts: true
+minimumReleaseAgeExclude:
+  - expo-camera@57.0.5
+  - expo-image-picker@57.0.17
+  - expo-secure-store@57.0.4

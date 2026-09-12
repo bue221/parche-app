@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import { router, type Href } from 'expo-router';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { debugLog } from '@/data/log';
 import { setPendingPath, useAuthSnapshot } from '@/data/session';
@@ -31,6 +32,11 @@ export function DeepLinkListener() {
   const { isLoggedIn } = useAuthSnapshot();
 
   useEffect(() => {
+    // Web: expo-linking fires `url` on every window.message (maps, HMR). Expo Router owns http URLs.
+    if (Platform.OS === 'web') {
+      return;
+    }
+
     const handle = (url: string) => {
       const dest = routeFromUrl(url);
       if (!dest) {

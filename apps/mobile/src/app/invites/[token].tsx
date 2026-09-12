@@ -1,11 +1,14 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { BackBar } from '@/components/back-bar';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
+import { PendingAuth } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import type { Membership, ParcheEvent } from '@/data/types';
 
@@ -23,12 +26,13 @@ export default function InviteAcceptScreen() {
   }, [token]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
 
   return (
     <Screen>
-      <Text variant="heading">Invitación</Text>
+      <BackBar />
+      <PageHeader title="Invitación" />
       {error ? <Text className="mt-ds-16">{error}</Text> : null}
       {payload ? (
         <>

@@ -13,6 +13,7 @@ export type User = {
   email: string;
   password: string;
   displayName: string;
+  phone?: string;
   avatarUrl?: string;
   profiles: ProfileKind[];
   platformAdmin: boolean;
@@ -67,6 +68,12 @@ export type EventTrack = {
   sortOrder: number;
 };
 
+export type EventWithExtras = ParcheEvent & {
+  lineup: Artist[];
+  tracks: EventTrack[];
+  ticketTypes: TicketType[];
+};
+
 export type Membership = {
   id: string;
   eventId: string;
@@ -119,14 +126,6 @@ export type Follow = {
   artistId: string;
 };
 
-export type EditorialPost = {
-  id: string;
-  title: string;
-  body: string;
-  flyerUrl?: string;
-  publishedAt: string;
-};
-
 export type ScanLog = {
   id: string;
   eventId: string;
@@ -174,7 +173,6 @@ export type MockSnapshot = {
   orders: Order[];
   tickets: Ticket[];
   follows: Follow[];
-  posts: EditorialPost[];
   scans: ScanLog[];
   uploads: Upload[];
   permissions: DevicePermissions;

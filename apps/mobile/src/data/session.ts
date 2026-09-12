@@ -1,47 +1,38 @@
 import { useMemo } from 'react';
 
+import { useAuthStore } from '@/data/auth-store';
 import { api } from '@/data/client';
-import { getSession, useMockStore } from '@/data/mock/store';
+import { primaryProfile, operateDensity } from '@/lib/profiles';
 import type { Membership, User } from '@/data/types';
 
 export function useAuthSnapshot() {
-  const session = useMockStore((s) => s.session);
-  const users = useMockStore((s) => s.data.users);
-  const memberships = useMockStore((s) => s.data.memberships);
-  const revision = useMockStore((s) => s.revision);
+  const me = useAuthStore((s) => s.me);
+  const memberships = useAuthStore((s) => s.memberships);
+  const hydrated = useAuthStore((s) => s.hydrated);
 
   return useMemo(() => {
-    const live = getSession();
-    if (!live) {
-      return {
-        isLoggedIn: false,
-        user: null as Omit<User, 'password'> | null,
-        memberships: [] as Membership[],
-        isPromoter: false,
-        isAdmin: false,
-        hasOperate: false,
-      };
-    }
-    const raw = users.find((u) => u.id === live.userId);
-    const user = raw
-      ? (() => {
-          const { password, ...safe } = raw;
-          void password;
-          return safe;
-        })()
+    const user = me
+      ? ({
+          id: me.id,
+          email: me.email,
+          displayName: me.displayName,
+          phone: me.phone,
+          avatarUrl: me.avatarUrl,
+          profiles: me.profiles,
+          platformAdmin: me.platformAdmin,
+        } satisfies Omit<User, 'password'>)
       : null;
-    const mine = memberships.filter((m) => m.userId === live.userId && m.status === 'active');
     const isPromoter = Boolean(user?.profiles.includes('promoter'));
     return {
       isLoggedIn: Boolean(user),
       user,
-      memberships: mine,
+      memberships: memberships as Membership[],
       isPromoter,
       isAdmin: Boolean(user?.platformAdmin),
-      hasOperate: isPromoter || mine.length > 0,
+      hasOperate: isPromoter || memberships.length > 0,
+      hydrated,
     };
-    // revision forces recompute after store mutations
-  }, [session, users, memberships, revision]);
+  }, [me, memberships, hydrated]);
 }
 
 export function useTabVisibility() {
@@ -56,13 +47,21 @@ export function useTabVisibility() {
   };
 }
 
+export function usePrimaryProfile() {
+  const { user, memberships } = useAuthSnapshot();
+  return {
+    primary: primaryProfile(user?.profiles),
+    density: operateDensity(memberships),
+  };
+}
+
 export function setPendingPath(path: string | null) {
-  useMockStore.getState().setPendingPath(path);
+  useAuthStore.getState().setPendingPath(path);
 }
 
 export function takePendingPath(): string | null {
-  const path = useMockStore.getState().pendingPath;
-  useMockStore.getState().setPendingPath(null);
+  const path = useAuthStore.getState().pendingPath;
+  useAuthStore.getState().setPendingPath(null);
   return path;
 }
 

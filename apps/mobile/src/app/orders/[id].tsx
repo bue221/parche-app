@@ -2,6 +2,9 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
+import { BackBar } from '@/components/back-bar';
+import { ErrorState, PendingAuth, Skeleton } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -42,12 +45,22 @@ export default function OrderStatusScreen() {
   }, [order?.status, id]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
+  }
+  if (error && !order) {
+    return (
+      <Screen>
+        <BackBar />
+        <ErrorState message={error} />
+      </Screen>
+    );
   }
 
   return (
     <Screen>
-      <Text variant="heading">Pago</Text>
+      <BackBar />
+      <PageHeader title="Pago" lead="Esperamos la confirmación." />
+      {!order && !error ? <Skeleton className="mt-ds-24 h-24 w-full" /> : null}
       {order?.status === 'pending' ? (
         <View className="mt-ds-24 items-center gap-ds-16">
           <ActivityIndicator />
