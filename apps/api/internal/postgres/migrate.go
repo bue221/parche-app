@@ -79,26 +79,50 @@ func execMigrationSQL(ctx context.Context, tx pgx.Tx, sqlText string) error {
 	return nil
 }
 
-// SplitSQL breaks a migration file into statements. Comments-only chunks are dropped.
+// SplitSQL breaks a migration file into statements. Line comments are stripped
+// first so a semicolon inside `-- ...` cannot split a statement.
 func SplitSQL(sqlText string) []string {
 	var out []string
-	for _, part := range strings.Split(sqlText, ";") {
-		stmt := strings.TrimSpace(part)
-		if stmt == "" {
-			continue
-		}
-		var kept []string
-		for _, line := range strings.Split(stmt, "\n") {
-			trim := strings.TrimSpace(line)
-			if trim == "" || strings.HasPrefix(trim, "--") {
-				continue
+	var b strings.Builder
+	inString := false
+	for i := 0; i < len(sqlText); i++ {
+		c := sqlText[i]
+		if inString {
+			b.WriteByte(c)
+			if c == '\'' {
+				if i+1 < len(sqlText) && sqlText[i+1] == '\'' {
+					b.WriteByte('\'')
+					i++
+					continue
+				}
+				inString = false
 			}
-			kept = append(kept, line)
-		}
-		if len(kept) == 0 {
 			continue
 		}
-		out = append(out, strings.TrimSpace(strings.Join(kept, "\n")))
+		if c == '-' && i+1 < len(sqlText) && sqlText[i+1] == '-' {
+			i++
+			for i+1 < len(sqlText) && sqlText[i+1] != '\n' {
+				i++
+			}
+			continue
+		}
+		if c == '\'' {
+			inString = true
+			b.WriteByte(c)
+			continue
+		}
+		if c == ';' {
+			stmt := strings.TrimSpace(b.String())
+			if stmt != "" {
+				out = append(out, stmt)
+			}
+			b.Reset()
+			continue
+		}
+		b.WriteByte(c)
+	}
+	if stmt := strings.TrimSpace(b.String()); stmt != "" {
+		out = append(out, stmt)
 	}
 	return out
 }

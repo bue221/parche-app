@@ -42,7 +42,7 @@ func (s *PG) Create(ctx context.Context, e Event, ownerUserID string) error {
 		INSERT INTO events (
 			id, tenant_id, title, slug, description, starts_at, ends_at,
 			venue_id, status, flyer_asset_id, genres, age_policy, created_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NULLIF($10,''),$11,$12,$13)`,
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,'')::uuid,$9,NULLIF($10,'')::uuid,$11,$12,$13)`,
 		e.ID, e.TenantID, e.Title, e.Slug, e.Description, e.StartsAt, e.EndsAt,
 		e.VenueID, e.Status, e.FlyerAssetID, e.Genres, e.AgePolicy, e.CreatedBy)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *PG) Update(ctx context.Context, e Event) error {
 	tag, err := s.q.Exec(ctx, `
 		UPDATE events SET
 			title = $2, description = $3, starts_at = $4, ends_at = $5,
-			venue_id = $6, status = $7, flyer_asset_id = NULLIF($8, ''),
+			venue_id = NULLIF($6,'')::uuid, status = $7, flyer_asset_id = NULLIF($8,'')::uuid,
 			genres = $9, age_policy = $10, updated_at = now()
 		WHERE id = $1`,
 		e.ID, e.Title, e.Description, e.StartsAt, e.EndsAt,

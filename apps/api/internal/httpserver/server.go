@@ -16,6 +16,7 @@ import (
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/broker"
 	"github.com/parche-app/backend/internal/config"
+	"github.com/parche-app/backend/internal/demoseed"
 	"github.com/parche-app/backend/internal/editorial"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/health"
@@ -193,6 +194,13 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		if postSvc != nil {
 			mediaSvc.Posts = postSvc
 			postSvc.Covers = mediaSvc
+		}
+	}
+	if strings.EqualFold(strings.TrimSpace(cfg.AppEnv), "dev") && sessions != nil && eventSvc != nil {
+		if err := demoseed.Run(ctx, demoseed.Deps{
+			Auth: sessions, Events: eventSvc, Artists: artistSvc, Media: mediaSvc, Objects: store, Log: log,
+		}); err != nil {
+			log.Error("demo seed", "err", err)
 		}
 	}
 	if cfg.BrokerURL != "" {

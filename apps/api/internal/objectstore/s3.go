@@ -160,6 +160,15 @@ func (s *s3Store) GetPresign(ctx context.Context, key string, ttl time.Duration)
 	return u.String(), nil
 }
 
+// AllowPublicGet opens anonymous s3:GetObject on the bucket (local demo flyers).
+func (s *s3Store) AllowPublicGet(ctx context.Context) error {
+	if err := s.Ping(ctx); err != nil {
+		return err
+	}
+	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, s.bucket)
+	return s.client.SetBucketPolicy(ctx, s.bucket, policy)
+}
+
 func (s *s3Store) GetPublicURL(key string) string {
 	if s.publicBase != "" {
 		return s.publicBase + "/" + key

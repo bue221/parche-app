@@ -33,7 +33,7 @@ func (s *PG) Create(ctx context.Context, a Artist) error {
 	}
 	_, err = s.q.Exec(ctx, `
 		INSERT INTO artists (id, user_id, tenant_id, name, bio, avatar_asset_id, links, created_at, updated_at)
-		VALUES ($1, NULLIF($2,''), NULLIF($3,''), $4, $5, NULLIF($6,''), $7, $8, $9)`,
+		VALUES ($1::uuid, NULLIF($2,'')::uuid, NULLIF($3,'')::uuid, $4, $5, NULLIF($6,'')::uuid, $7, $8, $9)`,
 		a.ID, a.UserID, a.TenantID, a.Name, a.Bio, a.AvatarAssetID, links, a.CreatedAt, a.UpdatedAt)
 	if isUnique(err) {
 		return auth.ErrConflict
@@ -56,7 +56,7 @@ func (s *PG) Update(ctx context.Context, a Artist) error {
 	}
 	tag, err := s.q.Exec(ctx, `
 		UPDATE artists SET
-			name = $2, bio = $3, avatar_asset_id = NULLIF($4, ''), links = $5, updated_at = now()
+			name = $2, bio = $3, avatar_asset_id = NULLIF($4,'')::uuid, links = $5, updated_at = now()
 		WHERE id = $1`,
 		a.ID, a.Name, a.Bio, a.AvatarAssetID, links)
 	if err != nil {

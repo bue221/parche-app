@@ -29,7 +29,7 @@ func NewPG(pool *pgxpool.Pool) *PG {
 func (s *PG) SaveIntent(ctx context.Context, in Intent) error {
 	_, err := s.q.Exec(ctx, `
 		INSERT INTO upload_intents (key, user_id, kind, event_id, artist_id, post_id, content_type, byte_size, expires_at)
-		VALUES ($1,$2,$3,NULLIF($4,''),NULLIF($5,''),NULLIF($6,''),$7,$8,$9)
+		VALUES ($1,$2,$3,NULLIF($4,'')::uuid,NULLIF($5,'')::uuid,NULLIF($6,'')::uuid,$7,$8,$9)
 		ON CONFLICT (key) DO UPDATE SET
 			user_id = EXCLUDED.user_id,
 			kind = EXCLUDED.kind,

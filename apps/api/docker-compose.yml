@@ -19,7 +19,7 @@ x-app-env: &app-env
   OBJECT_STORE_REGION: ${OBJECT_STORE_REGION:-us-east-1}
   OBJECT_STORE_USE_SSL: ${OBJECT_STORE_USE_SSL:-false}
   OBJECT_STORE_PATH: ${OBJECT_STORE_PATH:-./data/media}
-  OBJECT_STORE_PUBLIC_BASE_URL: ${OBJECT_STORE_PUBLIC_BASE_URL:-}
+  OBJECT_STORE_PUBLIC_BASE_URL: ${OBJECT_STORE_PUBLIC_BASE_URL:-http://localhost:9000/parche}
   PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-change-me-webhook-dev-only}
   SMTP_HOST: ${SMTP_HOST:-mailhog}
   SMTP_PORT: ${SMTP_PORT:-1025}
@@ -27,13 +27,13 @@ x-app-env: &app-env
   SMTP_PASSWORD: ${SMTP_PASSWORD:-}
   EMAIL_FROM: ${EMAIL_FROM:-parche@localhost}
   EMAIL_DRIVER: ${EMAIL_DRIVER:-log}
-  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-  APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8081,http://127.0.0.1:8081}
+  APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8081}
   APP_ENV: ${APP_ENV:-dev}
   PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
   PAYMENT_CHECKOUT_BASE_URL: ${PAYMENT_CHECKOUT_BASE_URL:-}
   LOG_LEVEL: ${LOG_LEVEL:-info}
-  BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+  BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@parche.test}
 
 services:
   api:
@@ -113,11 +113,14 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: parcheminio
       MINIO_ROOT_PASSWORD: parcheminio
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    ports:
+      - "9000:9000"
     volumes:
       - minio_data:/data
     restart: unless-stopped
