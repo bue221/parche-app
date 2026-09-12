@@ -14,6 +14,8 @@ Treat `docs/` as the source of truth for product and architecture rules. Read th
 
 Go HTTP API · PostgreSQL · Redis · message broker (NATS or RabbitMQ) · Docker Compose for local and CI.
 
+Local stack: [README.md](README.md). Build with `COMPOSE_PARALLEL_LIMIT=1` so api and worker are not compiled in parallel.
+
 ## Do
 
 - Keep a single shared database with `tenant_id` isolation; do not create one database per organizer.

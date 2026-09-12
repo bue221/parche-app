@@ -55,7 +55,7 @@ Fallo: 401 `UNAUTHORIZED` “Correo o contraseña incorrectos” (siempre el mis
 
 ### `POST /v1/auth/refresh`
 
-Body `{ "refresh_token": "…" }` (web también cookie httpOnly `refresh` si `CORS` credentials; nativo manda body).
+Body `{ "refresh_token": "…" }` (nativo). Web manda cookie httpOnly `refresh` (`Path=/v1/auth`) con `credentials`; si el request trae `Origin`, el JSON **omite** `refresh_token`. Cookie-only refresh/logout exigen `Origin` (o `Referer`) en `CORS_ORIGINS`.
 
 - Hash lookup. Si revoked o expired → 401.
 - Si `replaced_by` ya existe (reuso) → revocar **family_id** completo, 401.
@@ -90,12 +90,12 @@ Clave: `JWT_ACCESS_SECRET` o par; **distinta** de `TICKET_SIGNING_KEY` y de `JWT
 
 ## Seguridad
 
-- Access en memoria app; web: no localStorage si hay cookie refresh; si SPA sin cookie, memory + refresh en storage seguro.
-- Logout en todos los dispositivos: `DELETE /v1/me/sessions` (revoca todas las familias). **Incluido aquí**, no después.
+- Access en memoria app; web: cookie httpOnly `refresh` (no localStorage del token). Nativo: SecureStore.
+- Logout en todos los dispositivos: `DELETE /v1/me/sessions` (revoca todas las familias **y** sube `session_epoch` para invalidar access de inmediato). **Incluido aquí**, no después.
 
 ### `DELETE /v1/me/sessions`
 
-Access. Revoca todos los refresh del user. 204. Fuerza re-login.
+Access. Revoca todos los refresh del user y hace bump de `session_epoch`. 204. Fuerza re-login.
 
 ### `GET /v1/me/sessions`
 

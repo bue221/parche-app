@@ -8,7 +8,7 @@ El backend arranca como un stack reproducible: API Go, worker Go, PostgreSQL, Re
 
 ## Quick path
 
-1. `docker-compose.yml` en `backend/` con servicios `api`, `worker`, `postgres`, `redis`, `broker`, `minio`.
+1. `docker-compose.yml` en `backend/` con servicios `api`, `worker`, `postgres`, `redis`, `broker`, `minio`. Arranque local: [README.md](../../README.md) (`COMPOSE_PARALLEL_LIMIT=1 docker compose up --build`).
 2. Misma imagen para `api` y `worker`; `CMD` distinto.
 3. `.env.example` con todas las variables (sin secretos reales).
 4. `GET /health` 200 con el proceso vivo; `GET /ready` 200 solo si Postgres, Redis y store responden.

@@ -13,12 +13,15 @@ import (
 	"github.com/parche-app/backend/internal/media"
 )
 
-const refreshCookie = "refresh"
+const (
+	refreshCookie     = "refresh"
+	refreshCookiePath = "/v1/auth"
+)
 
 type sessionBody struct {
 	AccessToken      string          `json:"access_token"`
 	AccessExpiresAt  time.Time       `json:"access_expires_at"`
-	RefreshToken     string          `json:"refresh_token"`
+	RefreshToken     string          `json:"refresh_token,omitempty"`
 	RefreshExpiresAt time.Time       `json:"refresh_expires_at"`
 	User             auth.PublicUser `json:"user"`
 }
@@ -27,6 +30,7 @@ type registerBody struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
 	DisplayName string `json:"display_name"`
+	Phone       string `json:"phone"`
 	Profile     string `json:"profile"`
 }
 
@@ -56,7 +60,7 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	if access == nil {
 		access = RejectAccess{}
 	}
-	h := authHandler{svc: routes.Auth, access: access, media: routes.Media}
+	h := authHandler{svc: routes.Auth, access: access, media: routes.Media, origins: routes.CORSOrigins}
 	mux.HandleFunc("POST /v1/auth/register", h.register)
 	mux.HandleFunc("POST /v1/auth/login", h.login)
 	mux.HandleFunc("POST /v1/auth/refresh", h.refresh)
@@ -81,9 +85,10 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 }
 
 type authHandler struct {
-	svc    *auth.Service
-	access Access
-	media  *media.Service
+	svc     *auth.Service
+	access  Access
+	media   *media.Service
+	origins []string
 }
 
 func (h authHandler) register(w http.ResponseWriter, r *http.Request) {
@@ -95,6 +100,7 @@ func (h authHandler) register(w http.ResponseWriter, r *http.Request) {
 		Email:       req.Email,
 		Password:    req.Password,
 		DisplayName: req.DisplayName,
+		Phone:       req.Phone,
 		Profile:     req.Profile,
 		UserAgent:   r.UserAgent(),
 	})
@@ -123,7 +129,10 @@ func (h authHandler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h authHandler) refresh(w http.ResponseWriter, r *http.Request) {
-	raw := readRefresh(r)
+	raw, ok := h.refreshCredential(w, r)
+	if !ok {
+		return
+	}
 	sess, err := h.svc.Refresh(r.Context(), raw, r.UserAgent())
 	if err != nil {
 		writeAuthErr(w, r, err)
@@ -133,7 +142,11 @@ func (h authHandler) refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h authHandler) logout(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.Logout(r.Context(), readRefresh(r)); err != nil {
+	raw, ok := h.refreshCredential(w, r)
+	if !ok {
+		return
+	}
+	if err := h.svc.Logout(r.Context(), raw); err != nil {
 		writeAuthErr(w, r, err)
 		return
 	}
@@ -213,13 +226,17 @@ func (h authHandler) logoutAll(w http.ResponseWriter, r *http.Request) {
 
 func (h authHandler) writeSession(w http.ResponseWriter, r *http.Request, status int, sess auth.Session) {
 	setRefreshCookie(w, r, sess.RefreshToken, sess.RefreshExpiresAt)
-	apierr.WriteJSON(w, status, sessionBody{
+	body := sessionBody{
 		AccessToken:      sess.AccessToken,
 		AccessExpiresAt:  sess.AccessExpiresAt,
 		RefreshToken:     sess.RefreshToken,
 		RefreshExpiresAt: sess.RefreshExpiresAt,
 		User:             sess.User,
-	})
+	}
+	if strings.TrimSpace(r.Header.Get("Origin")) != "" {
+		body.RefreshToken = ""
+	}
+	apierr.WriteJSON(w, status, body)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
@@ -232,7 +249,20 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
 	return true
 }
 
-func readRefresh(r *http.Request) string {
+func (h authHandler) refreshCredential(w http.ResponseWriter, r *http.Request) (string, bool) {
+	bodyTok := readRefreshBody(r)
+	cookieTok := cookieRefresh(r)
+	if bodyTok == "" && cookieTok != "" && !originAllowed(requestOrigin(r), h.origins) {
+		writeAuthErr(w, r, auth.ErrUnauthorized)
+		return "", false
+	}
+	if bodyTok != "" {
+		return bodyTok, true
+	}
+	return cookieTok, true
+}
+
+func readRefreshBody(r *http.Request) string {
 	var body refreshBody
 	if r.Body != nil {
 		raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
@@ -242,10 +272,7 @@ func readRefresh(r *http.Request) string {
 			_ = json.Unmarshal(raw, &body)
 		}
 	}
-	if tok := strings.TrimSpace(body.RefreshToken); tok != "" {
-		return tok
-	}
-	return cookieRefresh(r)
+	return strings.TrimSpace(body.RefreshToken)
 }
 
 func cookieRefresh(r *http.Request) string {
@@ -260,7 +287,7 @@ func setRefreshCookie(w http.ResponseWriter, r *http.Request, raw string, exp ti
 	http.SetCookie(w, &http.Cookie{
 		Name:     refreshCookie,
 		Value:    raw,
-		Path:     "/",
+		Path:     refreshCookiePath,
 		Expires:  exp,
 		MaxAge:   int(time.Until(exp).Seconds()),
 		HttpOnly: true,
@@ -270,15 +297,17 @@ func setRefreshCookie(w http.ResponseWriter, r *http.Request, raw string, exp ti
 }
 
 func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     refreshCookie,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   isHTTPS(r),
-		SameSite: http.SameSiteLaxMode,
-	})
+	for _, path := range []string{refreshCookiePath, "/"} {
+		http.SetCookie(w, &http.Cookie{
+			Name:     refreshCookie,
+			Value:    "",
+			Path:     path,
+			MaxAge:   -1,
+			HttpOnly: true,
+			Secure:   isHTTPS(r),
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
 }
 
 func isHTTPS(r *http.Request) bool {

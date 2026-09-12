@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/parche-app/backend/internal/auth"
@@ -226,6 +227,17 @@ func (m *Memory) TicketByID(_ context.Context, id string) (Ticket, error) {
 		return Ticket{}, auth.ErrNotFound
 	}
 	return t, nil
+}
+
+func (m *Memory) TicketByJTI(_ context.Context, jti string) (Ticket, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, t := range m.tix {
+		if t.JTI != "" && strings.EqualFold(t.JTI, jti) {
+			return t, nil
+		}
+	}
+	return Ticket{}, auth.ErrNotFound
 }
 
 func (m *Memory) TransferValidTicket(_ context.Context, ticketID, fromUserID, toUserID, newJTI string, now time.Time) (Ticket, error) {

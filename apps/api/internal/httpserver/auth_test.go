@@ -252,6 +252,12 @@ func TestAuthLogoutAndSessions(t *testing.T) {
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("logout all=%d", rr.Code)
 	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer "+sess.AccessToken)
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
 }
 
 func TestAuthMeRequiresBearer(t *testing.T) {
@@ -302,9 +308,14 @@ func TestUploadsAvatarWithAccessJWT(t *testing.T) {
 func TestRefreshCookieRoundTrip(t *testing.T) {
 	mux, _ := testAuthStack(t)
 	rr := httptest.NewRecorder()
-	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"c@example.com","password":"correct-horse","display_name":"C","profile":"attendee"}`)))
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"c@example.com","password":"correct-horse","display_name":"C","profile":"attendee"}`))
+	req.Header.Set("Origin", "http://localhost:3000")
+	mux.ServeHTTP(rr, req)
 	var sess sessionBody
 	_ = json.Unmarshal(rr.Body.Bytes(), &sess)
+	if sess.RefreshToken != "" {
+		t.Fatal("browser origin must not receive refresh_token in JSON")
+	}
 	cookie := rr.Result().Cookies()
 	var refresh *http.Cookie
 	for _, c := range cookie {
@@ -315,13 +326,40 @@ func TestRefreshCookieRoundTrip(t *testing.T) {
 	if refresh == nil || !refresh.HttpOnly {
 		t.Fatal("expected httpOnly refresh cookie")
 	}
+	if refresh.Path != refreshCookiePath {
+		t.Fatalf("cookie path=%q want %q", refresh.Path, refreshCookiePath)
+	}
 
 	rr = httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", nil)
+	req = httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", nil)
 	req.AddCookie(refresh)
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", nil)
+	req.AddCookie(refresh)
+	req.Header.Set("Origin", "https://evil.example")
+	mux.ServeHTTP(rr, req)
+	assertAPICode(t, rr, http.StatusUnauthorized, apierr.Unauthorized)
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", nil)
+	req.AddCookie(refresh)
+	req.Header.Set("Origin", "http://localhost:3000")
 	mux.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("cookie refresh=%d %s", rr.Code, rr.Body.String())
+	}
+	var rotated sessionBody
+	if err := json.Unmarshal(rr.Body.Bytes(), &rotated); err != nil {
+		t.Fatal(err)
+	}
+	if rotated.RefreshToken != "" {
+		t.Fatal("browser origin must not receive refresh_token in JSON")
+	}
+	if rotated.AccessToken == "" {
+		t.Fatal("expected access token")
 	}
 }
 

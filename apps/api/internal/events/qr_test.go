@@ -37,6 +37,9 @@ func TestPaidTicketsGetStableQR(t *testing.T) {
 	if first[0].QRToken == "" || first[0].TicketID != tix[0].ID {
 		t.Fatalf("%+v", first[0])
 	}
+	if first[0].Barcode != barcodePayload(jti) {
+		t.Fatalf("barcode=%s jti=%s", first[0].Barcode, jti)
+	}
 	second, err := svc.ListMyTickets(ctx, buyer, "", true)
 	if err != nil || second[0].QRToken != first[0].QRToken {
 		t.Fatalf("re-sign must keep jti/qr")

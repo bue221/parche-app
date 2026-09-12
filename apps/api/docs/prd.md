@@ -331,9 +331,11 @@ Números de puerta pueden leerse de Redis (contadores incrementados en el check-
 
 ### Contenido y recomendaciones (RC-018, RC-019)
 
+`GET /v1/posts` queda para un blog futuro en `web-frontend`. La app Expo no lo consume.
+
 | Método | Ruta | Auth | Sprint |
 |--------|------|------|--------|
-| GET | `/v1/posts` | opcional | 4 |
+| GET | `/v1/posts` | opcional | futuro (web) |
 | GET | `/v1/me/recommendations` | attendee | 4 |
 
 ## Seguridad de tokens

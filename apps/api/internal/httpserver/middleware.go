@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -310,4 +311,35 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func requestOrigin(r *http.Request) string {
+	if o := strings.TrimSpace(r.Header.Get("Origin")); o != "" && !strings.EqualFold(o, "null") {
+		return o
+	}
+	ref := strings.TrimSpace(r.Header.Get("Referer"))
+	if ref == "" {
+		return ""
+	}
+	u, err := url.Parse(ref)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+func originAllowed(origin string, origins []string) bool {
+	if origin == "" {
+		return false
+	}
+	for _, o := range origins {
+		o = strings.TrimSpace(o)
+		if o == "" || o == "*" {
+			continue
+		}
+		if o == origin {
+			return true
+		}
+	}
+	return false
 }

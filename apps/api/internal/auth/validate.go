@@ -21,6 +21,37 @@ func normalizeBio(bio string) string {
 	return strings.TrimSpace(bio)
 }
 
+func normalizePhone(raw string) (string, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", true
+	}
+	var b strings.Builder
+	plus := false
+	digits := 0
+	for i, r := range trimmed {
+		if r == '+' && i == 0 {
+			plus = true
+			continue
+		}
+		if unicode.IsSpace(r) || r == '-' || r == '(' || r == ')' {
+			continue
+		}
+		if !unicode.IsDigit(r) {
+			return "", false
+		}
+		digits++
+		b.WriteRune(r)
+	}
+	if digits < 8 || digits > 15 {
+		return "", false
+	}
+	if plus {
+		return "+" + b.String(), true
+	}
+	return b.String(), true
+}
+
 func bioTooLong(bio string) bool {
 	return utf8.RuneCountInString(bio) > maxUserBio
 }

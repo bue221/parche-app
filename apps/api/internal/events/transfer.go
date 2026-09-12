@@ -151,6 +151,7 @@ func (s *Service) AcceptTicketClaim(ctx context.Context, userID, token string) (
 		Event:    MyTicketEvent{ID: ev.ID, Title: ev.Title, StartsAt: ev.StartsAt.UTC()},
 		Status:   moved.Status,
 		QRToken:  qr,
+		Barcode:  barcodePayload(moved.JTI),
 	}, nil
 }
 

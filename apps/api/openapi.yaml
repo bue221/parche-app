@@ -3158,6 +3158,9 @@ components:
           minLength: 10
         display_name:
           type: string
+        phone:
+          type: string
+          description: Optional E.164-ish contact phone
         profile:
           type: string
           enum: [attendee, promoter]
@@ -3175,7 +3178,7 @@ components:
       properties:
         refresh_token:
           type: string
-          description: Opaque refresh; web may send httpOnly cookie `refresh` instead
+          description: Opaque refresh; web may send httpOnly cookie `refresh` (Path=/v1/auth) instead. Cookie-only refresh/logout require Origin (or Referer) in CORS_ORIGINS.
     ForgotPasswordRequest:
       type: object
       required: [email]
@@ -3203,13 +3206,15 @@ components:
           type: string
         display_name:
           type: string
+        phone:
+          type: string
         profiles:
           type: array
           items:
             type: string
     Session:
       type: object
-      required: [access_token, access_expires_at, refresh_token, refresh_expires_at, user]
+      required: [access_token, access_expires_at, refresh_expires_at, user]
       properties:
         access_token:
           type: string
@@ -3218,6 +3223,7 @@ components:
           format: date-time
         refresh_token:
           type: string
+          description: Opaque refresh for native clients. Omitted when Origin is present; browsers use the httpOnly cookie `refresh` (Path=/v1/auth).
         refresh_expires_at:
           type: string
           format: date-time
@@ -3233,6 +3239,8 @@ components:
         email:
           type: string
         display_name:
+          type: string
+        phone:
           type: string
         bio:
           type: string
@@ -3487,7 +3495,7 @@ components:
             $ref: "#/components/schemas/MyTicket"
     MyTicket:
       type: object
-      required: [ticket_id, event, status, qr_token]
+      required: [ticket_id, event, status, qr_token, barcode]
       properties:
         ticket_id:
           type: string
@@ -3509,14 +3517,17 @@ components:
           enum: [valid, used]
         qr_token:
           type: string
-          description: Compact JWS (tid, eid, jti, iat, exp). Never log.
+          description: Compact JWS kept for paste/debug. Door scans barcode.
+        barcode:
+          type: string
+          description: Code 128 payload (ticket jti without dashes). Never log.
     CheckInRequest:
       type: object
       required: [qr_token]
       properties:
         qr_token:
           type: string
-          description: Ticket JWS from GET /v1/me/tickets. Do not persist.
+          description: Code 128 barcode payload or legacy JWS from GET /v1/me/tickets. Do not persist.
     CheckInResult:
       type: object
       required: [result, ticket_id, scanned_at]
@@ -3865,6 +3876,8 @@ components:
         bio:
           type: string
           maxLength: 280
+        phone:
+          type: string
     ChangeEmailRequest:
       type: object
       required: [email]
@@ -3888,6 +3901,8 @@ components:
         display_name:
           type: string
         bio:
+          type: string
+        phone:
           type: string
         avatar_asset_id:
           type: string

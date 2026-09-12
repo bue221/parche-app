@@ -11,6 +11,8 @@ import (
 	"github.com/parche-app/backend/internal/ticketsign"
 )
 
+const minJWTSecretBytes = 32
+
 // Config is process configuration loaded from the environment.
 type Config struct {
 	Service     string
@@ -108,6 +110,15 @@ func (c Config) Validate() error {
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required env: %s", strings.Join(missing, ", "))
+	}
+	if len(c.JWTAccessSecret) < minJWTSecretBytes {
+		return fmt.Errorf("JWT_ACCESS_SECRET must be at least %d bytes", minJWTSecretBytes)
+	}
+	if len(c.JWTRefreshSecret) < minJWTSecretBytes {
+		return fmt.Errorf("JWT_REFRESH_SECRET must be at least %d bytes", minJWTSecretBytes)
+	}
+	if hmac.Equal([]byte(c.JWTAccessSecret), []byte(c.JWTRefreshSecret)) {
+		return fmt.Errorf("JWT_REFRESH_SECRET must differ from JWT_ACCESS_SECRET")
 	}
 	keys, err := ticketsign.Parse(c.TicketSigningKey, c.TicketSigningKeys)
 	if err != nil {

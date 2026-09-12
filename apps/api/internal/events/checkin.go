@@ -107,9 +107,49 @@ func (s *Service) CheckIn(ctx context.Context, scannerID, eventID, qrToken strin
 		return out, nil
 	}
 	if err != nil {
-		out.Result = ScanInvalid
-		return out, nil
+		jti, ok := parseBarcodeJTI(qrToken)
+		if !ok {
+			out.Result = ScanInvalid
+			return out, nil
+		}
+		claims, out, cont, err := s.claimsFromBarcode(ctx, now, jti, out)
+		if err != nil || !cont {
+			return out, err
+		}
+		return s.finishCheckIn(ctx, scannerID, eventID, claims, out, now)
 	}
+	return s.finishCheckIn(ctx, scannerID, eventID, claims, out, now)
+}
+
+func (s *Service) claimsFromBarcode(ctx context.Context, now time.Time, jti string, out CheckInResult) (ticketsign.Claims, CheckInResult, bool, error) {
+	t, err := s.Store.TicketByJTI(ctx, jti)
+	if err != nil {
+		out.Result = ScanInvalid
+		return ticketsign.Claims{}, out, false, nil
+	}
+	if t.Status != TicketValid && t.Status != TicketUsed {
+		out.Result = ScanInvalid
+		return ticketsign.Claims{}, out, false, nil
+	}
+	ev, err := s.Store.ByID(ctx, t.EventID)
+	if err != nil {
+		return ticketsign.Claims{}, CheckInResult{}, false, err
+	}
+	exp := ev.EndsAt.UTC().Add(ticketQRGrace)
+	if !exp.After(now) {
+		out.Result = ScanExpired
+		out.TicketID = strPtr(t.ID)
+		return ticketsign.Claims{}, out, false, nil
+	}
+	return ticketsign.Claims{
+		TicketID:  t.ID,
+		EventID:   t.EventID,
+		JWTID:     t.JTI,
+		ExpiresAt: exp,
+	}, out, true, nil
+}
+
+func (s *Service) finishCheckIn(ctx context.Context, scannerID, eventID string, claims ticketsign.Claims, out CheckInResult, now time.Time) (CheckInResult, error) {
 	out.TicketID = strPtr(claims.TicketID)
 	if claims.EventID != eventID {
 		out.Result = ScanWrongEvent

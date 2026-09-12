@@ -14,6 +14,10 @@ func (s *PG) TicketByID(ctx context.Context, id string) (Ticket, error) {
 	return scanTicket(s.q.QueryRow(ctx, ticketSelect+` WHERE id = $1`, id))
 }
 
+func (s *PG) TicketByJTI(ctx context.Context, jti string) (Ticket, error) {
+	return scanTicket(s.q.QueryRow(ctx, ticketSelect+` WHERE jti = $1`, jti))
+}
+
 func (s *PG) TransferValidTicket(ctx context.Context, ticketID, fromUserID, toUserID, newJTI string, now time.Time) (Ticket, error) {
 	tag, err := s.q.Exec(ctx, `
 		UPDATE tickets

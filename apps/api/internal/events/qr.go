@@ -17,6 +17,7 @@ type MyTicket struct {
 	Event    MyTicketEvent `json:"event"`
 	Status   string        `json:"status"`
 	QRToken  string        `json:"qr_token"`
+	Barcode  string        `json:"barcode"`
 }
 
 // MyTicketEvent is the public event slice on a wallet ticket.
@@ -75,6 +76,7 @@ func (s *Service) ListMyTickets(ctx context.Context, userID, status string, upco
 			Event:    MyTicketEvent{ID: ev.ID, Title: ev.Title, StartsAt: ev.StartsAt.UTC()},
 			Status:   t.Status,
 			QRToken:  qr,
+			Barcode:  barcodePayload(t.JTI),
 		})
 	}
 	return out, nil
@@ -105,4 +107,23 @@ func (s *Service) qrForTicket(ctx context.Context, t Ticket, ev Event) (string, 
 		return "", err
 	}
 	return token, nil
+}
+
+func barcodePayload(jti string) string {
+	return strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(jti), "-", ""))
+}
+
+func parseBarcodeJTI(raw string) (string, bool) {
+	s := strings.ToUpper(strings.TrimSpace(raw))
+	s = strings.TrimPrefix(s, "PCH")
+	s = strings.ReplaceAll(s, "-", "")
+	if len(s) != 32 {
+		return "", false
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'A' || c > 'F') {
+			return "", false
+		}
+	}
+	return strings.ToLower(s[0:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:32]), true
 }

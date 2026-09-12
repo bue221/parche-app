@@ -193,6 +193,17 @@ func TestLogoutAndLogoutAll(t *testing.T) {
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("logout all err=%v", err)
 	}
+	claims, err := svc.Tokens.ParseAccess(b.AccessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ident, err := svc.AccessIdentity(ctx, a.User.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ident.Epoch == claims.Epoch {
+		t.Fatalf("logout all should bump session_epoch, still %d", ident.Epoch)
+	}
 }
 
 func TestAccessJWTDoesNotEmbedEventRoles(t *testing.T) {

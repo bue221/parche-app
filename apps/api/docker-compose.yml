@@ -1,5 +1,6 @@
 # Dev stack. Host publishes only the API (8080).
-# Usage: cp .env.example .env && docker compose up --build
+# Usage: cp .env.example .env && COMPOSE_PARALLEL_LIMIT=1 docker compose up --build
+# See README.md if the build dies with no space left on device or signal: killed.
 name: parche
 
 x-app-env: &app-env
@@ -7,8 +8,8 @@ x-app-env: &app-env
   REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
   BROKER_URL: ${BROKER_URL:-nats://broker:4222}
   HTTP_ADDR: ${HTTP_ADDR:-:8080}
-  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-dev-only}
-  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-dev-only}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-parche-dev-jwt-access-secret-32b}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-parche-dev-jwt-refresh-secret-32}
   TICKET_SIGNING_KEY: ${TICKET_SIGNING_KEY:-change-me-ticket-dev-only-32chars!}
   TICKET_SIGNING_KEYS: ${TICKET_SIGNING_KEYS:-}
   OBJECT_STORE_DRIVER: ${OBJECT_STORE_DRIVER:-minio}

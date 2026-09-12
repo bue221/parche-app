@@ -21,11 +21,12 @@ func TestPatchMeAndPublicProfile(t *testing.T) {
 	}
 	name := "Ada Lovelace"
 	bio := "Bogotá"
-	me, err := svc.PatchMe(ctx, sess.User.ID, PatchMeInput{DisplayName: &name, Bio: &bio})
+	phone := "+573001112233"
+	me, err := svc.PatchMe(ctx, sess.User.ID, PatchMeInput{DisplayName: &name, Bio: &bio, Phone: &phone})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if me.DisplayName != name || me.Bio != bio {
+	if me.DisplayName != name || me.Bio != bio || me.Phone != phone {
 		t.Fatalf("me=%+v", me)
 	}
 	if me.Tenants == nil || me.Memberships == nil {
@@ -41,8 +42,13 @@ func TestPatchMeAndPublicProfile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pub.DisplayName != name || pub.ID != sess.User.ID {
+	if pub.DisplayName != name || pub.ID != sess.User.ID || pub.Phone != phone {
 		t.Fatalf("public=%+v", pub)
+	}
+
+	bad := "12"
+	if _, err := svc.PatchMe(ctx, sess.User.ID, PatchMeInput{Phone: &bad}); !errors.As(err, &Invalid{}) {
+		t.Fatalf("phone err=%v", err)
 	}
 
 	store.SetStatus(sess.User.ID, StatusDisabled)

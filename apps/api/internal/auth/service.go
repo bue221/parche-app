@@ -65,6 +65,7 @@ type RegisterInput struct {
 	Email       string
 	Password    string
 	DisplayName string
+	Phone       string
 	Profile     string
 	UserAgent   string
 }
@@ -91,6 +92,7 @@ type PublicUser struct {
 	ID          string   `json:"id"`
 	Email       string   `json:"email"`
 	DisplayName string   `json:"display_name"`
+	Phone       string   `json:"phone"`
 	Profiles    []string `json:"profiles"`
 }
 
@@ -110,6 +112,7 @@ type PublicProfile struct {
 	ID            string `json:"id"`
 	DisplayName   string `json:"display_name"`
 	Bio           string `json:"bio"`
+	Phone         string `json:"phone"`
 	AvatarAssetID string `json:"avatar_asset_id,omitempty"`
 	AvatarURL     string `json:"avatar_url,omitempty"`
 }
@@ -118,6 +121,7 @@ type PublicProfile struct {
 type PatchMeInput struct {
 	DisplayName *string
 	Bio         *string
+	Phone       *string
 }
 
 // EventMembership is a summarized event role (F11).
@@ -138,6 +142,7 @@ type SessionListItem struct {
 func (s *Service) Register(ctx context.Context, in RegisterInput) (Session, error) {
 	email := normalizeEmail(in.Email)
 	display := normalizeDisplayName(in.DisplayName)
+	phone, phoneOK := normalizePhone(in.Phone)
 	profile, ok := parseProfile(in.Profile)
 	var fields []Field
 	if !validEmail(email) {
@@ -145,6 +150,9 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (Session, erro
 	}
 	if display == "" || len([]rune(display)) > maxDisplayName {
 		fields = append(fields, Field{Name: "display_name", Issue: "invalid"})
+	}
+	if !phoneOK {
+		fields = append(fields, Field{Name: "phone", Issue: "invalid"})
 	}
 	if !ok {
 		fields = append(fields, Field{Name: "profile", Issue: "invalid"})
@@ -169,6 +177,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (Session, erro
 			Email:        email,
 			PasswordHash: hash,
 			DisplayName:  display,
+			Phone:        phone,
 			Status:       StatusActive,
 			CreatedAt:    now,
 		},
@@ -287,6 +296,9 @@ func (s *Service) Logout(ctx context.Context, raw string) error {
 }
 
 func (s *Service) LogoutAll(ctx context.Context, userID string) error {
+	if err := s.Store.BumpSessionEpoch(ctx, userID); err != nil {
+		return err
+	}
 	return s.Store.RevokeUser(ctx, userID, s.now())
 }
 
@@ -574,6 +586,7 @@ func toPublic(user User, profiles []string) PublicUser {
 		ID:          user.ID,
 		Email:       user.Email,
 		DisplayName: user.DisplayName,
+		Phone:       user.Phone,
 		Profiles:    profiles,
 	}
 }

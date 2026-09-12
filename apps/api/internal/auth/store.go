@@ -28,6 +28,7 @@ type User struct {
 	Status        string
 	SessionEpoch  int
 	EmailOptOut   bool
+	Phone         string
 	CreatedAt     time.Time
 }
 
@@ -133,7 +134,7 @@ type Store interface {
 	InvalidateUserPasswordResets(ctx context.Context, userID string, at time.Time) error
 	SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash string) error
 
-	UpdateProfile(ctx context.Context, userID, displayName, bio string) error
+	UpdateProfile(ctx context.Context, userID, displayName, bio, phone string) error
 	SetAvatarAsset(ctx context.Context, userID, assetID string) (previousAssetID string, err error)
 	SetEmail(ctx context.Context, userID, email string) error
 	InsertEmailChange(ctx context.Context, row EmailChangeRow) error

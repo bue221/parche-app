@@ -97,6 +97,18 @@ func TestCheckInSignatureWrongEventExpiredDuplicate(t *testing.T) {
 	_ = buyer
 }
 
+func TestCheckInBarcodeJTI(t *testing.T) {
+	ctx, svc, _, buyer, door, _, eventID, _ := doorScanFixture(t)
+	wallet, err := svc.ListMyTickets(ctx, buyer, "", true)
+	if err != nil || len(wallet) != 1 || wallet[0].Barcode == "" {
+		t.Fatalf("wallet=%+v %v", wallet, err)
+	}
+	got, err := svc.CheckIn(ctx, door, eventID, wallet[0].Barcode)
+	if err != nil || got.Result != ScanApproved {
+		t.Fatalf("barcode scan=%+v %v", got, err)
+	}
+}
+
 func TestCheckInTwoScannersAndPostgresOffPath(t *testing.T) {
 	ctx, svc, owner, _, doorA, _, eventID, qr := doorScanFixture(t)
 	mail, ok := svc.Mailer.(*mailer.Memory)

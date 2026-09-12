@@ -18,8 +18,8 @@ func TestValidateMissingRequired(t *testing.T) {
 
 func TestLoadSuccess(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://parche:secret@postgres:5432/parche")
-	t.Setenv("JWT_ACCESS_SECRET", "access")
-	t.Setenv("JWT_REFRESH_SECRET", "refresh")
+	t.Setenv("JWT_ACCESS_SECRET", "parche-dev-jwt-access-secret-32b")
+	t.Setenv("JWT_REFRESH_SECRET", "parche-dev-jwt-refresh-secret-32")
 	t.Setenv("TICKET_SIGNING_KEY", "ticket-signing-key-32-bytes-min!!")
 	t.Setenv("HTTP_ADDR", ":9090")
 	t.Setenv("SERVICE", "api")
@@ -44,10 +44,31 @@ func TestLoadRejectsTicketKeyEqualToAccess(t *testing.T) {
 	const shared = "same-secret-must-not-be-reused-32b"
 	t.Setenv("DATABASE_URL", "postgres://parche:secret@postgres:5432/parche")
 	t.Setenv("JWT_ACCESS_SECRET", shared)
-	t.Setenv("JWT_REFRESH_SECRET", "refresh")
+	t.Setenv("JWT_REFRESH_SECRET", "parche-dev-jwt-refresh-secret-32")
 	t.Setenv("TICKET_SIGNING_KEY", shared)
 	if _, err := Load(); err == nil {
 		t.Fatal("expected ticket key collision")
+	}
+}
+
+func TestLoadRejectsShortJWTSecrets(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://parche:secret@postgres:5432/parche")
+	t.Setenv("JWT_ACCESS_SECRET", "too-short")
+	t.Setenv("JWT_REFRESH_SECRET", "parche-dev-jwt-refresh-secret-32")
+	t.Setenv("TICKET_SIGNING_KEY", "ticket-signing-key-32-bytes-min!!")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected short access secret to fail")
+	}
+}
+
+func TestLoadRejectsMatchingJWTSecrets(t *testing.T) {
+	const shared = "parche-dev-jwt-shared-secret-32b!"
+	t.Setenv("DATABASE_URL", "postgres://parche:secret@postgres:5432/parche")
+	t.Setenv("JWT_ACCESS_SECRET", shared)
+	t.Setenv("JWT_REFRESH_SECRET", shared)
+	t.Setenv("TICKET_SIGNING_KEY", "ticket-signing-key-32-bytes-min!!")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected matching jwt secrets to fail")
 	}
 }
 

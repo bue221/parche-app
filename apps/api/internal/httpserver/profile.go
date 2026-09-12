@@ -12,6 +12,7 @@ import (
 type patchMeBody struct {
 	DisplayName *string `json:"display_name"`
 	Bio         *string `json:"bio"`
+	Phone       *string `json:"phone"`
 }
 
 type changeEmailBody struct {
@@ -40,6 +41,7 @@ func (h authHandler) patchMe(w http.ResponseWriter, r *http.Request) {
 	me, err := h.svc.PatchMe(r.Context(), p.UserID, auth.PatchMeInput{
 		DisplayName: req.DisplayName,
 		Bio:         req.Bio,
+		Phone:       req.Phone,
 	})
 	if err != nil {
 		writeAuthErr(w, r, err)

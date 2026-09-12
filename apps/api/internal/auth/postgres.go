@@ -56,9 +56,9 @@ func (s *PG) CreateAccount(ctx context.Context, acc Account) error {
 			return fmt.Errorf("auth store type")
 		}
 		_, err := pg.q.Exec(ctx, `
-			INSERT INTO users (id, email, password_hash, display_name, status, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			acc.User.ID, acc.User.Email, acc.User.PasswordHash, acc.User.DisplayName, acc.User.Status, acc.User.CreatedAt)
+			INSERT INTO users (id, email, password_hash, display_name, phone, status, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			acc.User.ID, acc.User.Email, acc.User.PasswordHash, acc.User.DisplayName, acc.User.Phone, acc.User.Status, acc.User.CreatedAt)
 		if err != nil {
 			return mapUniqueEmail(err)
 		}
@@ -100,11 +100,16 @@ func (s *PG) UserByID(ctx context.Context, id string) (User, error) {
 	return s.scanUser(ctx, userSelect+` WHERE id = $1`, id)
 }
 
-const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio, ''), COALESCE(avatar_asset_id::text, ''), status, session_epoch, created_at, COALESCE(email_opt_out, false) FROM users`
+const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio, ''), COALESCE(avatar_asset_id::text, ''), status, session_epoch, created_at, COALESCE(email_opt_out, false), COALESCE(phone, '') FROM users`
+
+func scanUserCols(scan func(dest ...any) error) (User, error) {
+	var u User
+	err := scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut, &u.Phone)
+	return u, err
+}
 
 func (s *PG) scanUser(ctx context.Context, q string, arg any) (User, error) {
-	var u User
-	err := s.q.QueryRow(ctx, q, arg).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut)
+	u, err := scanUserCols(s.q.QueryRow(ctx, q, arg).Scan)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -399,8 +404,8 @@ func (s *PG) SetPasswordAndBumpEpoch(ctx context.Context, userID, passwordHash s
 	return err
 }
 
-func (s *PG) UpdateProfile(ctx context.Context, userID, displayName, bio string) error {
-	tag, err := s.q.Exec(ctx, `UPDATE users SET display_name = $2, bio = $3 WHERE id = $1`, userID, displayName, bio)
+func (s *PG) UpdateProfile(ctx context.Context, userID, displayName, bio, phone string) error {
+	tag, err := s.q.Exec(ctx, `UPDATE users SET display_name = $2, bio = $3, phone = $4 WHERE id = $1`, userID, displayName, bio, phone)
 	if err != nil {
 		return err
 	}
@@ -506,8 +511,8 @@ func (s *PG) SearchUsers(ctx context.Context, q string, limit int) ([]User, erro
 	defer rows.Close()
 	var out []User
 	for rows.Next() {
-		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut); err != nil {
+		u, err := scanUserCols(rows.Scan)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, u)
@@ -575,8 +580,8 @@ func (s *PG) ListMailRecipients(ctx context.Context) ([]User, error) {
 	defer rows.Close()
 	var out []User
 	for rows.Next() {
-		var u User
-		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut); err != nil {
+		u, err := scanUserCols(rows.Scan)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, u)

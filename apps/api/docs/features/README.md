@@ -66,7 +66,7 @@ F01 runtime
 | [F20](F20-event-metrics.md) | Métricas de evento | Ventas, aforo, scans por persona |
 | [F21](F21-tenant-metrics.md) | Métricas de tenant | Caja del colectivo |
 | [F22](F22-event-search.md) | Búsqueda y filtros | q, fecha, género, artista, bbox |
-| [F23](F23-editorial-posts.md) | Editorial / blog | Posts públicos de cultura techno |
+| [F23](F23-editorial-posts.md) | Editorial / blog | API de posts; lectura en web (futuro), no en la app |
 | [F24](F24-recommendations.md) | Recomendaciones | Sugerencias por follows y géneros |
 | [F25](F25-clubs-directory.md) | Directorio de clubes | Venues persistentes explorables |
 | [F26](F26-transactional-email.md) | Email transaccional | Reset, invite, compra, digest admin |

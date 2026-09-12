@@ -17,6 +17,7 @@ func (s *Service) PatchMe(ctx context.Context, userID string, in PatchMeInput) (
 	}
 	display := user.DisplayName
 	bio := user.Bio
+	phone := user.Phone
 	var fields []Field
 	if in.DisplayName != nil {
 		display = normalizeDisplayName(*in.DisplayName)
@@ -30,10 +31,17 @@ func (s *Service) PatchMe(ctx context.Context, userID string, in PatchMeInput) (
 			fields = append(fields, Field{Name: "bio", Issue: "length"})
 		}
 	}
+	if in.Phone != nil {
+		var ok bool
+		phone, ok = normalizePhone(*in.Phone)
+		if !ok {
+			fields = append(fields, Field{Name: "phone", Issue: "invalid"})
+		}
+	}
 	if len(fields) > 0 {
 		return Me{}, Invalid{Fields: fields}
 	}
-	if err := s.Store.UpdateProfile(ctx, user.ID, display, bio); err != nil {
+	if err := s.Store.UpdateProfile(ctx, user.ID, display, bio, phone); err != nil {
 		return Me{}, err
 	}
 	return s.Me(ctx, user.ID)
@@ -162,6 +170,7 @@ func (s *Service) PublicProfile(ctx context.Context, userID string) (PublicProfi
 		ID:            user.ID,
 		DisplayName:   user.DisplayName,
 		Bio:           user.Bio,
+		Phone:         user.Phone,
 		AvatarAssetID: user.AvatarAssetID,
 	}, nil
 }

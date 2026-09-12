@@ -477,7 +477,7 @@ func (m *Memory) SetPasswordAndBumpEpoch(_ context.Context, userID, passwordHash
 	return nil
 }
 
-func (m *Memory) UpdateProfile(_ context.Context, userID, displayName, bio string) error {
+func (m *Memory) UpdateProfile(_ context.Context, userID, displayName, bio, phone string) error {
 	m.lock()
 	defer m.unlock()
 	u, ok := m.users[userID]
@@ -486,6 +486,7 @@ func (m *Memory) UpdateProfile(_ context.Context, userID, displayName, bio strin
 	}
 	u.DisplayName = displayName
 	u.Bio = bio
+	u.Phone = phone
 	m.users[userID] = u
 	return nil
 }

@@ -34,4 +34,4 @@ Contenido de cultura techno y novedades, no es el feed de eventos.
 
 ## Next step
 
-Web landing puede indexar posts. [F26](F26-transactional-email.md) digest no es masivo arbitrario; ver F26/F27.
+La app Expo **no** lee posts. Un blog público en `web-frontend` (ISR, slug, JSON-LD) puede indexar `GET /v1/posts` más adelante. No borrar este API. [F26](F26-transactional-email.md) digest no es masivo arbitrario; ver F26/F27.

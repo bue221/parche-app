@@ -48,6 +48,7 @@ type Routes struct {
 	WebhookSecret string
 	AppEnv        string
 	Audit         admin.Auditor
+	CORSOrigins   []string
 }
 
 // NewMux registers process health routes and the /v1 product prefix with HTTP contract middleware.
@@ -56,6 +57,9 @@ func NewMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, ch
 }
 
 func newMux(log *applog.Logger, cfg config.Config, limiter ratelimit.Limiter, checkers []health.Checker, extra func(*http.ServeMux), routes Routes) http.Handler {
+	if len(routes.CORSOrigins) == 0 {
+		routes.CORSOrigins = cfg.CORSOrigins
+	}
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", health.Health())
 	mux.Handle("GET /ready", health.Ready(log, checkers...))
