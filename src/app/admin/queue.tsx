@@ -1,9 +1,11 @@
-import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { EmptyState } from '@/components/feedback';
-import { MockMap } from '@/components/mock-map';
+import { BackBar } from '@/components/back-bar';
+import { EventCard } from '@/components/event-card';
+import { EmptyState, ErrorState, PendingAuth } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
+import { OsmMap } from '@/components/osm-map';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -33,11 +35,12 @@ export default function AdminQueueScreen() {
   }, []);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (!isAdmin) {
     return (
       <Screen>
+        <BackBar />
         <Text>Solo admin de plataforma.</Text>
       </Screen>
     );
@@ -45,24 +48,24 @@ export default function AdminQueueScreen() {
 
   return (
     <Screen>
-      <Text variant="heading">Aprobación</Text>
-      {queue.length === 0 ? <EmptyState title="Nada por revisar" /> : null}
-      {error ? <Text>{error}</Text> : null}
+      <BackBar />
+      <PageHeader title="Aprobación" lead="Revisa foto y pin antes de publicar." />
+      {queue.length === 0 && !error ? <EmptyState title="Nada por revisar" lead="La cola está limpia." /> : null}
+      {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
       {queue.map((event) => (
-        <View key={event.id} className="mt-ds-24 gap-ds-8">
-          {event.flyerUrl ? (
-            <Image source={{ uri: event.flyerUrl }} className="aspect-[4/5] w-full rounded-images" />
-          ) : null}
-          <Text variant="subheading">{event.name}</Text>
+        <View key={event.id} className="mt-ds-24 gap-ds-12">
+          <EventCard layout="listing" event={event} />
           {event.lat != null && event.lng != null ? (
-            <MockMap pin={{ lat: event.lat, lng: event.lng }} events={[event]} />
+            <OsmMap pin={{ lat: event.lat, lng: event.lng }} events={[event]} />
           ) : null}
-          <Button onPress={() => void api.admin.decide(event.id, 'approve').then(load)}>
-            <Text>Aprobar</Text>
-          </Button>
-          <Button variant="outline" onPress={() => void api.admin.decide(event.id, 'reject', 'No encaja').then(load)}>
-            <Text>Rechazar</Text>
-          </Button>
+          <View className="flex-row gap-ds-8">
+            <Button onPress={() => void api.admin.decide(event.id, 'approve').then(load)}>
+              <Text>Aprobar</Text>
+            </Button>
+            <Button variant="outline" onPress={() => void api.admin.decide(event.id, 'reject', 'No encaja').then(load)}>
+              <Text>Rechazar</Text>
+            </Button>
+          </View>
         </View>
       ))}
     </Screen>

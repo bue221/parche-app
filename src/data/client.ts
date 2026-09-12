@@ -1,4 +1,5 @@
-import { mockApi, type ParcheApi } from '@/data/mock/api';
+import { httpApi } from '@/data/http-api';
+import type { ParcheApi } from '@/data/mock/api';
 
-/** Swap this export for a real HTTP client when the backend is wired. */
-export const api: ParcheApi = mockApi;
+export const api: ParcheApi = httpApi;
+export type { ParcheApi };

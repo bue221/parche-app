@@ -4,14 +4,17 @@ import { useEffect } from 'react';
 import { setPendingPath, useAuthSnapshot } from '@/data/session';
 
 export function useRequireAuth(nextPath: string): boolean {
-  const { isLoggedIn } = useAuthSnapshot();
+  const { isLoggedIn, hydrated } = useAuthSnapshot();
 
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
     if (!isLoggedIn) {
       setPendingPath(nextPath);
       router.replace('/auth/login' as Href);
     }
-  }, [isLoggedIn, nextPath]);
+  }, [hydrated, isLoggedIn, nextPath]);
 
-  return isLoggedIn;
+  return hydrated && isLoggedIn;
 }

@@ -1,69 +1,56 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { EventForm, type EventFormValue } from '@/components/event-form';
+import { EventWizard } from '@/components/event-wizard';
+import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
-import { userMessage } from '@/data/errors';
+import { ApiError, userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import type { EventWithExtras } from '@/data/mock/api';
+import type { EventWithExtras } from '@/data/types';
 
 export default function EventEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ok = useRequireAuth(`/event/${id}/edit`);
   const { user } = useAuthSnapshot();
   const [event, setEvent] = useState<EventWithExtras | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void api.events.get(id).then(setEvent).catch((err) => setError(userMessage(err)));
+    void api.events
+      .get(id)
+      .then(setEvent)
+      .catch((err) => {
+        setError(userMessage(err));
+        if (err instanceof ApiError && err.code === 'FORBIDDEN') {
+          router.replace(`/event/${id}` as Href);
+        }
+      });
   }, [id]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (user && !api.helpers.can(user.id, id, 'event.write')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>No puedes editar esta fecha.</Text>
       </Screen>
     );
   }
+  if (error && !event) {
+    return <LoadError message={error} onRetry={() => void api.events.get(id).then(setEvent).catch((err) => setError(userMessage(err)))} />;
+  }
   if (!event) {
     return (
-      <Screen>
-        <Text variant="muted">Cargando…</Text>
+      <Screen back>
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="mt-ds-16 h-48 w-full" />
       </Screen>
     );
   }
 
-  async function save(value: EventFormValue, publish: boolean) {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.events.patch(id, { ...value, publish });
-      router.replace(`/event/${id}` as Href);
-    } catch (err) {
-      setError(userMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Screen>
-      <Text variant="heading">Editar fecha</Text>
-      <EventForm
-        initial={event}
-        eventId={event.id}
-        submitLabel="Guardar cambios"
-        busy={busy}
-        error={error}
-        onSubmit={(v, p) => void save(v, p)}
-      />
-    </Screen>
-  );
+  return <EventWizard mode="edit" eventId={event.id} initial={event} />;
 }

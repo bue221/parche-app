@@ -66,12 +66,15 @@ export const Spacing = {
 
 export const Radii = {
   small: 4,
-  cards: 8,
-  images: 8,
+  cards: 16,
+  images: 16,
   navelements: 20,
   buttons: 40,
   tags: 100,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 1200;
+export const BottomTabInset = Platform.select({ ios: 88, android: 88, web: 0 }) ?? 88;
+export const WebNavHeight = 72;
+export const WebCompactTop = 56;
+export const WebCompactBottom = 72;
+export const MaxContentWidth = 1440;

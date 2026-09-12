@@ -1,7 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
+import { BackBar } from '@/components/back-bar';
+import { ErrorState, PendingAuth } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
+import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
@@ -31,7 +36,7 @@ export default function EventMetricsScreen() {
   }, [id]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (user && !api.helpers.can(user.id, id, 'event.metrics.read')) {
     return (
@@ -43,24 +48,44 @@ export default function EventMetricsScreen() {
 
   return (
     <Screen>
-      <Text variant="heading">Métricas</Text>
-      <Button variant="outline" className="mt-ds-16" onPress={() => void load()}>
-        <Text>Actualizar</Text>
-      </Button>
-      {error ? <Text>{error}</Text> : null}
-      <Text className="mt-ds-16">
-        Vendidos {data?.sold ?? 0} · check-ins {data?.checkIns ?? 0} · no-show {data?.noShow ?? 0}
+      <BackBar />
+      <PageHeader
+        title="Métricas"
+        actions={
+          <Button variant="outline" onPress={() => void load()}>
+            <Text>Actualizar</Text>
+          </Button>
+        }
+      />
+      {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
+      <View className="mt-ds-24 flex-row gap-ds-12">
+        <Surface elevated className="flex-1 gap-ds-4">
+          <Text variant="heading">{data?.sold ?? 0}</Text>
+          <Text variant="muted">vendidos</Text>
+        </Surface>
+        <Surface elevated className="flex-1 gap-ds-4">
+          <Text variant="heading">{data?.checkIns ?? 0}</Text>
+          <Text variant="muted">check-ins</Text>
+        </Surface>
+      </View>
+      <Text variant="muted" className="mt-ds-12">
+        no-show {data?.noShow ?? 0}
       </Text>
-      {data?.byType.map((row) => (
-        <Text key={row.name} className="mt-ds-8">
-          {row.name}: {row.sold} vendidos / {row.reserved} reserved / {row.available} free · {formatMoney(row.revenueCents)}
-        </Text>
-      ))}
+      <View className="mt-ds-24 gap-ds-8">
+        {data?.byType.map((row) => (
+          <Surface key={row.name} muted>
+            <Text>
+              {row.name}: {row.sold} vendidos / {row.reserved} reserved / {row.available} free
+            </Text>
+            <Text variant="muted">{formatMoney(row.revenueCents)}</Text>
+          </Surface>
+        ))}
+      </View>
       <Text variant="headingSm" className="mt-ds-24">
         Scans por persona
       </Text>
       {data?.scansByScanner.map((row) => (
-        <Text key={row.userId}>
+        <Text key={row.userId} className="mt-ds-8">
           {row.displayName}: {row.count}
         </Text>
       ))}

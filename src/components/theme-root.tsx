@@ -4,11 +4,20 @@ import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 
 import { useResolvedColorScheme, useTheme } from '@/hooks/use-theme';
+import { useOnboarding } from '@/data/onboarding-store';
+import { useThemePref } from '@/data/theme-store';
 import { cn } from '@/lib/utils';
 
 export function ThemeRoot({ children }: PropsWithChildren) {
   const scheme = useResolvedColorScheme();
   const theme = useTheme();
+  const hydrateTheme = useThemePref((s) => s.hydrate);
+  const hydrateOnboarding = useOnboarding((s) => s.hydrate);
+
+  useEffect(() => {
+    void hydrateTheme();
+    void hydrateOnboarding();
+  }, [hydrateTheme, hydrateOnboarding]);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.background);

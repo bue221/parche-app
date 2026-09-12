@@ -2,16 +2,20 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { ArtistRow } from '@/components/artist-row';
+import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
+import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
+import { PendingAuth } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import type { Artist } from '@/data/types';
-import type { EventWithExtras } from '@/data/mock/api';
+import type { EventWithExtras } from '@/data/types';
 
 export default function EventLineupEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,7 +32,7 @@ export default function EventLineupEditScreen() {
   }, [id]);
 
   if (!ok) {
-    return null;
+    return <PendingAuth />;
   }
   if (user && !api.helpers.can(user.id, id, 'event.write')) {
     return (
@@ -42,14 +46,13 @@ export default function EventLineupEditScreen() {
 
   return (
     <Screen>
-      <Text variant="heading">Lineup</Text>
+      <BackBar />
+      <PageHeader title="Lineup" />
       {event?.lineup.length === 0 ? <Text variant="muted">Aún no hay lineup</Text> : null}
       <View className="mt-ds-16 gap-ds-8">
         {event?.lineup.map((artist, index) => (
           <View key={artist.id} className="flex-row items-center justify-between">
-            <Text>
-              {index + 1}. {artist.stageName}
-            </Text>
+            <ArtistRow artist={artist} />
             <Button variant="ghost" onPress={() => void api.events.removeLineup(id, artist.id).then(setEvent)}>
               <Text>Quitar</Text>
             </Button>
