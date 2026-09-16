@@ -13,7 +13,7 @@ Contratos y features: [`docs/README.md`](docs/README.md).
 COMPOSE_PARALLEL_LIMIT=1 docker compose up --build
 ```
 
-3. Comprueba `http://localhost:8080/v1/events`. Con `APP_ENV=dev` el seed deja **Selva 04** y **Bodega Cerrada**.
+3. Comprueba `http://localhost:8080/v1/events`. Con `APP_ENV=dev` el seed deja **Selva 04**, **Bodega Cerrada** y un calendario 2027 (Neon Garden, Acid Roof, Selva 05, etc.) con flyers neón regenerados al arrancar.
 
 Cuentas demo (contraseña `parche1234`): `ata@`, `promoter@`, `door@`, `metrics@`, `admin@`, `luna@` — todas `@parche.test`.
 
