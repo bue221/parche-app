@@ -170,12 +170,17 @@ func (s *s3Store) AllowPublicGet(ctx context.Context) error {
 }
 
 func (s *s3Store) GetPublicURL(key string) string {
-	if s.publicBase != "" {
+	if reachablePublicBase(s.publicBase) {
 		return s.publicBase + "/" + key
 	}
-	scheme := "http"
-	if s.useSSL {
-		scheme = "https"
+	return PublicMediaURL(key)
+}
+
+func reachablePublicBase(base string) bool {
+	u, err := url.Parse(base)
+	if err != nil || u.Host == "" {
+		return false
 	}
-	return scheme + "://" + s.endpoint + "/" + s.bucket + "/" + key
+	host := strings.ToLower(u.Hostname())
+	return host != "localhost" && host != "127.0.0.1" && host != "minio" && host != "0.0.0.0"
 }

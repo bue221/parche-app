@@ -120,6 +120,10 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 	if sessions != nil {
 		sessions.Mailer = mailer.Log{Logger: log}
 		sessions.AppOrigin = cfg.AppOrigin
+		sessions.GoogleAudiences = cfg.GoogleOAuthClientIDs
+		if len(cfg.GoogleOAuthClientIDs) > 0 {
+			sessions.Google = auth.HTTPGoogleVerifier{}
+		}
 		if email := strings.TrimSpace(cfg.BootstrapAdminEmail); email != "" {
 			if err := sessions.BootstrapPlatformAdmin(ctx, email); err != nil {
 				log.Error("bootstrap platform admin", "err", err)

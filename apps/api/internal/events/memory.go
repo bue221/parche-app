@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ type Memory struct {
 	claimHashes map[string]string // token_hash → id
 	scanLogs    []TicketScanLog
 	order       []string
+	saves       map[string]time.Time // userID+"/"+eventID
 }
 
 func NewMemory() *Memory {
@@ -40,6 +42,7 @@ func NewMemory() *Memory {
 		payments:    map[string]PaymentTx{},
 		claims:      map[string]TicketClaim{},
 		claimHashes: map[string]string{},
+		saves:       map[string]time.Time{},
 	}
 }
 
@@ -432,6 +435,64 @@ func (m *Memory) GMVSince(_ context.Context, since time.Time) (int, error) {
 		}
 	}
 	return sum, nil
+}
+
+func (m *Memory) SaveEvent(_ context.Context, row EventSave) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.saves == nil {
+		m.saves = map[string]time.Time{}
+	}
+	if _, ok := m.byID[row.EventID]; !ok {
+		return auth.ErrNotFound
+	}
+	m.saves[row.UserID+"/"+row.EventID] = row.CreatedAt
+	return nil
+}
+
+func (m *Memory) UnsaveEvent(_ context.Context, userID, eventID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.saves, userID+"/"+eventID)
+	return nil
+}
+
+func (m *Memory) SavedEventIDs(_ context.Context, userID string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	type pair struct {
+		id string
+		at time.Time
+	}
+	var rows []pair
+	prefix := userID + "/"
+	for k, at := range m.saves {
+		if strings.HasPrefix(k, prefix) {
+			rows = append(rows, pair{id: strings.TrimPrefix(k, prefix), at: at})
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].at.After(rows[j].at) })
+	out := make([]string, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, r.id)
+	}
+	return out, nil
+}
+
+func (m *Memory) PendingInvitesFor(_ context.Context, email, userID string) ([]Invite, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	email = strings.ToLower(strings.TrimSpace(email))
+	var out []Invite
+	for _, inv := range m.invites {
+		if inv.AcceptedAt != nil {
+			continue
+		}
+		if strings.EqualFold(inv.Email, email) || (userID != "" && inv.InvitedUserID == userID) {
+			out = append(out, inv)
+		}
+	}
+	return out, nil
 }
 
 func cloneEvent(e Event) Event {

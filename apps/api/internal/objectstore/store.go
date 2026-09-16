@@ -51,6 +51,15 @@ type Presign struct {
 // DirectPutPrefix is the path-only URL issued by the fs driver; the HTTP layer makes it absolute.
 const DirectPutPrefix = "/v1/uploads/direct?token="
 
+// PublicMediaPrefix is the API path GetPublicURL uses when there is no public CDN.
+// It sits under /v1 so reverse proxies (Cloudflare) do not treat flyers as static files.
+const PublicMediaPrefix = "/v1/media/"
+
+// PublicMediaURL is the relative flyer/gallery URL served by GET /v1/media/{key}.
+func PublicMediaURL(key string) string {
+	return PublicMediaPrefix + key
+}
+
 // New builds a driver from config. Handlers must depend on Store, not a vendor SDK.
 func New(cfg config.Config) (Store, error) {
 	switch strings.ToLower(cfg.ObjectStoreDriver) {

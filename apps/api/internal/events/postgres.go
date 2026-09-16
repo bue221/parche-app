@@ -478,3 +478,63 @@ func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
+
+func isFK(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
+}
+
+func (s *PG) SaveEvent(ctx context.Context, row EventSave) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO event_saves (user_id, event_id, created_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, event_id) DO NOTHING`,
+		row.UserID, row.EventID, row.CreatedAt)
+	if isFK(err) {
+		return auth.ErrNotFound
+	}
+	return err
+}
+
+func (s *PG) UnsaveEvent(ctx context.Context, userID, eventID string) error {
+	_, err := s.q.Exec(ctx, `DELETE FROM event_saves WHERE user_id = $1 AND event_id = $2`, userID, eventID)
+	return err
+}
+
+func (s *PG) SavedEventIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := s.q.Query(ctx, `
+		SELECT event_id FROM event_saves WHERE user_id = $1
+		ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+func (s *PG) PendingInvitesFor(ctx context.Context, email, userID string) ([]Invite, error) {
+	rows, err := s.q.Query(ctx, inviteSelect+`
+		WHERE accepted_at IS NULL AND expires_at > now()
+		AND (email = $1 OR invited_user_id::text = $2)`, strings.ToLower(strings.TrimSpace(email)), userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Invite
+	for rows.Next() {
+		inv, err := scanInvite(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, inv)
+	}
+	return out, rows.Err()
+}

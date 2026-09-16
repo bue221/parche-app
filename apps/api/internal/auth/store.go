@@ -151,5 +151,12 @@ type Store interface {
 	SetEmailOptOut(ctx context.Context, userID string, optedOut bool) error
 	ListMailRecipients(ctx context.Context) ([]User, error)
 
+	UpsertOTP(ctx context.Context, row OTPChallenge) error
+	OTPByEmail(ctx context.Context, email string) (OTPChallenge, error)
+	IncrementOTPAttempts(ctx context.Context, email string) error
+	DeleteOTP(ctx context.Context, email string) error
+	UpsertIdentity(ctx context.Context, row Identity) error
+	IdentityByProviderSubject(ctx context.Context, provider, subject string) (Identity, error)
+
 	InTx(ctx context.Context, fn func(Store) error) error
 }

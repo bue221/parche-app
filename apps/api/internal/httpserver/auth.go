@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/parche-app/backend/internal/apierr"
+	"github.com/parche-app/backend/internal/artists"
 	"github.com/parche-app/backend/internal/auth"
+	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/media"
 )
 
@@ -60,15 +62,26 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	if access == nil {
 		access = RejectAccess{}
 	}
-	h := authHandler{svc: routes.Auth, access: access, media: routes.Media, origins: routes.CORSOrigins}
+	h := authHandler{
+		svc:     routes.Auth,
+		access:  access,
+		media:   routes.Media,
+		artists: routes.Artists,
+		events:  routes.Catalog,
+		origins: routes.CORSOrigins,
+	}
 	mux.HandleFunc("POST /v1/auth/register", h.register)
 	mux.HandleFunc("POST /v1/auth/login", h.login)
 	mux.HandleFunc("POST /v1/auth/refresh", h.refresh)
 	mux.HandleFunc("POST /v1/auth/logout", h.logout)
 	mux.HandleFunc("POST /v1/auth/password/forgot", h.forgot)
 	mux.HandleFunc("POST /v1/auth/password/reset", h.reset)
+	mux.HandleFunc("POST /v1/auth/otp/request", h.requestOTP)
+	mux.HandleFunc("POST /v1/auth/otp/verify", h.verifyOTP)
+	mux.HandleFunc("POST /v1/auth/oauth", h.oauth)
 	mux.HandleFunc("GET /v1/me", h.me)
 	mux.HandleFunc("PATCH /v1/me", h.patchMe)
+	mux.HandleFunc("POST /v1/me/sync", h.syncInterest)
 	mux.HandleFunc("POST /v1/me/avatar", h.confirmAvatar)
 	mux.HandleFunc("POST /v1/me/email/change", h.changeEmail)
 	mux.HandleFunc("POST /v1/me/email/confirm", h.confirmEmail)
@@ -84,10 +97,27 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("DELETE /v1/tenants/{id}/members/{userId}", h.removeMember)
 }
 
+type otpBody struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
+type oauthBody struct {
+	Provider string `json:"provider"`
+	IDToken  string `json:"id_token"`
+}
+
+type syncBody struct {
+	ArtistIDs []string `json:"artist_ids"`
+	EventIDs  []string `json:"event_ids"`
+}
+
 type authHandler struct {
 	svc     *auth.Service
 	access  Access
 	media   *media.Service
+	artists *artists.Service
+	events  *events.Service
 	origins []string
 }
 
@@ -176,6 +206,83 @@ func (h authHandler) reset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clearRefreshCookie(w, r)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h authHandler) requestOTP(w http.ResponseWriter, r *http.Request) {
+	var req otpBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := h.svc.RequestOTP(r.Context(), auth.OTPRequestInput{Email: req.Email}); err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h authHandler) verifyOTP(w http.ResponseWriter, r *http.Request) {
+	var req otpBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	sess, created, err := h.svc.VerifyOTP(r.Context(), auth.OTPVerifyInput{
+		Email: req.Email, Code: req.Code, UserAgent: r.UserAgent(),
+	})
+	if err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.writeSession(w, r, status, sess)
+}
+
+func (h authHandler) oauth(w http.ResponseWriter, r *http.Request) {
+	var req oauthBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	sess, created, err := h.svc.OAuth(r.Context(), auth.OAuthInput{
+		Provider: req.Provider, IDToken: req.IDToken, UserAgent: r.UserAgent(),
+	})
+	if err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.writeSession(w, r, status, sess)
+}
+
+func (h authHandler) syncInterest(w http.ResponseWriter, r *http.Request) {
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	var req syncBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	for _, id := range req.ArtistIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || h.artists == nil {
+			continue
+		}
+		_ = h.artists.Follow(r.Context(), p.UserID, id)
+	}
+	for _, id := range req.EventIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || h.events == nil {
+			continue
+		}
+		_ = h.events.SaveEvent(r.Context(), p.UserID, id)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -166,3 +166,80 @@ func (h eventHandler) listMemberships(w http.ResponseWriter, r *http.Request) {
 	}
 	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
 }
+
+func (h eventHandler) listInvites(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	items, err := h.svc.ListPendingInvites(r.Context(), p.UserID)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	if items == nil {
+		items = []auth.EventMembership{}
+	}
+	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h eventHandler) listSavedEvents(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	list, err := h.svc.ListSavedEvents(r.Context(), p.UserID)
+	if err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	pub := make([]map[string]any, 0, len(list))
+	for _, e := range list {
+		pub = append(pub, publicEventAbs(r, e))
+	}
+	apierr.WriteJSON(w, http.StatusOK, map[string]any{"items": pub})
+}
+
+func (h eventHandler) saveEvent(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	if err := h.svc.SaveEvent(r.Context(), p.UserID, r.PathValue("id")); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h eventHandler) unsaveEvent(w http.ResponseWriter, r *http.Request) {
+	if h.svc == nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	if err := h.svc.UnsaveEvent(r.Context(), p.UserID, r.PathValue("id")); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

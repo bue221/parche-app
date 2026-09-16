@@ -18,14 +18,17 @@ type Hasher interface {
 
 // Service is register/login/refresh/logout, password recovery, and /v1/me.
 type Service struct {
-	Store      Store
-	Tokens     *Tokens
-	Hasher     Hasher
-	Mailer     mailer.Sender
-	AppOrigin  string
-	EventRoles EventMembershipLister
-	Log        *slog.Logger
-	dummy      string
+	Store           Store
+	Tokens          *Tokens
+	Hasher          Hasher
+	Mailer          mailer.Sender
+	AppOrigin       string
+	EventRoles      EventMembershipLister
+	Google          GoogleVerifier
+	GoogleAudiences []string
+	OTPCode         func() (string, error)
+	Log             *slog.Logger
+	dummy           string
 }
 
 // EventMembershipLister is GET /v1/me memberships (F11). events.Service implements it.
@@ -216,7 +219,10 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (Session, error) {
 		}
 		return Session{}, err
 	}
-	if !VerifyPassword(in.Password, user.PasswordHash) {
+	if user.PasswordHash == "" || !VerifyPassword(in.Password, user.PasswordHash) {
+		if user.PasswordHash == "" {
+			s.verifyDummy(in.Password)
+		}
 		return Session{}, ErrUnauthorized
 	}
 	if user.Status != StatusActive {

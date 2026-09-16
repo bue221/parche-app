@@ -8,7 +8,7 @@ Treat `docs/` as the source of truth for product and architecture rules. Read th
 |------|--------|
 | [docs/README.md](docs/README.md) | Index of all project rule docs |
 | [docs/prd.md](docs/prd.md) | Product requirements: API, Docker, data, tokens |
-| [docs/features/README.md](docs/features/README.md) | Feature specs F01–F27 (implementation units) |
+| [docs/features/README.md](docs/features/README.md) | Feature specs F01–F30 (implementation units) |
 
 ## Stack
 

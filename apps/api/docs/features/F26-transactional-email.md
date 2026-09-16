@@ -26,6 +26,7 @@ Todo correo sale por un puerto `Mailer` y subjects en la cola. No hay SMTP en lo
 | `event_cancelled` | F08 |
 | `artist_new_event` | F13 + F08 publish |
 | `admin_digest` | F27: novedades a users `notify_email=true` |
+| `auth_otp` | F28: código de 6 dígitos |
 
 ## RC-025 masivos
 

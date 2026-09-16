@@ -23,6 +23,8 @@ type Memory struct {
 	resetsByID map[string]PasswordResetRow
 	emailChg   map[string]EmailChangeRow
 	emailChgID map[string]EmailChangeRow
+	otp        map[string]OTPChallenge
+	identities map[string]Identity
 }
 
 type member struct {
@@ -45,6 +47,8 @@ func NewMemory() *Memory {
 		resetsByID: map[string]PasswordResetRow{},
 		emailChg:   map[string]EmailChangeRow{},
 		emailChgID: map[string]EmailChangeRow{},
+		otp:        map[string]OTPChallenge{},
+		identities: map[string]Identity{},
 	}
 }
 
@@ -694,6 +698,65 @@ func (m *Memory) SetStatus(userID, status string) {
 	}
 	u.Status = status
 	m.users[userID] = u
+}
+
+func (m *Memory) UpsertOTP(_ context.Context, row OTPChallenge) error {
+	m.lock()
+	defer m.unlock()
+	if m.otp == nil {
+		m.otp = map[string]OTPChallenge{}
+	}
+	m.otp[row.Email] = row
+	return nil
+}
+
+func (m *Memory) OTPByEmail(_ context.Context, email string) (OTPChallenge, error) {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.otp[email]
+	if !ok {
+		return OTPChallenge{}, ErrNotFound
+	}
+	return row, nil
+}
+
+func (m *Memory) IncrementOTPAttempts(_ context.Context, email string) error {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.otp[email]
+	if !ok {
+		return ErrNotFound
+	}
+	row.Attempts++
+	m.otp[email] = row
+	return nil
+}
+
+func (m *Memory) DeleteOTP(_ context.Context, email string) error {
+	m.lock()
+	defer m.unlock()
+	delete(m.otp, email)
+	return nil
+}
+
+func (m *Memory) UpsertIdentity(_ context.Context, row Identity) error {
+	m.lock()
+	defer m.unlock()
+	if m.identities == nil {
+		m.identities = map[string]Identity{}
+	}
+	m.identities[row.Provider+"/"+row.Subject] = row
+	return nil
+}
+
+func (m *Memory) IdentityByProviderSubject(_ context.Context, provider, subject string) (Identity, error) {
+	m.lock()
+	defer m.unlock()
+	row, ok := m.identities[provider+"/"+subject]
+	if !ok {
+		return Identity{}, ErrNotFound
+	}
+	return row, nil
 }
 
 func normalizeEmail(email string) string {

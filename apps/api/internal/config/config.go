@@ -50,6 +50,7 @@ type Config struct {
 	AppEnv                 string
 	PaymentProvider        string
 	PaymentCheckoutBaseURL string
+	GoogleOAuthClientIDs   []string
 }
 
 // Load reads and validates required environment variables.
@@ -88,6 +89,7 @@ func Load() (Config, error) {
 		AppEnv:                   getenv("APP_ENV", ""),
 		PaymentProvider:          getenv("PAYMENT_PROVIDER", "fake"),
 		PaymentCheckoutBaseURL:   os.Getenv("PAYMENT_CHECKOUT_BASE_URL"),
+		GoogleOAuthClientIDs:     splitCSV(os.Getenv("GOOGLE_OAUTH_CLIENT_ID")),
 	}
 
 	if err := cfg.Validate(); err != nil {

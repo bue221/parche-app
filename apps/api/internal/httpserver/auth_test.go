@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -434,4 +435,59 @@ func TestPasswordResetValidationAndUnknownToken(t *testing.T) {
 	rr = httptest.NewRecorder()
 	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/v1/auth/password/reset", strings.NewReader(`{"token":"not-a-real-token","password":"correct-horse"}`)))
 	assertAPICode(t, rr, http.StatusGone, apierr.Gone)
+}
+
+func TestOTPHTTPCreatesSession(t *testing.T) {
+	store := auth.NewMemory()
+	tokens := &auth.Tokens{
+		AccessSecret:  []byte("0123456789abcdef0123456789abcdef"),
+		RefreshPepper: []byte("refresh-pepper-32-bytes-minimum!"),
+	}
+	var logs bytes.Buffer
+	svc, err := auth.NewService(store, tokens, auth.FastArgon2(), slog.New(slog.NewJSONHandler(&logs, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inbox := &mailer.Memory{}
+	svc.Mailer = inbox
+	svc.OTPCode = func() (string, error) { return "654321", nil }
+	svc.GoogleAudiences = []string{"web"}
+	svc.Google = fakeGoogleHTTP{email: "g@example.com", sub: "s1", aud: "web"}
+	access := JWTAccess{Tokens: tokens, Lookup: svc.AccessIdentity}
+	mux := newMux(slog.New(slog.NewJSONHandler(&logs, nil)), config.Config{CORSOrigins: []string{"http://localhost:3000"}}, ratelimit.NewMemory(), nil, nil, Routes{
+		Access: access,
+		Auth:   svc,
+	})
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/otp/request", strings.NewReader(`{"email":"otp@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("request status=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/auth/otp/verify", strings.NewReader(`{"email":"otp@example.com","code":"654321"}`))
+	req.Header.Set("Content-Type", "application/json")
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("verify status=%d body=%s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/auth/oauth", strings.NewReader(`{"provider":"google","id_token":"id"}`))
+	req.Header.Set("Content-Type", "application/json")
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("oauth status=%d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+type fakeGoogleHTTP struct {
+	email, sub, aud string
+}
+
+func (f fakeGoogleHTTP) Verify(context.Context, string) (auth.GoogleIdentity, error) {
+	return auth.GoogleIdentity{Email: f.email, Subject: f.sub, EmailVerified: true, Audience: f.aud}, nil
 }

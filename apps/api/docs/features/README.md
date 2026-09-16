@@ -37,7 +37,10 @@ F01 runtime
           ├─ F23 editorial
           ├─ F24 recomendaciones
           ├─ F25 clubes
-          └─ F26 email
+          ├─ F26 email
+          ├─ F28 OTP
+          ├─ F29 Google
+          └─ F30 saves / sync / me invites
 ```
 
 ## Catálogo
@@ -71,6 +74,9 @@ F01 runtime
 | [F25](F25-clubs-directory.md) | Directorio de clubes | Venues persistentes explorables |
 | [F26](F26-transactional-email.md) | Email transaccional | Reset, invite, compra, digest admin |
 | [F27](F27-platform-admin.md) | Admin de plataforma | Aprobar eventos, gestionar usuarios y roles |
+| [F28](F28-auth-otp.md) | Auth OTP | Email + código 6 dígitos, password_hash nullable |
+| [F29](F29-auth-google.md) | Auth Google | ID token, `auth_identities` |
+| [F30](F30-event-saves.md) | Saves y sync | Guardar eventos, merge local, invites pending |
 
 ## Cómo está escrita cada feature
 

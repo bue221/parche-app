@@ -61,6 +61,8 @@ func registerUploadRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/uploads", h.create)
 	mux.HandleFunc("PUT /v1/uploads/direct", h.directPut)
 	mux.HandleFunc("GET /v1/uploads/direct", h.directGet)
+	mux.HandleFunc("GET /media/{key...}", h.publicGet)
+	mux.HandleFunc("GET /v1/media/{key...}", h.publicGet)
 }
 
 type uploadHandler struct {
@@ -271,6 +273,49 @@ func (h uploadHandler) directGet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "inline")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, body)
+}
+
+func (h uploadHandler) publicGet(w http.ResponseWriter, r *http.Request) {
+	key := strings.Trim(r.PathValue("key"), "/")
+	if blockedMediaKey(key) {
+		w.Header().Set("Cache-Control", "no-store")
+		apierr.Write(w, r, apierr.NotFound, "", nil)
+		return
+	}
+	body, info, err := h.store.Get(r.Context(), key)
+	if err != nil {
+		w.Header().Set("Cache-Control", "no-store")
+		apierr.Write(w, r, apierr.NotFound, "", nil)
+		return
+	}
+	defer body.Close()
+	ct := info.ContentType
+	if ct == "" {
+		ct = objectstore.MIMEFromKey(key)
+	}
+	w.Header().Set("Content-Type", ct)
+	if audioPreviewKey(key) {
+		w.Header().Set("Cache-Control", "public, max-age=600")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+	}
+	w.Header().Set("Content-Disposition", "inline")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, body)
+}
+
+func blockedMediaKey(key string) bool {
+	if key == "" {
+		return true
+	}
+	if !strings.Contains("/"+key+"/", "/audio/") {
+		return false
+	}
+	return !audioPreviewKey(key)
+}
+
+func audioPreviewKey(key string) bool {
+	return strings.HasSuffix(key, ".preview.mp3") || strings.HasSuffix(key, ".preview.m4a")
 }
 
 func writeDirectError(w http.ResponseWriter, r *http.Request, err error) {

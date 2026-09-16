@@ -85,7 +85,7 @@ Clave: `JWT_ACCESS_SECRET` o par; **distinta** de `TICKET_SIGNING_KEY` y de `JWT
 
 ## Datos
 
-`users`: id, email, password_hash, display_name, status (`active`/`disabled`), created_at  
+`users`: id, email, password_hash (nullable desde F28), display_name, status (`active`/`disabled`), created_at. OTP y Google (F28/F29) no exigen password.  
 `refresh_tokens`: id, user_id, family_id, token_hash, expires_at, revoked_at, replaced_by, user_agent, created_at
 
 ## Seguridad

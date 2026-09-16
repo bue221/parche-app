@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -113,6 +114,55 @@ func TestUploadsFlyerForbiddenWithoutEventWrite(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer test")
 	mux.ServeHTTP(rr, req)
 	assertAPICode(t, rr, http.StatusForbidden, apierr.Forbidden)
+}
+
+func TestPublicMediaGet(t *testing.T) {
+	dir := t.TempDir()
+	store, err := objectstore.NewFS(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "t/e/flyer/a.png"
+	if err := store.Put(context.Background(), key, "image/png", strings.NewReader("pngdata"), 7); err != nil {
+		t.Fatal(err)
+	}
+	mux := uploadMux(t, store, RejectAccess{}, DenyEventWrite{})
+
+	for _, path := range []string{"/media/" + key, "/v1/media/" + key} {
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s status=%d body=%s", path, rr.Code, rr.Body.String())
+		}
+		if rr.Body.String() != "pngdata" {
+			t.Fatalf("%s body=%q", path, rr.Body.String())
+		}
+		if ct := rr.Header().Get("Content-Type"); !strings.HasPrefix(ct, "image/png") {
+			t.Fatalf("%s ct=%s", path, ct)
+		}
+	}
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/media/t/e/audio/x.mp3", nil))
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("audio status=%d", rr.Code)
+	}
+	if cc := rr.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Fatalf("audio cache=%q", cc)
+	}
+
+	preview := "t/e/audio/x.preview.mp3"
+	if err := store.Put(context.Background(), preview, "audio/mpeg", strings.NewReader("id3"), 3); err != nil {
+		t.Fatal(err)
+	}
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/media/"+preview, nil))
+	if rr.Code != http.StatusOK || rr.Body.String() != "id3" {
+		t.Fatalf("preview status=%d body=%q", rr.Code, rr.Body.String())
+	}
+	if cc := rr.Header().Get("Cache-Control"); cc != "public, max-age=600" {
+		t.Fatalf("preview cache=%q", cc)
+	}
 }
 
 func TestUploadsFSPutAndExists(t *testing.T) {

@@ -57,7 +57,7 @@ func TestKnownTemplates(t *testing.T) {
 	for _, id := range []string{
 		TemplatePasswordReset, TemplateEventInvite, TemplateEmailChange, TemplateTicketClaim,
 		TemplateOrderPaid, TemplateOrderFailed, TemplateEventCancelled, TemplateArtistNewEvent,
-		TemplateAdminDigest,
+		TemplateAdminDigest, TemplateAuthOTP,
 	} {
 		if !KnownTemplate(id) {
 			t.Fatalf("missing %s", id)

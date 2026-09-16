@@ -61,4 +61,4 @@ Admin uses a strong password plus `session_epoch` (no 2FA in MVP). `/v1/admin/*`
 
 ## Next step
 
-Catálogo F01–F27 cerrado.
+Catálogo F01–F27 cerrado; F28–F30 amplían auth liviana y saves.

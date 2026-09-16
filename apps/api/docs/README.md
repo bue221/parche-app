@@ -5,7 +5,7 @@ Product and engineering rules for the Parche backend live in this folder. Agents
 | Doc | Use when |
 |-----|----------|
 | [prd.md](prd.md) | API, Docker, RBAC, media, maps, tokens — visión y contratos globales |
-| [features/README.md](features/README.md) | Índice F01–F27: cada tarea del PRD como feature implementable |
+| [features/README.md](features/README.md) | Índice F01–F30: cada tarea del PRD como feature implementable |
 
 ## How to add a rule doc
 

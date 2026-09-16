@@ -372,3 +372,57 @@ func tokenFromResetURL(t *testing.T, raw string) string {
 	}
 	return tok
 }
+
+func TestOTPCreateSessionAndPasswordLoginFails(t *testing.T) {
+	svc, store := testService(t)
+	inbox := &mailer.Memory{}
+	svc.Mailer = inbox
+	svc.OTPCode = func() (string, error) { return "123456", nil }
+	ctx := context.Background()
+	if err := svc.RequestOTP(ctx, OTPRequestInput{Email: "guest@example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	msg, ok := inbox.Last()
+	if !ok || msg.Vars["code"] != "123456" {
+		t.Fatalf("mail=%+v", msg)
+	}
+	sess, created, err := svc.VerifyOTP(ctx, OTPVerifyInput{Email: "guest@example.com", Code: "123456"})
+	if err != nil || !created || sess.AccessToken == "" {
+		t.Fatalf("verify created=%v err=%v", created, err)
+	}
+	user, err := store.UserByEmail(ctx, "guest@example.com")
+	if err != nil || user.PasswordHash != "" {
+		t.Fatalf("passwordless user=%+v err=%v", user, err)
+	}
+	if _, err := svc.Login(ctx, LoginInput{Email: "guest@example.com", Password: "correct-horse"}); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("login err=%v", err)
+	}
+	if _, _, err := svc.VerifyOTP(ctx, OTPVerifyInput{Email: "guest@example.com", Code: "000000"}); !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("bad code err=%v", err)
+	}
+}
+
+type fakeGoogle struct {
+	ident GoogleIdentity
+	err   error
+}
+
+func (f fakeGoogle) Verify(context.Context, string) (GoogleIdentity, error) {
+	return f.ident, f.err
+}
+
+func TestOAuthGoogleCreatesAndLinks(t *testing.T) {
+	svc, _ := testService(t)
+	svc.GoogleAudiences = []string{"web-client"}
+	svc.Google = fakeGoogle{ident: GoogleIdentity{
+		Subject: "sub-1", Email: "g@example.com", EmailVerified: true, Audience: "web-client",
+	}}
+	sess, created, err := svc.OAuth(context.Background(), OAuthInput{Provider: "google", IDToken: "tok"})
+	if err != nil || !created || sess.User.Email != "g@example.com" {
+		t.Fatalf("oauth created=%v err=%v sess=%+v", created, err, sess.User)
+	}
+	again, created, err := svc.OAuth(context.Background(), OAuthInput{Provider: "google", IDToken: "tok"})
+	if err != nil || created || again.User.ID != sess.User.ID {
+		t.Fatalf("link created=%v err=%v", created, err)
+	}
+}

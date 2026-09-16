@@ -165,6 +165,19 @@ func TestS3GetPublicURLUsesCDN(t *testing.T) {
 	}
 }
 
+func TestS3GetPublicURLLoopbackUsesMediaPath(t *testing.T) {
+	store := &s3Store{publicBase: "http://localhost:9000/parche"}
+	got := store.GetPublicURL("t/e/flyer/a.webp")
+	if got != "/v1/media/t/e/flyer/a.webp" {
+		t.Fatalf("url=%q", got)
+	}
+	store.publicBase = ""
+	got = store.GetPublicURL("t/e/flyer/a.webp")
+	if got != "/v1/media/t/e/flyer/a.webp" {
+		t.Fatalf("empty base url=%q", got)
+	}
+}
+
 func TestBuildKeyAvatarNotUnderEvents(t *testing.T) {
 	key, err := BuildKey(KindAvatar, "tenant", "event-should-be-ignored", "user-1", "image/png")
 	if err != nil {

@@ -222,7 +222,8 @@ func limitSpec(r *http.Request) (key string, limit int, window time.Duration, ap
 
 func isAuthHotPath(path string) bool {
 	switch path {
-	case "/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh":
+	case "/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh",
+		"/v1/auth/otp/request", "/v1/auth/otp/verify", "/v1/auth/oauth":
 		return true
 	default:
 		return false

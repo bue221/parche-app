@@ -246,6 +246,10 @@ type Store interface {
 	ListTicketHolderIDs(ctx context.Context, eventID string) ([]string, error)
 	CountPublished(ctx context.Context) (int, error)
 	GMVSince(ctx context.Context, since time.Time) (int, error)
+	SaveEvent(ctx context.Context, row EventSave) error
+	UnsaveEvent(ctx context.Context, userID, eventID string) error
+	SavedEventIDs(ctx context.Context, userID string) ([]string, error)
+	PendingInvitesFor(ctx context.Context, email, userID string) ([]Invite, error)
 }
 
 // Tenancy is F06 membership plus user lookup for invites. auth.Store satisfies it.

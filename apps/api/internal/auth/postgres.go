@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -57,7 +58,7 @@ func (s *PG) CreateAccount(ctx context.Context, acc Account) error {
 		}
 		_, err := pg.q.Exec(ctx, `
 			INSERT INTO users (id, email, password_hash, display_name, phone, status, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7)`,
 			acc.User.ID, acc.User.Email, acc.User.PasswordHash, acc.User.DisplayName, acc.User.Phone, acc.User.Status, acc.User.CreatedAt)
 		if err != nil {
 			return mapUniqueEmail(err)
@@ -104,7 +105,9 @@ const userSelect = `SELECT id, email, password_hash, display_name, COALESCE(bio,
 
 func scanUserCols(scan func(dest ...any) error) (User, error) {
 	var u User
-	err := scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut, &u.Phone)
+	var hash sql.NullString
+	err := scan(&u.ID, &u.Email, &hash, &u.DisplayName, &u.Bio, &u.AvatarAssetID, &u.Status, &u.SessionEpoch, &u.CreatedAt, &u.EmailOptOut, &u.Phone)
+	u.PasswordHash = hash.String
 	return u, err
 }
 
@@ -613,4 +616,64 @@ func mapUniqueConflict(err error) error {
 		return ErrConflict
 	}
 	return err
+}
+
+func (s *PG) UpsertOTP(ctx context.Context, row OTPChallenge) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO auth_otp_challenges (email, code_hash, expires_at, attempts, created_at)
+		VALUES ($1, $2, $3, 0, $4)
+		ON CONFLICT (email) DO UPDATE SET
+			code_hash = EXCLUDED.code_hash,
+			expires_at = EXCLUDED.expires_at,
+			attempts = 0,
+			created_at = EXCLUDED.created_at`,
+		row.Email, row.CodeHash, row.ExpiresAt, row.CreatedAt)
+	return err
+}
+
+func (s *PG) OTPByEmail(ctx context.Context, email string) (OTPChallenge, error) {
+	var row OTPChallenge
+	err := s.q.QueryRow(ctx, `
+		SELECT email, code_hash, expires_at, attempts, created_at
+		FROM auth_otp_challenges WHERE email = $1`, email).Scan(
+		&row.Email, &row.CodeHash, &row.ExpiresAt, &row.Attempts, &row.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return OTPChallenge{}, ErrNotFound
+	}
+	if err != nil {
+		return OTPChallenge{}, err
+	}
+	row.ExpiresAt = row.ExpiresAt.UTC()
+	row.CreatedAt = row.CreatedAt.UTC()
+	return row, nil
+}
+
+func (s *PG) IncrementOTPAttempts(ctx context.Context, email string) error {
+	_, err := s.q.Exec(ctx, `UPDATE auth_otp_challenges SET attempts = attempts + 1 WHERE email = $1`, email)
+	return err
+}
+
+func (s *PG) DeleteOTP(ctx context.Context, email string) error {
+	_, err := s.q.Exec(ctx, `DELETE FROM auth_otp_challenges WHERE email = $1`, email)
+	return err
+}
+
+func (s *PG) UpsertIdentity(ctx context.Context, row Identity) error {
+	_, err := s.q.Exec(ctx, `
+		INSERT INTO auth_identities (user_id, provider, subject)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (provider, subject) DO UPDATE SET user_id = EXCLUDED.user_id`,
+		row.UserID, row.Provider, row.Subject)
+	return err
+}
+
+func (s *PG) IdentityByProviderSubject(ctx context.Context, provider, subject string) (Identity, error) {
+	var row Identity
+	err := s.q.QueryRow(ctx, `
+		SELECT user_id, provider, subject FROM auth_identities
+		WHERE provider = $1 AND subject = $2`, provider, subject).Scan(&row.UserID, &row.Provider, &row.Subject)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Identity{}, ErrNotFound
+	}
+	return row, err
 }

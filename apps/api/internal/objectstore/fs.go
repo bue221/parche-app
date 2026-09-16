@@ -208,7 +208,7 @@ func (s *fsStore) GetPresign(_ context.Context, key string, ttl time.Duration) (
 }
 
 func (s *fsStore) GetPublicURL(key string) string {
-	return "/media/" + key
+	return PublicMediaURL(key)
 }
 
 func (s *fsStore) ConsumePut(ctx context.Context, token, contentType string, body io.Reader, contentLength int64) error {
