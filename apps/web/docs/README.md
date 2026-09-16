@@ -5,6 +5,7 @@ Product and engineering rules for Parche web live in this folder. Agents and hum
 | Doc | Use when |
 |-----|----------|
 | [ui/design.md](ui/design.md) | Building or restyling UI: light/dark tokens, type, radii, components |
+| [features/feat-001-event-detail-seo.md](features/feat-001-event-detail-seo.md) | Public event detail pages: ISR, metadata, sitemap, CTA to the app |
 
 ## How to add a rule doc
 

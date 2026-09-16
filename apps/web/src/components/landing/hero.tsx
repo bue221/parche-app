@@ -1,96 +1,123 @@
-import type { CSSProperties } from "react";
-
+import Image from "next/image";
 import {
-  FlyerColumn,
-  LEFT_FLYERS,
-  Marquee,
-  RIGHT_FLYERS,
-} from "@/components/landing/hero-atmosphere";
-import { Button } from "@/components/ui/button";
-import { Stack } from "@/components/ui/layout";
-import { Tag } from "@/components/ui/tag";
-import { Text } from "@/components/ui/text";
-import { siteConfig } from "@/lib/site";
+  Disc3,
+  Landmark,
+  Martini,
+  MoreHorizontal,
+  Music2,
+  Sparkles,
+  Theater,
+  type LucideIcon,
+} from "lucide-react";
 
-const GENRES = ["Concierto", "Club", "Festival", "Teatro", "Fiesta"] as const;
+import { HeroPhone } from "@/components/landing/hero-phone";
+import { HeroSearch } from "@/components/landing/hero-search";
+import { Icon } from "@/components/ui/icon";
+import { DEFAULT_CITY } from "@/constants/cities";
+import { HERO_KICKERS, LANDING_CATEGORIES } from "@/constants/genres";
+import type { PublicEventCard } from "@/lib/events";
+import { socialAvatars } from "@/lib/landing";
+import { appWebHref } from "@/lib/site";
+import { cn } from "@/lib/utils";
 
-function Hero() {
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  music: Music2,
+  disc: Disc3,
+  sparkles: Sparkles,
+  masks: Theater,
+  wine: Martini,
+  landmark: Landmark,
+  more: MoreHorizontal,
+};
+
+function Hero({ events }: { events: readonly PublicEventCard[] }) {
+  const appHref = appWebHref("/");
+  const avatars = socialAvatars(events);
+
   return (
     <section
       aria-labelledby="hero-heading"
-      className="relative isolate flex min-h-[calc(100svh-5rem)] flex-col overflow-x-hidden"
+      className="relative isolate overflow-hidden bg-background -mt-[4.75rem] pt-[6.5rem] sm:-mt-[5.25rem] sm:pt-[7.5rem]"
     >
-      <Marquee />
-      <div className="mx-auto grid w-full max-w-page flex-1 grid-cols-1 px-ds-24 py-ds-24 lg:grid-cols-[8rem_minmax(0,1fr)_8rem] lg:gap-ds-16 xl:grid-cols-[13rem_minmax(0,1fr)_13rem] xl:gap-ds-24">
-        <FlyerColumn flyers={LEFT_FLYERS} align="start" />
-        <Stack className="mx-auto w-full max-w-xl items-center self-center text-center">
-          <div className="flex flex-wrap items-center justify-center gap-ds-8 animate-parche-fade">
-            <Tag>App de eventos en vivo</Tag>
-            <Tag className="border-foreground bg-foreground text-background animate-parche-blink">
-              Live
-            </Tag>
-          </div>
-          <Text
-            as="h1"
+      <div className="pointer-events-none absolute inset-0 page-glow" aria-hidden />
+      <Image
+        src="/landing/hero-crowd.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="pointer-events-none object-cover object-[center_30%] opacity-80 dark:opacity-90"
+      />
+      <div className="hero-photo-scrim pointer-events-none absolute inset-0" aria-hidden />
+
+      <div className="relative z-10 mx-auto grid max-w-page items-center gap-ds-32 px-ds-16 pb-ds-40 pt-ds-16 sm:px-ds-24 sm:pb-ds-48 sm:pt-ds-24 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:pb-ds-80 lg:pt-ds-32">
+        <div className="flex w-full min-w-0 max-w-xl flex-col items-start">
+          <p className="mb-ds-12 font-favorit text-[11px] font-bold tracking-favorit text-muted-foreground uppercase sm:mb-ds-16 sm:text-caption">
+            {HERO_KICKERS.join(" · ")}
+          </p>
+          <h1
             id="hero-heading"
-            variant="display"
-            className="max-w-[14ch] uppercase"
+            className="max-w-[11ch] font-favorit text-[clamp(2.25rem,9vw,4.75rem)] font-bold tracking-tight text-foreground animate-parche-stamp sm:text-display"
           >
-            <span
-              className="block animate-parche-stamp"
-              style={{ animationDelay: "80ms" }}
-            >
-              Welcome
-            </span>
-            <span
-              className="block animate-parche-stamp"
-              style={{ animationDelay: "170ms" }}
-            >
-              to the
-            </span>
-            <span className="hero-parche-line block">Parche</span>
-          </Text>
-          <Text
-            variant="lead"
-            className="max-w-md animate-parche-rise"
-            style={{ animationDelay: "360ms" }}
-          >
-            Encuentra conciertos, rumba y teatro en tu ciudad. Escoge la noche
-            y confirma que vas.
-          </Text>
-          <div
-            className="mt-ds-8 flex flex-wrap items-center justify-center gap-ds-12 animate-parche-rise"
-            style={{ animationDelay: "440ms" }}
-          >
-            <Button href={siteConfig.appWebUrl ?? "#descarga"}>
-              {siteConfig.appWebUrl ? "Abrir la app" : "Descargar la app"}
-            </Button>
-            <Button href="#eventos" variant="outline">
-              Ver eventos
-            </Button>
+            Qué hay{" "}
+            <span className="text-aurora">hoy</span> en tu ciudad?
+          </h1>
+          <p className="mt-ds-12 max-w-md text-body-sm text-muted-foreground animate-parche-rise sm:mt-ds-16 sm:text-body">
+            Descubre eventos, artistas y lugares. Escoge la noche y confirma
+            que vas.
+          </p>
+          <div className="mt-ds-20 w-full min-w-0 animate-parche-rise sm:mt-ds-24" style={{ animationDelay: "120ms" }}>
+            <HeroSearch actionHref={appHref} defaultCity={DEFAULT_CITY.slug} />
           </div>
-          <ul className="mt-ds-16 flex flex-wrap justify-center gap-ds-8">
-            {GENRES.map((genre, index) => (
-              <li
-                key={genre}
-                className="animate-parche-float"
-                style={
-                  {
-                    animationDelay: `${index * 220}ms`,
-                    "--tilt": `${index % 2 === 0 ? -6 : 5}deg`,
-                  } as CSSProperties
-                }
-              >
-                <Tag className="border-border text-muted-foreground">
-                  {genre}
-                </Tag>
-              </li>
-            ))}
+          <ul className="-mx-ds-16 mt-ds-20 flex w-[calc(100%+2rem)] min-w-0 max-w-none gap-ds-12 overflow-x-auto px-ds-16 pb-ds-4 scrollbar-none sm:mx-0 sm:mt-ds-24 sm:w-full sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+            {LANDING_CATEGORIES.map((category) => {
+              const icon = CATEGORY_ICONS[category.icon] ?? MoreHorizontal;
+              const href =
+                category.id === "mas"
+                  ? "#eventos"
+                  : `${appHref ?? "#eventos"}`;
+              return (
+                <li key={category.id} className="shrink-0">
+                  <a
+                    href={href}
+                    className={cn(
+                      "flex w-[4.5rem] flex-col items-center gap-ds-8 outline-none sm:w-16",
+                      "focus-visible:ring-2 focus-visible:ring-aurora rounded-cards",
+                    )}
+                  >
+                    <span className="flex size-14 items-center justify-center rounded-full border border-border bg-glass text-foreground backdrop-blur-xl sm:size-12">
+                      <Icon as={icon} size={18} className="text-current" />
+                    </span>
+                    <span className="text-center font-favorit text-caption text-muted-foreground">
+                      {category.label}
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
           </ul>
-        </Stack>
-        <FlyerColumn flyers={RIGHT_FLYERS} align="end" />
+          <div className="mt-ds-20 flex w-full min-w-0 items-start gap-ds-12 sm:mt-ds-24 sm:items-center">
+            {avatars.length > 0 ? (
+              <ul className="flex shrink-0 -space-x-2" aria-hidden>
+                {avatars.map((src) => (
+                  <li key={src} className="relative size-8 overflow-hidden rounded-full ring-2 ring-background">
+                    <Image src={src} alt="" fill sizes="32px" className="object-cover" />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <p className="min-w-0 flex-1 text-body-sm leading-snug text-muted-foreground">
+              {events.length === 1
+                ? "1 evento publicado. El parche ya está armado."
+                : events.length > 1
+                  ? `${events.length} eventos publicados. El parche ya está armado.`
+                  : "El parche se está armando en tu ciudad."}
+            </p>
+          </div>
+        </div>
+
+        <HeroPhone />
       </div>
-      <Marquee reverse />
     </section>
   );
 }

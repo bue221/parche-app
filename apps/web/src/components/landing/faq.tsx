@@ -1,32 +1,33 @@
 import { FAQS } from "@/constants/faqs";
-import { Container, Section } from "@/components/ui/layout";
-import { Text } from "@/components/ui/text";
+import { Container, Section, SectionHeading } from "@/components/ui/layout";
 
 function Faq() {
   return (
     <Section id="faq" aria-labelledby="faq-heading">
       <Container>
-        <Text as="h2" id="faq-heading" variant="heading" className="mb-ds-32">
-          Preguntas
-        </Text>
-        <div className="flex flex-col gap-ds-16">
+        <SectionHeading
+          id="faq-heading"
+          title="Preguntas"
+          description="Lo esencial antes de armar el plan."
+        />
+        <div className="flex flex-col gap-ds-12">
           {FAQS.map((item) => (
             <details
               key={item.q}
-              className="group rounded-cards bg-muted p-ds-24 open:bg-muted"
+              className="group rounded-cards border border-border bg-surface p-ds-24 shadow-card"
             >
-              <summary className="cursor-pointer list-none font-favorit text-subheading font-bold tracking-favorit outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-foreground [&::-webkit-details-marker]:hidden">
+              <summary className="cursor-pointer list-none font-favorit text-subheading font-bold tracking-tight outline-none marker:content-none focus-visible:ring-2 focus-visible:ring-aurora [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-ds-16">
                   {item.q}
                   <span
                     aria-hidden
-                    className="text-caption font-bold transition-transform group-open:rotate-45"
+                    className="text-caption font-bold text-aurora transition-transform group-open:rotate-45"
                   >
                     +
                   </span>
                 </span>
               </summary>
-              <p className="mt-ds-12 max-w-2xl font-favorit text-body tracking-favorit text-muted-foreground">
+              <p className="mt-ds-12 max-w-2xl font-favorit text-body text-muted-foreground">
                 {item.a}
               </p>
             </details>

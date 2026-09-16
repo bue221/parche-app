@@ -1,129 +1,138 @@
+import Image from "next/image";
+import Link from "next/link";
+import { Heart } from "lucide-react";
+
 import { Reveal } from "@/components/motion/reveal";
-import { Container, Section, Stack } from "@/components/ui/layout";
+import { Button } from "@/components/ui/button";
+import { Container, EmptyPanel, Section, SectionHeading } from "@/components/ui/layout";
 import { Tag } from "@/components/ui/tag";
-import { Text } from "@/components/ui/text";
+import { eventPath, type PublicEventCard } from "@/lib/events";
+import { ageLabel, formatEventPosterBadge } from "@/lib/format";
+import { firstGenre, flyerSrc, placeLine } from "@/lib/landing";
+import { appWebHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-type EventPoster = {
-  id: string;
-  title: string;
-  venue: string;
-  city: string;
-  date: string;
-  genre: string;
-  art: "ink" | "paper" | "confirm";
-};
-
-const EVENTS: EventPoster[] = [
-  {
-    id: "sala-negra",
-    title: "Sala Negra",
-    venue: "Teatro Amnesia",
-    city: "Bogotá",
-    date: "12 Sep",
-    genre: "Concierto",
-    art: "ink",
-  },
-  {
-    id: "rumba-4am",
-    title: "Rumba 4AM",
-    venue: "Club Horario",
-    city: "Medellín",
-    date: "18 Sep",
-    genre: "Club",
-    art: "confirm",
-  },
-  {
-    id: "teatro-abierto",
-    title: "Teatro Abierto",
-    venue: "Casa del Río",
-    city: "Cali",
-    date: "21 Sep",
-    genre: "Teatro",
-    art: "paper",
-  },
-];
-
-function PosterArt({ event }: { event: EventPoster }) {
-  const surface =
-    event.art === "ink"
-      ? "bg-pitch-black text-paper-white ring-1 ring-foreground"
-      : event.art === "confirm"
-        ? "bg-confirm text-pitch-black"
-        : "bg-ash-gray text-pitch-black";
-
+function DateBadge({ iso }: { iso: string }) {
+  const badge = formatEventPosterBadge(iso);
   return (
-    <div
-      className={cn(
-        "relative flex aspect-3/4 flex-col justify-between overflow-hidden rounded-images p-ds-16",
-        surface,
-      )}
-    >
-      <span className="font-favorit text-caption font-bold tracking-favorit uppercase motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-parche motion-safe:group-hover:translate-x-1">
-        {event.genre}
+    <span className="absolute top-ds-12 left-ds-12 z-10 rounded-xl bg-pitch-black/70 px-ds-8 py-ds-8 text-center font-favorit text-paper-white backdrop-blur-md">
+      <span className="block text-[10px] font-bold tracking-favorit uppercase">
+        {badge.weekday}
       </span>
-      <p className="origin-left font-foggy text-[clamp(3rem,8vw,4.5rem)] leading-[0.83] uppercase motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-parche motion-safe:group-hover:scale-[1.04]">
-        {event.title}
-      </p>
-      <span className="font-favorit text-caption font-bold tracking-favorit uppercase">
-        {event.date} · {event.city}
+      <span className="block text-caption font-bold tracking-tight">
+        {badge.dayMonth}
       </span>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-ds-16 bottom-ds-12 h-px origin-left scale-x-0 bg-current motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-parche motion-safe:group-hover:scale-x-100"
-      />
-    </div>
+    </span>
   );
 }
 
 function EventCard({
   event,
-  delayMs,
+  delayMs = 0,
 }: {
-  event: EventPoster;
-  delayMs: number;
+  event: PublicEventCard;
+  delayMs?: number;
 }) {
+  const flyer = flyerSrc(event);
+  const place = placeLine(event);
+  const genre = firstGenre(event);
+  const age = ageLabel(event.agePolicy);
+
   return (
-    <Reveal as="article" delayMs={delayMs} className="group flex flex-col gap-ds-8">
-      <div className="motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-parche motion-safe:group-hover:-translate-y-1.5">
-        <PosterArt event={event} />
-      </div>
-      <div className="flex flex-col gap-ds-4">
-        <Text as="h3" variant="headingSm">
-          {event.title}
-        </Text>
-        <Text variant="muted">
-          {event.venue} · {event.city}
-        </Text>
-      </div>
+    <Reveal as="article" delayMs={delayMs} className="group h-full">
+      <Link
+        href={eventPath(event.id)}
+        className={cn(
+          "relative flex aspect-4/5 h-full flex-col overflow-hidden rounded-cards bg-surface shadow-card outline-none",
+          "focus-visible:ring-2 focus-visible:ring-aurora",
+        )}
+      >
+        <div className="absolute inset-0">
+          {flyer ? (
+            <Image
+              src={flyer}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-parche motion-safe:group-hover:scale-[1.05]"
+            />
+          ) : (
+            <div className="flex h-full items-end bg-muted p-ds-16">
+              <span className="font-favorit text-heading font-bold tracking-tight">
+                {event.title}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="card-photo-scrim absolute inset-0" />
+        <DateBadge iso={event.startsAt} />
+        <span
+          aria-hidden
+          className="absolute top-ds-12 right-ds-12 z-10 flex size-9 items-center justify-center rounded-full bg-pitch-black/55 text-paper-white backdrop-blur-md"
+        >
+          <Heart size={14} />
+        </span>
+        <div className="relative z-10 mt-auto flex flex-col gap-ds-8 p-ds-16 text-paper-white">
+          <h3 className="line-clamp-2 font-favorit text-subheading font-bold tracking-tight">
+            {event.title}
+          </h3>
+          {place ? (
+            <p className="line-clamp-1 text-caption font-normal tracking-normal text-paper-white/75">
+              {place}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-ds-8">
+            {genre ? <Tag tone="glass">{genre}</Tag> : null}
+            {age ? <Tag tone="glass">{age}</Tag> : null}
+          </div>
+        </div>
+      </Link>
     </Reveal>
   );
 }
 
-function FeaturedEvents() {
+function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
+  const featured = events.slice(0, 8);
+  const allHref = appWebHref("/") ?? "#descarga";
+
   return (
     <Section id="eventos" aria-labelledby="eventos-heading">
       <Container>
-        <Reveal>
-          <Stack className="mb-ds-32 items-start gap-ds-8">
-            <Tag>Esta semana</Tag>
-            <Text as="h2" id="eventos-heading" variant="heading">
-              Qué hay para armar parche
-            </Text>
-            <Text variant="lead" className="max-w-lg">
-              Conciertos, clubes y teatro en Bogotá, Medellín y Cali. Lo que
-              está pasando, no un scroll infinito.
-            </Text>
-          </Stack>
-        </Reveal>
-        <div className="grid gap-ds-24 md:grid-cols-3">
-          {EVENTS.map((event, index) => (
-            <EventCard key={event.id} event={event} delayMs={index * 90} />
-          ))}
-        </div>
+        <SectionHeading
+          id="eventos-heading"
+          title="Eventos destacados"
+          description="No te pierdas lo mejor que viene."
+          action={
+            events.length > 0 ? (
+              <a
+                href={allHref}
+                className="font-favorit text-body-sm text-muted-foreground outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora"
+              >
+                Ver todos
+              </a>
+            ) : null
+          }
+        />
+        {featured.length === 0 ? (
+          <EmptyPanel
+            title="Aún no hay fechas publicadas"
+            body="Cuando salga el próximo cartel, aparece aquí. Entra a la app para armar el parche o crear una fecha."
+            action={
+              <Button href={allHref} size="sm">
+                Entrar a la app
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-ds-16 sm:grid-cols-2 lg:grid-cols-4">
+            {featured.map((event, index) => (
+              <EventCard key={event.id} event={event} delayMs={index * 70} />
+            ))}
+          </div>
+        )}
       </Container>
     </Section>
   );
 }
 
-export { FeaturedEvents };
+export { EventCard, FeaturedEvents };

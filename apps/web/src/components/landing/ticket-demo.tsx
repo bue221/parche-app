@@ -32,7 +32,7 @@ function TicketStub({ printing }: { printing: boolean }) {
     <article
       className={cn(
         "ticket-stub relative mx-auto w-[min(100%,18rem)] bg-paper-white text-pitch-black",
-        printing && "is-printing",
+        printing ? "is-printing" : "is-waiting",
       )}
       aria-label={`Ticket de ejemplo: ${TICKET.event}, ${TICKET.venue}, ${TICKET.city}`}
     >
@@ -43,7 +43,7 @@ function TicketStub({ printing }: { printing: boolean }) {
         {HOLES.map((hole) => (
           <span
             key={hole}
-            className="size-2.5 shrink-0 -translate-y-1/2 rounded-full bg-muted"
+            className="size-2.5 shrink-0 -translate-y-1/2 rounded-full bg-[#1c1c26]"
           />
         ))}
       </div>
@@ -53,7 +53,7 @@ function TicketStub({ printing }: { printing: boolean }) {
           <span className="font-favorit text-caption font-bold tracking-favorit uppercase">
             Parche
           </span>
-          <span className="font-favorit text-caption font-bold tracking-favorit text-stone uppercase">
+          <span className="font-favorit text-caption font-bold tracking-favorit text-heat uppercase">
             En vivo
           </span>
         </div>
@@ -132,7 +132,7 @@ function TicketStub({ printing }: { printing: boolean }) {
 function TicketPrinter() {
   const stageRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
-  const [printing, setPrinting] = useState(false);
+  const [printing, setPrinting] = useState(true);
   const [busy, setBusy] = useState(false);
   const [run, setRun] = useState(0);
 
@@ -187,7 +187,7 @@ function TicketPrinter() {
   return (
     <div
       ref={stageRef}
-      className="mx-auto w-full max-w-sm rounded-cards bg-muted px-ds-24 py-ds-32"
+      className="mx-auto w-full max-w-sm rounded-cards border border-border bg-muted px-ds-24 py-ds-32 shadow-card"
     >
       <div className="rounded-t-cards bg-pitch-black px-ds-16 py-ds-12 text-paper-white ring-1 ring-foreground">
         <div className="flex items-center justify-between font-favorit text-caption font-bold tracking-favorit uppercase">
@@ -228,7 +228,7 @@ function TicketDemo() {
         <div className="grid items-center gap-ds-48 lg:grid-cols-2">
           <Reveal>
             <Stack className="items-start gap-ds-8">
-              <Tag>Tu ticket</Tag>
+              <Tag tone="heat">Tu ticket</Tag>
               <Text as="h2" id="ticket-heading" variant="heading">
                 Así llega tu entrada
               </Text>

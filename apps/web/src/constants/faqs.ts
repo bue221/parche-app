@@ -5,7 +5,11 @@ export const FAQS = [
   },
   {
     q: "¿Parche vende entradas?",
-    a: "Parche te muestra la noche: quién toca, a qué hora y en qué lugar. El checkout vive en la app cuando el evento lo permite; esta web es la puerta de entrada.",
+    a: "Esta web es la vitrina: quién toca, a qué hora y en qué lugar. El checkout, el QR y la puerta viven en la app.",
+  },
+  {
+    q: "¿Puedo gestionar mis eventos desde el navegador?",
+    a: "Sí. Entra a la app web para crear fechas, vender tiquetes y escanear en puerta. La landing no sustituye esa operación.",
   },
   {
     q: "¿En qué ciudades está Parche?",

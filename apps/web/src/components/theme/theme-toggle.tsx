@@ -2,29 +2,31 @@
 
 import { Moon, Sun } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { applyTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
-function ThemeToggle() {
+function ThemeToggle({ className }: { className?: string }) {
   function toggle() {
-    const next = document.documentElement.classList.contains("dark")
-      ? "light"
-      : "dark";
+    const root = document.documentElement;
+    const next = root.classList.contains("dark") ? "light" : "dark";
     applyTheme(next);
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
+      type="button"
       onClick={toggle}
       aria-label="Cambiar tema claro u oscuro"
       title="Cambiar tema"
+      className={cn(
+        "inline-flex size-10 shrink-0 items-center justify-center rounded-full text-foreground outline-none",
+        "hover:bg-muted focus-visible:ring-2 focus-visible:ring-aurora",
+        className,
+      )}
     >
-      <Icon as={Sun} size={16} className="hidden dark:block" />
-      <Icon as={Moon} size={16} className="block dark:hidden" />
-    </Button>
+      <Sun aria-hidden className="hidden size-4 dark:block" />
+      <Moon aria-hidden className="block size-4 dark:hidden" />
+    </button>
   );
 }
 

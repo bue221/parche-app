@@ -1,24 +1,30 @@
 export const Colors = {
   light: {
-    text: "#000000",
-    background: "#ffffff",
-    backgroundElement: "#eeeeee",
-    backgroundSelected: "#d9d9d9",
-    textSecondary: "#595959",
-    textMuted: "#808080",
-    charcoal: "#333333",
-    border: "#d9d9d9",
+    text: "#0b0b12",
+    background: "#f4f4f7",
+    surface: "#ffffff",
+    backgroundElement: "#ececf1",
+    backgroundSelected: "#e2e2ea",
+    textSecondary: "#5c5c6e",
+    textMuted: "#8a8a9b",
+    charcoal: "#1c1c26",
+    border: "rgb(11 11 18 / 0.1)",
+    aurora: "#b8a4ff",
+    neon: "#3ddcff",
     confirm: "#7ffeb1",
   },
   dark: {
-    text: "#ffffff",
-    background: "#000000",
-    backgroundElement: "#333333",
-    backgroundSelected: "#595959",
-    textSecondary: "#808080",
-    textMuted: "#808080",
-    charcoal: "#eeeeee",
-    border: "#333333",
+    text: "#f5f5f8",
+    background: "#07070c",
+    surface: "#12121a",
+    backgroundElement: "#1c1c26",
+    backgroundSelected: "#2a2a36",
+    textSecondary: "#9a9aab",
+    textMuted: "#8a8a9b",
+    charcoal: "#ececf1",
+    border: "rgb(245 245 248 / 0.1)",
+    aurora: "#b8a4ff",
+    neon: "#3ddcff",
     confirm: "#7ffeb1",
   },
 } as const;
@@ -35,12 +41,12 @@ export const Spacing = {
 } as const;
 
 export const Radii = {
-  small: 4,
-  cards: 8,
-  images: 8,
-  navelements: 20,
+  small: 8,
+  cards: 20,
+  images: 20,
+  navelements: 28,
   buttons: 40,
   tags: 100,
 } as const;
 
-export const MaxContentWidth = 1200;
+export const MaxContentWidth = 1280;

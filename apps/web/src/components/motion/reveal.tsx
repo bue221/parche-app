@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -18,12 +18,10 @@ function Reveal({
   as: Comp = "div",
 }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
@@ -31,11 +29,11 @@ function Reveal({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisible(true);
+          node.classList.add("reveal-in");
           observer.disconnect();
         }
       },
-      { threshold: 0.16, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0.08, rootMargin: "0px 0px -4% 0px" },
     );
 
     observer.observe(node);
@@ -47,7 +45,7 @@ function Reveal({
       ref={(el) => {
         ref.current = el;
       }}
-      className={cn("reveal", visible && "reveal-in", className)}
+      className={cn("reveal", className)}
       style={{ "--reveal-delay": `${delayMs}ms` } as CSSProperties}
     >
       {children}

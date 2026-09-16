@@ -22,19 +22,20 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 |------|--------|
 | [docs/README.md](docs/README.md) | Index of all project rule docs |
 | [docs/ui/design.md](docs/ui/design.md) | Visual system: light/dark tokens, type, components |
+| [docs/features/feat-001-event-detail-seo.md](docs/features/feat-001-event-detail-seo.md) | Public event pages (ISR, metadata, CTA to the app) |
 
 ## Stack
 
-Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript. Visual tokens match `app-frontend`. Landing is the only public indexed route.
+Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript. Visual tokens match `app-frontend`. Indexed routes: landing and `/eventos/{id}` (published). Do not index `/sistema`.
 
 ## Do
 
-- Use semantic color tokens for chrome (`bg-background`, `text-foreground`, `bg-primary`).
-- Keep display type (Antonio / Foggy) for hero-scale headlines only.
+- Use semantic color tokens for chrome (`bg-background`, `text-foreground`, `bg-primary`, `bg-surface`).
+- Keep display type (Inter bold, mixed case) for hero-scale headlines. Antonio is for stamps only.
 - Put SEO metadata in `src/lib/seo.ts` and route `metadata` exports, not ad-hoc `<head>` tags.
 
 ## Don't
 
-- Color on buttons, borders, or text (except `confirm` on success).
-- Shadows or gradients on UI.
+- Wash the page in aurora. Pigment marks the keyword, live, and brand sparks.
+- Use volt/`confirm` as the default button or idle chip.
 - Index `/sistema`.

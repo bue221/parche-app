@@ -18,12 +18,12 @@ export const metadata: Metadata = {
 const PRIMITIVES = [
   { name: "pitch-black", className: "bg-pitch-black" },
   { name: "paper-white", className: "bg-paper-white border border-border" },
-  { name: "ash-gray", className: "bg-ash-gray" },
-  { name: "concrete", className: "bg-concrete" },
-  { name: "charcoal", className: "bg-charcoal" },
-  { name: "slate", className: "bg-slate" },
-  { name: "stone", className: "bg-stone" },
-  { name: "confirm", className: "bg-confirm" },
+  { name: "surface", className: "bg-surface border border-border" },
+  { name: "aurora", className: "bg-aurora" },
+  { name: "neon", className: "bg-neon" },
+  { name: "volt / confirm", className: "bg-confirm" },
+  { name: "amber", className: "bg-amber" },
+  { name: "danger", className: "bg-danger" },
 ] as const;
 
 const SEMANTIC = [
@@ -31,15 +31,17 @@ const SEMANTIC = [
   { name: "foreground", className: "bg-foreground" },
   { name: "primary", className: "bg-primary" },
   { name: "muted", className: "bg-muted" },
+  { name: "aurora-soft", className: "bg-aurora-soft" },
   { name: "border", className: "bg-border" },
+  { name: "glass", className: "bg-glass border border-border" },
 ] as const;
 
 const TYPE = [
-  { variant: "display" as const, sample: "Display / Foggy" },
-  { variant: "heading" as const, sample: "Heading 28" },
-  { variant: "headingSm" as const, sample: "Heading SM 24" },
+  { variant: "display" as const, sample: "Qué hay hoy en tu ciudad?" },
+  { variant: "heading" as const, sample: "Eventos destacados" },
+  { variant: "headingSm" as const, sample: "Heading SM 22" },
   { variant: "subheading" as const, sample: "Subheading 18" },
-  { variant: "default" as const, sample: "Body 16 — tracking Favorit" },
+  { variant: "default" as const, sample: "Body 16 — Inter, tracking normal" },
   { variant: "muted" as const, sample: "Muted copy" },
   { variant: "caption" as const, sample: "Caption 12" },
 ];
@@ -50,13 +52,14 @@ export default function DesignSystemPage() {
       <Section aria-labelledby="ds-heading">
         <Container>
           <Stack className="gap-ds-12">
-            <Tag>Interno · noindex</Tag>
+            <Tag tone="aurora">Interno · noindex</Tag>
             <Text as="h1" id="ds-heading" variant="heading">
               Sistema visual
             </Text>
             <Text variant="lead" className="max-w-xl">
-              Mismos tokens que app-frontend. Chrome en semántica. Color solo
-              en artwork y en confirm.
+              Canvas cinematográfico: foto primero, chrome de vidrio encima.
+              Aurora marca la palabra clave. El CTA primario es inverso — blanco
+              en oscuro, negro en claro.
             </Text>
           </Stack>
         </Container>
@@ -70,7 +73,7 @@ export default function DesignSystemPage() {
           <ul className="grid grid-cols-2 gap-ds-16 md:grid-cols-4">
             {PRIMITIVES.map((swatch) => (
               <li key={swatch.name} className="flex flex-col gap-ds-8">
-                <div className={`h-20 rounded-cards ${swatch.className}`} />
+                <div className={`h-20 rounded-cards ring-1 ring-border ${swatch.className}`} />
                 <Text variant="caption">{swatch.name}</Text>
               </li>
             ))}
@@ -83,10 +86,10 @@ export default function DesignSystemPage() {
           <Text as="h2" id="ds-semantic-heading" variant="headingSm" className="mb-ds-24">
             Semánticos
           </Text>
-          <ul className="grid grid-cols-2 gap-ds-16 md:grid-cols-5">
+          <ul className="grid grid-cols-2 gap-ds-16 md:grid-cols-4 lg:grid-cols-7">
             {SEMANTIC.map((swatch) => (
               <li key={swatch.name} className="flex flex-col gap-ds-8">
-                <div className={`h-20 rounded-cards ${swatch.className}`} />
+                <div className={`h-20 rounded-cards ring-1 ring-border ${swatch.className}`} />
                 <Text variant="caption">{swatch.name}</Text>
               </li>
             ))}
@@ -115,31 +118,33 @@ export default function DesignSystemPage() {
             Componentes
           </Text>
           <div className="flex flex-wrap items-center gap-ds-12">
-            <Button>Filled pill</Button>
-            <Button variant="outline">Outlined pill</Button>
+            <Button>Filled inverse</Button>
+            <Button variant="outline">Outlined</Button>
             <Button variant="ghost">Ghost</Button>
+            <Button variant="signal">Aurora</Button>
+            <Button variant="glass">Glass</Button>
             <Button variant="link">
               Link
               <Icon as={ArrowUpRight} />
             </Button>
-            <Tag>Tag</Tag>
+            <Tag>Tag ink</Tag>
+            <Tag tone="aurora">Hoy</Tag>
+            <Tag tone="glass">Festival</Tag>
+            <Tag tone="confirm">PASA</Tag>
+            <Tag tone="amber">Pendiente</Tag>
+            <Tag tone="danger">Inválido</Tag>
           </div>
         </Container>
       </Section>
 
       <Section band="ink" aria-labelledby="ds-band-heading">
         <Container>
-          <Text
-            as="h2"
-            id="ds-band-heading"
-            variant="display"
-            className="text-background uppercase"
-          >
-            Dark band
+          <span className="mb-ds-16 block h-2 w-ds-48 rounded-full bg-aurora" />
+          <Text as="h2" id="ds-band-heading" variant="display">
+            Banda inversa
           </Text>
-          <p className="mt-ds-16 max-w-md font-favorit text-subheading tracking-favorit text-current/80">
-            Banda invertida: tinta en claro, papel en oscuro. El contraste lo
-            pone el tipo.
+          <p className="mt-ds-16 max-w-md font-favorit text-subheading text-current/80">
+            Tinta en claro, papel en oscuro. Aurora es el acento, no el relleno.
           </p>
         </Container>
       </Section>

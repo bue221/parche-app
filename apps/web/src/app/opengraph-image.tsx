@@ -8,9 +8,6 @@ export const alt = `${siteConfig.name} — ${siteConfig.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const antonio = await readFile(
-  join(process.cwd(), "src/assets/fonts/Antonio-Regular.ttf"),
-);
 const inter = await readFile(
   join(process.cwd(), "src/assets/fonts/Inter-Bold.ttf"),
 );
@@ -25,8 +22,8 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#ffffff",
-          color: "#000000",
+          background: "#07070C",
+          color: "#F5F5F8",
           padding: 64,
         }}
       >
@@ -34,9 +31,7 @@ export default function OpenGraphImage() {
           style={{
             display: "flex",
             fontFamily: "Inter",
-            fontSize: 18,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
+            fontSize: 22,
             fontWeight: 700,
           }}
         >
@@ -46,25 +41,23 @@ export default function OpenGraphImage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            fontFamily: "Antonio",
-            fontSize: 120,
-            lineHeight: 0.83,
-            textTransform: "uppercase",
+            fontFamily: "Inter",
+            fontSize: 72,
+            lineHeight: 0.95,
+            letterSpacing: "-2px",
+            fontWeight: 700,
           }}
         >
-          Welcome
-          <br />
-          to the
-          <br />
-          Parche
+          Qué hay{" "}
+          <span style={{ color: "#B8A4FF" }}>hoy</span>
+          {" "}en tu ciudad?
         </div>
         <div
           style={{
             display: "flex",
             fontFamily: "Inter",
             fontSize: 22,
-            letterSpacing: "0.06em",
-            color: "#595959",
+            color: "#9A9AAB",
           }}
         >
           {siteConfig.tagline}
@@ -73,10 +66,7 @@ export default function OpenGraphImage() {
     ),
     {
       ...size,
-      fonts: [
-        { name: "Antonio", data: antonio, weight: 400, style: "normal" },
-        { name: "Inter", data: inter, weight: 700, style: "normal" },
-      ],
+      fonts: [{ name: "Inter", data: inter, weight: 700, style: "normal" }],
     },
   );
 }

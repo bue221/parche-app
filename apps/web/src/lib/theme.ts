@@ -6,6 +6,7 @@ export function applyTheme(theme: Theme, persist = true) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
   root.classList.toggle("light", theme === "light");
+  root.setAttribute("data-theme", theme);
   root.style.colorScheme = theme;
   if (persist) {
     localStorage.setItem(THEME_STORAGE_KEY, theme);

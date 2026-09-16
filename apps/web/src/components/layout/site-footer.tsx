@@ -3,27 +3,28 @@ import Link from "next/link";
 import { BrandMark } from "@/components/brand/mark";
 import { Container } from "@/components/ui/layout";
 import { Text } from "@/components/ui/text";
-import { siteConfig } from "@/lib/site";
+import { appWebHref, siteConfig } from "@/lib/site";
 
 const FOOTER_LINKS = [
   { href: "/#eventos", label: "Eventos" },
+  { href: "/#ciudades", label: "Ciudades" },
   { href: "/#como", label: "Cómo funciona" },
-  { href: "/#ticket", label: "Ticket" },
   { href: "/#faq", label: "Preguntas" },
   { href: "/sistema", label: "Sistema visual" },
 ] as const;
 
 function SiteFooter() {
+  const appHref = appWebHref("/");
   return (
-    <footer className="border-t border-border py-ds-48">
+    <footer className="border-t border-border bg-background py-ds-48">
       <Container className="flex flex-col gap-ds-32 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-ds-12">
           <Link
             href="/"
-            className="flex w-fit items-center gap-ds-8 outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+            className="flex w-fit items-center gap-ds-8 outline-none focus-visible:ring-2 focus-visible:ring-aurora"
           >
-            <BrandMark className="size-8" />
-            <span className="font-favorit text-body-sm font-bold tracking-favorit">
+            <BrandMark className="size-8 rounded-full" />
+            <span className="font-favorit text-body-sm font-bold text-foreground">
               Parche
             </span>
           </Link>
@@ -37,30 +38,33 @@ function SiteFooter() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="font-favorit text-caption font-bold tracking-favorit text-muted-foreground uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-foreground"
+                className="font-favorit text-caption font-bold tracking-favorit text-muted-foreground uppercase outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora"
               >
                 {item.label}
               </Link>
             </li>
           ))}
-          {siteConfig.appWebUrl ? (
+          {appHref ? (
             <li>
               <a
-                href={siteConfig.appWebUrl}
+                href={appHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-favorit text-caption font-bold tracking-favorit text-muted-foreground uppercase outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-foreground"
+                className="font-favorit text-caption font-bold tracking-favorit text-muted-foreground uppercase outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora"
               >
-                App web
+                Entrar a la app
               </a>
             </li>
           ) : null}
         </ul>
       </Container>
-      <Container className="mt-ds-32">
+      <Container className="mt-ds-32 flex flex-col gap-ds-8 md:flex-row md:items-center md:justify-between">
         <Text variant="helper">
           © {new Date().getFullYear()} {siteConfig.name}. Descubre la noche.
           Confirma que vas.
+        </Text>
+        <Text variant="helper">
+          Fotos de ciudades: Wikimedia Commons.
         </Text>
       </Container>
     </footer>

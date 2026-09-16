@@ -14,8 +14,8 @@ export const metadata: Metadata = defaultMetadata;
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#07070c" },
   ],
   colorScheme: "light dark",
   width: "device-width",
@@ -35,8 +35,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-background font-favorit text-foreground">
         <SkipLink />
         <SiteHeader />
-        {children}
-        <SiteFooter />
+        <div className="flex min-h-full flex-1 flex-col pt-[4.75rem] sm:pt-[5.25rem]">
+          {children}
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );

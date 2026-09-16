@@ -35,3 +35,10 @@ export function absoluteUrl(path = "/"): string {
   if (path === "/") return base;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
+
+export function appWebHref(path = "/"): string | undefined {
+  const base = siteConfig.appWebUrl?.replace(/\/$/, "");
+  if (!base) return undefined;
+  if (path === "/" || path === "") return base;
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}

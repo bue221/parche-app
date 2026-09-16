@@ -3,20 +3,21 @@ import type { ElementType, ComponentPropsWithoutRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-const textVariants = cva("font-favorit tracking-favorit", {
+const textVariants = cva("font-favorit", {
   variants: {
     variant: {
-      default: "text-body font-normal text-foreground",
-      caption: "text-caption font-normal text-foreground",
-      bodySm: "text-body-sm font-normal text-foreground",
-      subheading: "text-subheading font-normal text-foreground",
-      headingSm: "text-heading-sm font-bold text-foreground",
-      heading: "text-heading font-bold text-foreground",
+      default: "text-body font-normal tracking-normal text-foreground",
+      caption:
+        "text-caption font-bold tracking-favorit uppercase text-foreground",
+      bodySm: "text-body-sm font-normal tracking-normal text-foreground",
+      subheading: "text-subheading font-bold tracking-tight text-foreground",
+      headingSm: "text-heading-sm font-bold tracking-tight text-foreground",
+      heading: "text-heading font-bold tracking-tight text-foreground",
       display:
-        "font-foggy text-display font-normal leading-[0.83] tracking-normal text-foreground",
-      lead: "text-subheading font-normal text-muted-foreground",
-      muted: "text-body-sm font-normal text-muted-foreground",
-      helper: "text-caption font-quiet text-stone",
+        "font-favorit text-display font-bold tracking-tight text-foreground",
+      lead: "text-body font-normal tracking-normal text-muted-foreground",
+      muted: "text-body-sm font-normal tracking-normal text-muted-foreground",
+      helper: "text-caption font-quiet tracking-normal normal-case text-stone",
     },
   },
   defaultVariants: {

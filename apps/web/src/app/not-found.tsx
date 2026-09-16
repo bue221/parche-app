@@ -7,7 +7,7 @@ export default function NotFound() {
     <main className="flex flex-1 items-center py-ds-80">
       <Container>
         <Stack className="items-start gap-ds-16">
-          <Text as="h1" variant="display" className="uppercase">
+          <Text as="h1" variant="display">
             404
           </Text>
           <Text variant="lead" className="max-w-md">
