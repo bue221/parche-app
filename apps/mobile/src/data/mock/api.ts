@@ -1,5 +1,6 @@
 import { ApiError } from '@/data/errors';
 import { createId } from '@/data/ids';
+import { useInterestStore } from '@/data/interest-store';
 import { debugLog } from '@/data/log';
 import { wait } from '@/data/mock/delay';
 import { compactTicketCode } from '@/lib/code128';
@@ -17,6 +18,7 @@ import type {
   DevicePermission,
   EventFilters,
   EventTrack,
+  EventWithExtras,
   Follow,
   MediaKind,
   Membership,
@@ -40,11 +42,7 @@ export type Me = Omit<User, 'password'> & {
   memberships: Membership[];
 };
 
-export type EventWithExtras = ParcheEvent & {
-  lineup: Artist[];
-  tracks: EventTrack[];
-  ticketTypes: TicketType[];
-};
+export type { EventWithExtras };
 
 function requireSession(): Session {
   const session = getSession();
@@ -193,6 +191,7 @@ function hydrateEvent(event: ParcheEvent): EventWithExtras {
     lineup,
     tracks: data.tracks.filter((t) => t.eventId === event.id).sort((a, b) => a.sortOrder - b.sortOrder),
     ticketTypes: data.ticketTypes.filter((t) => t.eventId === event.id),
+    gallery: [],
   };
 }
 
@@ -324,6 +323,90 @@ export const mockApi = {
       });
       return this.me();
     },
+
+    async requestOtp(email: string): Promise<void> {
+      await wait();
+      const normalized = email.trim().toLowerCase();
+      if (!normalized.includes('@')) {
+        throw new ApiError('VALIDATION_ERROR', 'Revisa el email');
+      }
+      debugLog('auth', 'otp requested', { email: normalized });
+    },
+
+    async verifyOtp(email: string, code: string): Promise<Me> {
+      await wait();
+      if (code.trim() !== '123456' && !__DEV__) {
+        throw new ApiError('UNAUTHORIZED', 'No pudimos verificar el código');
+      }
+      if (code.trim().length !== 6) {
+        throw new ApiError('UNAUTHORIZED', 'No pudimos verificar el código');
+      }
+      const normalized = email.trim().toLowerCase();
+      let user = getSnapshot().users.find((u) => u.email === normalized);
+      if (!user) {
+        user = {
+          id: createId('user'),
+          email: normalized,
+          password: '',
+          displayName: normalized.split('@')[0] || 'Asistente',
+          profiles: ['attendee'],
+          platformAdmin: false,
+        };
+        useMockStore.getState().setData((d) => {
+          d.users.push(user!);
+        });
+      }
+      rotateSession(user.id);
+      return this.me();
+    },
+
+    async oauthGoogle(_idToken: string): Promise<Me> {
+      await wait();
+      const email = 'google.demo@parche.test';
+      let user = getSnapshot().users.find((u) => u.email === email);
+      if (!user) {
+        user = {
+          id: createId('user'),
+          email,
+          password: '',
+          displayName: 'Google',
+          profiles: ['attendee'],
+          platformAdmin: false,
+        };
+        useMockStore.getState().setData((d) => {
+          d.users.push(user!);
+        });
+      }
+      rotateSession(user.id);
+      return this.me();
+    },
+
+    async syncInterest(input: { artistIds: string[]; eventIds: string[] }): Promise<void> {
+      await wait();
+      const session = requireSession();
+      useMockStore.getState().setData((d) => {
+        for (const artistId of input.artistIds) {
+          if (d.artists.some((a) => a.id === artistId) && !d.follows.some((f) => f.userId === session.userId && f.artistId === artistId)) {
+            d.follows.push({ userId: session.userId, artistId });
+          }
+        }
+        if (!d.eventSaves) d.eventSaves = [];
+        for (const eventId of input.eventIds) {
+          if (d.events.some((e) => e.id === eventId) && !d.eventSaves.some((s) => s.userId === session.userId && s.eventId === eventId)) {
+            d.eventSaves.push({ userId: session.userId, eventId });
+          }
+        }
+      });
+    },
+
+    async invites(): Promise<Membership[]> {
+      await wait();
+      const session = requireSession();
+      const user = getSnapshot().users.find((u) => u.id === session.userId);
+      return getSnapshot().memberships.filter(
+        (m) => m.status === 'pending' && (m.userId === session.userId || (user && m.email === user.email))
+      );
+    },
   },
 
   events: {
@@ -345,6 +428,43 @@ export const mockApi = {
         throw new ApiError('GONE', 'Esta fecha ya no está');
       }
       return hydrateEvent(event);
+    },
+
+    async save(id: string): Promise<void> {
+      await wait();
+      const session = requireSession();
+      useMockStore.getState().setData((d) => {
+        if (!d.eventSaves) d.eventSaves = [];
+        if (d.events.some((e) => e.id === id) && !d.eventSaves.some((s) => s.userId === session.userId && s.eventId === id)) {
+          d.eventSaves.push({ userId: session.userId, eventId: id });
+        }
+      });
+    },
+
+    async unsave(id: string): Promise<void> {
+      await wait();
+      const session = requireSession();
+      useMockStore.getState().setData((d) => {
+        d.eventSaves = (d.eventSaves ?? []).filter((s) => !(s.userId === session.userId && s.eventId === id));
+      });
+    },
+
+    async saved(): Promise<ParcheEvent[]> {
+      await wait();
+      const session = requireSession();
+      const ids = new Set((getSnapshot().eventSaves ?? []).filter((s) => s.userId === session.userId).map((s) => s.eventId));
+      return getSnapshot().events.filter((e) => ids.has(e.id));
+    },
+
+    async similar(id: string): Promise<ParcheEvent[]> {
+      await wait();
+      const event = getSnapshot().events.find((e) => e.id === id);
+      if (!event || event.status !== 'published') {
+        return [];
+      }
+      return getSnapshot().events.filter(
+        (row) => row.id !== id && row.status === 'published' && (row.genre === event.genre || Boolean(row.lat && event.lat))
+      );
     },
 
     async create(input: {
@@ -586,6 +706,9 @@ export const mockApi = {
 
     isFollowing(artistId: string): boolean {
       const session = getSession();
+      if (useInterestStore.getState().isFollowing(artistId)) {
+        return true;
+      }
       if (!session) {
         return false;
       }

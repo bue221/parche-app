@@ -2,8 +2,9 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { AuthSheet } from '@/components/auth-sheet';
 import { BackBar } from '@/components/back-bar';
-import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
+import { LoadError, Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
@@ -14,21 +15,22 @@ import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
-import { setPendingPath } from '@/data/session';
-import { useRequireAuth } from '@/hooks/use-require-auth';
+import { useAuthSnapshot } from '@/data/session';
 import { formatMoney } from '@/lib/format';
 import type { EventWithExtras } from '@/data/types';
 import type { TicketType } from '@/data/types';
 
 export default function CheckoutScreen() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
-  const ok = useRequireAuth(`/checkout/${eventId}`);
+  const { isLoggedIn } = useAuthSnapshot();
   const [event, setEvent] = useState<EventWithExtras | null>(null);
   const [typeId, setTypeId] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const inflight = useRef(false);
+  const pendingType = useRef<TicketType | null>(null);
 
   useEffect(() => {
     void api.events
@@ -42,13 +44,23 @@ export default function CheckoutScreen() {
         const message = userMessage(err);
         setError(message);
         toast(message);
-        setPendingPath(`/checkout/${eventId}`);
       });
   }, [eventId]);
 
-  if (!ok) {
-    return <PendingAuth />;
+  function createOrder(selected: TicketType) {
+    if (inflight.current) return;
+    inflight.current = true;
+    setBusy(true);
+    void api.tickets
+      .createOrder(eventId, selected.id, qty)
+      .then((order) => router.replace(`/orders/${order.id}/pay` as Href))
+      .catch((err) => setError(userMessage(err)))
+      .finally(() => {
+        inflight.current = false;
+        setBusy(false);
+      });
   }
+
   if (error && !event) {
     return <LoadError message={error} />;
   }
@@ -66,64 +78,71 @@ export default function CheckoutScreen() {
   const selected: TicketType | undefined = event.ticketTypes.find((t) => t.id === typeId);
 
   return (
-    <Screen
-      footer={
-        <StickyCta>
-          <View className="gap-ds-8">
-            {selected ? (
-              <Text variant="muted">Total {formatMoney(selected.priceCents * qty, selected.currency)}</Text>
-            ) : null}
-            {error ? <Text>{error}</Text> : null}
-            <Button
-              disabled={busy || !selected}
-              onPress={() => {
-                if (inflight.current || !selected) return;
-                inflight.current = true;
-                setBusy(true);
-                void api.tickets
-                  .createOrder(eventId, selected.id, qty)
-                  .then((order) => router.replace(`/orders/${order.id}/pay` as Href))
-                  .catch((err) => setError(userMessage(err)))
-                  .finally(() => {
-                    inflight.current = false;
-                    setBusy(false);
-                  });
-              }}>
-              <Text>{busy ? 'Reservando…' : 'Ir a pagar'}</Text>
-            </Button>
+    <View className="flex-1">
+      <Screen
+        footer={
+          <StickyCta>
+            <View className="gap-ds-8">
+              {selected ? (
+                <Text variant="muted">Total {formatMoney(selected.priceCents * qty, selected.currency)}</Text>
+              ) : null}
+              {error ? <Text>{error}</Text> : null}
+              <Button
+                disabled={busy || !selected}
+                onPress={() => {
+                  if (!selected) return;
+                  if (!isLoggedIn) {
+                    pendingType.current = selected;
+                    setAuthOpen(true);
+                    return;
+                  }
+                  createOrder(selected);
+                }}>
+                <Text>{busy ? 'Reservando…' : 'Ir a pagar'}</Text>
+              </Button>
+            </View>
+          </StickyCta>
+        }>
+        <BackBar />
+        <PageHeader title="Boleta" lead={event.name} />
+        {event.flyerUrl ? (
+          <View className="mt-ds-16 overflow-hidden rounded-images">
+            <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />
           </View>
-        </StickyCta>
-      }>
-      <BackBar />
-      <PageHeader title="Boleta" lead={event.name} />
-      {event.flyerUrl ? (
-        <View className="mt-ds-16 overflow-hidden rounded-images">
-          <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />
+        ) : null}
+        <View className="mt-ds-16 gap-ds-8">
+          {event.ticketTypes.map((type) => (
+            <Surface
+              key={type.id}
+              elevated
+              onPress={api.helpers.typeOnSale(type) ? () => setTypeId(type.id) : undefined}
+              className={type.id === typeId ? 'border-foreground' : undefined}>
+              <Text>
+                {type.name} · {formatMoney(type.priceCents, type.currency)}
+                {!api.helpers.typeOnSale(type) ? ' · no disponible' : ''}
+              </Text>
+            </Surface>
+          ))}
         </View>
-      ) : null}
-      <View className="mt-ds-16 gap-ds-8">
-        {event.ticketTypes.map((type) => (
-          <Surface
-            key={type.id}
-            elevated
-            onPress={api.helpers.typeOnSale(type) ? () => setTypeId(type.id) : undefined}
-            className={type.id === typeId ? 'border-foreground' : undefined}>
-            <Text>
-              {type.name} · {formatMoney(type.priceCents, type.currency)}
-              {!api.helpers.typeOnSale(type) ? ' · no disponible' : ''}
-            </Text>
-          </Surface>
-        ))}
-      </View>
-      <View className="mt-ds-16 flex-row items-center gap-ds-8">
-        <Button variant="outline" onPress={() => setQty((n) => Math.max(1, n - 1))}>
-          <Text>-</Text>
-        </Button>
-        <Text>{qty}</Text>
-        <Button variant="outline" onPress={() => setQty((n) => n + 1)}>
-          <Text>+</Text>
-        </Button>
-      </View>
-    </Screen>
+        <View className="mt-ds-16 flex-row items-center gap-ds-8">
+          <Button variant="outline" onPress={() => setQty((n) => Math.max(1, n - 1))}>
+            <Text>-</Text>
+          </Button>
+          <Text>{qty}</Text>
+          <Button variant="outline" onPress={() => setQty((n) => Math.max(1, n + 1))}>
+            <Text>+</Text>
+          </Button>
+        </View>
+      </Screen>
+      <AuthSheet
+        visible={authOpen}
+        inline
+        onClose={() => setAuthOpen(false)}
+        onSuccess={() => {
+          const type = pendingType.current ?? selected;
+          if (type) createOrder(type);
+        }}
+      />
+    </View>
   );
 }

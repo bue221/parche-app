@@ -20,7 +20,7 @@ El platform admin revisa publicaciones. El promoter ve el estado, no aprueba las
 
 Cola simple. Rechazo: motivo corto opcional si el API lo acepta; si no, solo reject.
 
-Público: solo `publicado` entra a Agenda/mapa.
+Público: solo `publicado` entra a Explorar/mapa.
 
 ## Flujo
 
@@ -40,7 +40,7 @@ Moderación de artistas. Ban de usuarios (RC-024).
 
 ## Checklist
 
-- [ ] Evento no aprobado no sale en Agenda pública.
+- [ ] Evento no aprobado no sale en Explorar pública.
 - [ ] Promoter lee el estado.
 - [ ] Admin no sustituye el scanner del evento.
 

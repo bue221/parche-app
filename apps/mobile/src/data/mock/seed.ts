@@ -252,6 +252,7 @@ export function createSeed(): MockSnapshot {
     orders: [],
     tickets: [],
     follows: [{ userId: IDS.attendee, artistId: IDS.artistLuna }],
+    eventSaves: [],
     scans: [],
     uploads: [],
     permissions: {

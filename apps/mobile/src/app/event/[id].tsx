@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 
 import { ArtistRow } from '@/components/artist-row';
 import { BackBar } from '@/components/back-bar';
+import { EventCard } from '@/components/event-card';
 import { EventStaffSheet, buildEventStaffActions } from '@/components/event-staff-actions';
+import { EventTrackPlayer } from '@/components/event-track-player';
 import { ErrorState, Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
 import { OsmMap } from '@/components/osm-map';
@@ -17,10 +19,12 @@ import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
+import { toggleFollow, toggleSave } from '@/data/interest-sync';
+import { useInterestStore } from '@/data/interest-store';
 import { useAuthSnapshot } from '@/data/session';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
-import { formatMoney, formatWhen, statusLabel } from '@/lib/format';
-import type { EventWithExtras } from '@/data/types';
+import { formatMoney, formatTime, formatWhenRange, statusLabel } from '@/lib/format';
+import type { EventTrack, EventWithExtras } from '@/data/types';
 
 function BuyRow({
   onSale,
@@ -56,11 +60,17 @@ export default function EventDetailScreen() {
   const compact = useCompactLayout();
   const wide = Platform.OS === 'web' && !compact;
   const { isLoggedIn, user, memberships } = useAuthSnapshot();
-  const [playing, setPlaying] = useState<string | null>(null);
+  const saved = useInterestStore((s) => (id ? s.eventIds.includes(id) : false));
+  const followedArtists = useInterestStore((s) => s.artistIds);
   const [staffOpen, setStaffOpen] = useState(false);
   const { data: event, error, refetch, isLoading } = useQuery({
     queryKey: ['event', id],
     queryFn: () => api.events.get(id),
+    enabled: Boolean(id),
+  });
+  const similarQuery = useQuery({
+    queryKey: ['event', id, 'similar'],
+    queryFn: () => api.events.similar(id),
     enabled: Boolean(id),
   });
 
@@ -69,6 +79,8 @@ export default function EventDetailScreen() {
     () => (event?.lat != null && event?.lng != null ? { lat: event.lat, lng: event.lng } : undefined),
     [event?.lat, event?.lng]
   );
+  const genres = event?.genres?.length ? event.genres : event?.genre ? [event.genre] : [];
+  const similar = similarQuery.data ?? [];
 
   if (error && !event) {
     return (
@@ -109,11 +121,12 @@ export default function EventDetailScreen() {
     : null;
 
   function goCheckout() {
-    if (!isLoggedIn) {
-      router.push('/auth/login' as Href);
-      return;
-    }
     router.push(`/checkout/${event!.id}` as Href);
+  }
+
+  async function refreshTracks(): Promise<EventTrack[]> {
+    const result = await refetch();
+    return result.data?.tracks ?? [];
   }
 
   const flyer = event.flyerUrl ? (
@@ -126,23 +139,44 @@ export default function EventDetailScreen() {
     </View>
   );
 
+  const gallery =
+    event.gallery.length > 0 ? (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {event.gallery.map((image) => (
+          <View key={image.id} className="h-24 w-20 overflow-hidden rounded-images bg-muted">
+            <FlyerImage uri={image.url} className="h-full w-full" />
+          </View>
+        ))}
+      </ScrollView>
+    ) : null;
+
   const meta = (
     <View className="gap-ds-12">
       <View className="flex-row flex-wrap gap-ds-8">
-        <Tag inverted={event.status === 'published'} tone={event.status === 'published' ? 'ink' : 'muted'}>
+        <Tag tone={event.status === 'published' ? 'neon' : event.status === 'rejected' ? 'danger' : 'muted'}>
           {statusLabel(event.status)}
         </Tag>
-        {event.genre ? <Tag tone="muted">{event.genre}</Tag> : null}
+        {genres.map((genre) => (
+          <Tag key={genre} tone="muted">
+            {genre}
+          </Tag>
+        ))}
       </View>
       <Text variant="caption" className="uppercase text-muted-foreground">
-        {formatWhen(event.startsAt)}
+        {formatWhenRange(event.startsAt, event.endsAt)}
       </Text>
       <Text variant="heading">{event.name}</Text>
       <Text variant="muted">
         {event.venueName}
         {event.addressText ? ` · ${event.addressText}` : ''}
       </Text>
+      {event.agePolicy ? (
+        <Text variant="helper">{event.agePolicy}</Text>
+      ) : null}
       {event.description ? <Text>{event.description}</Text> : null}
+      <Button variant={saved ? 'outline' : 'default'} onPress={() => void toggleSave(event.id, isLoggedIn)}>
+        <Text>{saved ? 'Guardado' : 'Guardar fecha'}</Text>
+      </Button>
     </View>
   );
 
@@ -174,7 +208,10 @@ export default function EventDetailScreen() {
       }>
       <BackBar />
       <View className={wide ? 'flex-row items-start gap-ds-40' : 'gap-ds-24'}>
-        <View className={wide ? 'w-[42%] max-w-[480px] shrink-0' : undefined}>{flyer}</View>
+        <View className={wide ? 'w-[42%] max-w-[480px] shrink-0 gap-ds-12' : 'gap-ds-12'}>
+          {flyer}
+          {gallery}
+        </View>
         <View className={wide ? 'min-w-0 flex-1 gap-ds-20' : 'gap-ds-16'}>
           {meta}
           {tickets}
@@ -216,27 +253,39 @@ export default function EventDetailScreen() {
                       key={artist.id}
                       artist={artist}
                       onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                      trailing={
+                        <View className="flex-row items-center gap-ds-8">
+                          {artist.startsAt ? <Text variant="muted">{formatTime(artist.startsAt)}</Text> : null}
+                          <Button
+                            variant={followedArtists.includes(artist.id) ? 'outline' : 'ghost'}
+                            size="sm"
+                            onPress={() => void toggleFollow(artist.id, isLoggedIn)}>
+                            <Text>{followedArtists.includes(artist.id) ? 'Siguiendo' : 'Seguir'}</Text>
+                          </Button>
+                        </View>
+                      }
                     />
                   ))}
                 </View>
               </View>
             ) : null}
             {event.tracks.length > 0 ? (
-              <View className="gap-ds-12">
-                <Text variant="headingSm">Audio</Text>
-                {event.tracks.map((track) => (
-                  <Button
-                    key={track.id}
-                    variant="outline"
-                    onPress={() => setPlaying((current) => (current === track.id ? null : track.id))}>
-                    <Text>
-                      {playing === track.id ? 'Pausa' : 'Play'} · {track.title}
-                    </Text>
-                  </Button>
-                ))}
-              </View>
+              <EventTrackPlayer tracks={event.tracks} onRefresh={refreshTracks} />
             ) : null}
           </View>
+        </View>
+      ) : null}
+
+      {similar.length > 0 ? (
+        <View className="mt-ds-32 gap-ds-16">
+          <Text variant="headingSm">Más como este</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {similar.map((row) => (
+              <View key={row.id} style={{ width: 168 }}>
+                <EventCard event={row} onPress={() => router.push(`/event/${row.id}` as Href)} />
+              </View>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
 

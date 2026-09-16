@@ -11,5 +11,8 @@ export const cardShadowStyle: ViewStyle =
     android: {
       elevation: 3,
     },
+    web: {
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+    },
     default: {},
   }) ?? {};

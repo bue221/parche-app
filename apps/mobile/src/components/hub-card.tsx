@@ -21,7 +21,7 @@ export function HubCard({
       <View className="flex-row items-start gap-ds-12">
         {imageUri ? (
           <View className="size-16 overflow-hidden rounded-images bg-muted">
-            <FlyerImage uri={imageUri} className="h-full w-full" aspectRatio={1} />
+            <FlyerImage uri={imageUri} className="h-full w-full" />
           </View>
         ) : (
           <View className="size-16 items-center justify-center rounded-images bg-muted">

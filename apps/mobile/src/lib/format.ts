@@ -9,6 +9,38 @@ export function formatWhen(iso: string): string {
   });
 }
 
+export function formatDay(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString('es-CO', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+export function formatTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function formatWhenRange(startsAt: string, endsAt?: string): string {
+  const start = formatWhen(startsAt);
+  if (!endsAt) return start;
+  return `${start} – ${formatTime(endsAt)}`;
+}
+
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function toDateInput(iso?: string): string {
   if (!iso) return '';
   const date = new Date(iso);
@@ -76,4 +108,25 @@ export function statusLabel(status: string): string {
     revoked: 'Revocado',
   };
   return map[status] ?? status;
+}
+
+export function isSameLocalDay(iso: string, now = new Date()): boolean {
+  const d = new Date(iso);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
+export function countdownTo(iso: string, now = new Date()): string | null {
+  const ms = Date.parse(iso) - now.getTime();
+  if (ms <= 0) {
+    return 'Ahora';
+  }
+  const hours = Math.floor(ms / 3_600_000);
+  const minutes = Math.floor((ms % 3_600_000) / 60_000);
+  if (hours >= 24) {
+    return null;
+  }
+  if (hours < 1) {
+    return `${minutes} min`;
+  }
+  return `${hours} h ${minutes} min`;
 }

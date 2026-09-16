@@ -27,7 +27,7 @@ export default function LocationPermissionScreen() {
         </StickyCta>
       }>
       <BackBar />
-      <PageHeader title="Ubicación" lead="Solo para centrar el mapa. La agenda funciona sin GPS." />
+      <PageHeader title="Ubicación" lead="Solo para centrar el mapa. Explorar funciona sin GPS." />
     </Screen>
   );
 }

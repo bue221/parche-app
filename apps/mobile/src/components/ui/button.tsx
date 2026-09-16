@@ -7,7 +7,7 @@ const buttonVariants = cva(
   cn(
     'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3 shadow-none',
     Platform.select({
-      web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-foreground disabled:pointer-events-none',
+      web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-neon disabled:pointer-events-none',
     })
   ),
   {
@@ -23,8 +23,8 @@ const buttonVariants = cva(
         ghost: cn('bg-transparent active:bg-muted', Platform.select({ web: 'hover:bg-muted' })),
         link: 'min-h-0 bg-transparent px-0 py-0',
         destructive: cn(
-          'border border-foreground bg-transparent active:bg-muted',
-          Platform.select({ web: 'hover:bg-muted' })
+          'border border-danger bg-danger-soft active:opacity-80',
+          Platform.select({ web: 'hover:opacity-90' })
         ),
       },
       size: {
@@ -54,8 +54,8 @@ const buttonTextVariants = cva(
         outline: 'text-foreground',
         secondary: 'text-secondary-foreground',
         ghost: 'text-foreground',
-        link: 'text-foreground normal-case',
-        destructive: 'text-foreground',
+        link: 'text-neon normal-case',
+        destructive: 'text-pitch-black',
       },
       size: {
         default: '',

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -18,35 +18,67 @@ type OsmMapProps = {
   className?: string;
 };
 
-export function OsmMap({ events, pin, onPressMap, onPressEvent, fill = false, className }: OsmMapProps) {
+export function OsmMap({
+  events,
+  pin,
+  selectedId,
+  onPressMap,
+  onPressEvent,
+  onClear,
+  fill = false,
+  className,
+}: OsmMapProps) {
   const dark = useResolvedColorScheme() === 'dark';
-  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark);
+  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
+  const webRef = useRef<WebView>(null);
+  const onPressEventRef = useRef(onPressEvent);
+  onPressEventRef.current = onPressEvent;
+  const onPressMapRef = useRef(onPressMap);
+  onPressMapRef.current = onPressMap;
+  const onClearRef = useRef(onClear);
+  onClearRef.current = onClear;
 
-  const onRaw = useCallback(
-    (raw: string) => {
-      const msg = parseMapMessage(raw);
-      if (!msg) return;
-      if (msg.type === 'event' && msg.id) {
-        const found = pinsRef.current.find((e) => e.id === msg.id);
-        if (found) onPressEvent?.(found);
-      }
-      if (msg.type === 'pin' && msg.lat != null && msg.lng != null) {
-        onPressMap?.({ lat: msg.lat, lng: msg.lng });
-      }
-    },
-    [onPressEvent, onPressMap]
-  );
+  useEffect(() => {
+    const id = JSON.stringify(selectedId ?? null);
+    webRef.current?.injectJavaScript(`window.setSelected && window.setSelected(${id}); true;`);
+  }, [selectedId, html]);
+
+  const onRaw = useCallback((raw: string) => {
+    const msg = parseMapMessage(raw);
+    if (!msg) return;
+    if (msg.type === 'clear') {
+      onClearRef.current?.();
+      return;
+    }
+    if (msg.type === 'event' && msg.id) {
+      const found = pinsRef.current.find((event) => event.id === msg.id);
+      if (found) onPressEventRef.current?.(found);
+    }
+    if (msg.type === 'pin' && msg.lat != null && msg.lng != null) {
+      onPressMapRef.current?.({ lat: msg.lat, lng: msg.lng });
+    }
+  }, []);
 
   return (
     <View
-      className={cn(
-        'overflow-hidden',
-        fill ? 'min-h-[280px] flex-1' : 'h-80 rounded-cards border border-border',
-        className
-      )}>
-      <WebView originWhitelist={['*']} source={{ html }} onMessage={(e) => onRaw(e.nativeEvent.data)} style={{ flex: 1 }} />
+      className={cn('overflow-hidden', fill ? 'min-h-0 flex-1' : 'h-80 rounded-cards border border-border', className)}
+      style={fill ? { flex: 1 } : undefined}>
+      <WebView
+        ref={webRef}
+        originWhitelist={['*']}
+        source={{ html }}
+        onMessage={(e) => onRaw(e.nativeEvent.data)}
+        onLoadEnd={() => {
+          const id = JSON.stringify(selectedId ?? null);
+          webRef.current?.injectJavaScript(`window.setSelected && window.setSelected(${id}); true;`);
+        }}
+        bounces={false}
+        scrollEnabled={false}
+        setSupportMultipleWindows={false}
+        style={{ flex: 1, width: '100%', height: '100%', backgroundColor: 'transparent' }}
+      />
     </View>
   );
 }

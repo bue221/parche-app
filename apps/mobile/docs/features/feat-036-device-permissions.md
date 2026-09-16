@@ -22,7 +22,7 @@ Cámara y ubicación se piden en contexto, con copy en español, y un rechazo no
 | Ubicación | Centrar mapa / atajo de pin | Mapa Bogotá / pin a mano |
 | Cámara | [FEAT-028](feat-028-door-scanner.md) | No hay scan; no usar galería de fotos como QR feliz (opcional backlog) |
 
-No pedir cámara al instalar. No pedir ubicación para ver Agenda.
+No pedir cámara al instalar. No pedir ubicación para ver Explorar.
 
 ## Flujo
 
@@ -42,7 +42,7 @@ Push (después). Contactos. Tracking ATT.
 
 ## Checklist
 
-- [ ] Agenda funciona sin GPS.
+- [ ] Explorar funciona sin GPS.
 - [ ] Scanner explica por qué cámara.
 - [ ] Promoter publica pin sin GPS.
 

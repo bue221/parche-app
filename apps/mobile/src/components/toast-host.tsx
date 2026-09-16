@@ -25,9 +25,18 @@ export function ToastHost() {
           onPress={() => dismiss(item.id)}
           className={cn(
             'mb-ds-8 w-full max-w-md rounded-cards border px-ds-16 py-ds-12',
-            item.tone === 'success' ? 'border-foreground bg-confirm' : 'border-foreground bg-background'
+            item.tone === 'success'
+              ? 'border-confirm bg-confirm'
+              : item.tone === 'info'
+                ? 'border-amber bg-amber-soft'
+                : 'border-danger bg-danger-soft'
           )}>
-          <Text className={item.tone === 'success' ? 'text-pitch-black' : undefined}>{item.message}</Text>
+          <Text
+            className={
+              item.tone === 'success' || item.tone === 'info' ? 'text-pitch-black' : 'text-foreground'
+            }>
+            {item.message}
+          </Text>
         </Pressable>
       ))}
     </View>

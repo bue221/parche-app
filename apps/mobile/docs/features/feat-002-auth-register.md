@@ -1,6 +1,6 @@
 # FEAT-002: Registro
 
-Un usuario nuevo crea cuenta como asistente u organizador para entrar al resto de la app. El perfil inicial no lo convierte en staff de ningún evento.
+El registro con contraseña queda para **organizador** (tenant + nombre real). El asistente entra por [FEAT-038](feat-038-auth-otp.md) u [FEAT-039](feat-039-auth-google.md). El perfil inicial no lo convierte en staff de ningún evento.
 
 | Campo | Valor |
 |-------|-------|
@@ -13,7 +13,7 @@ Un usuario nuevo crea cuenta como asistente u organizador para entrar al resto d
 
 1. Parche → crear cuenta.
 2. Email, contraseña, nombre; elegir `attendee` o `promoter`.
-3. Éxito → sesión iniciada ([FEAT-004](feat-004-auth-session.md)) → Agenda.
+3. Éxito → sesión iniciada ([FEAT-004](feat-004-auth-session.md)) → Explorar.
 
 ## Pantallas
 
@@ -41,7 +41,7 @@ Un usuario nuevo crea cuenta como asistente u organizador para entrar al resto d
 
 ## Fuera de alcance
 
-OAuth. Verificación de email. Reset ([backlog RC-021](../product/prd.md)).
+OAuth de compra (eso es [FEAT-039](feat-039-auth-google.md)). Apple. OTP de asistente ([FEAT-038](feat-038-auth-otp.md)).
 
 ## Checklist
 

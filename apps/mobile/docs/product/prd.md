@@ -6,7 +6,7 @@ Parche es la plataforma que unifica la escena techno (Bogotá primero): eventos,
 
 - Canal principal: **Expo 57** (iOS, Android; web solo para desarrollo, no sustituye a `web-frontend`).
 - La web Next.js cubre landing/SEO y lectura pública; **compra, QR, puerta y métricas viven en la app**.
-- UI: consumer foto-first sobre chrome B/N ([sistema visual](../ui/design.md)). El verde `confirm` solo en pantallas de éxito (pago, check-in aprobado).
+- UI: consumer foto-first sobre escenario tinta/papel, con pigmento de señal ([sistema visual](../ui/design.md)). Neon en CTA y selección; volt/`confirm` en éxito (pago, check-in aprobado).
 - Mapas: **MapLibre + OSM**. Sin Google Maps, Places ni Mapbox como dependencia de producto.
 - Sesión (access + refresh) y token de tiquete (QR) son **familias distintas**; la app nunca usa el access del asistente para escanear.
 - Varias personas operan el mismo evento: la UI se filtra por **membresía + permiso**, no por un rol global.
@@ -94,15 +94,15 @@ Navegación objetivo (reemplaza Home/Explore de plantilla):
 
 | Tab / stack | Quién | Contenido |
 |-------------|-------|-----------|
-| **Agenda** | Todos (lectura pública parcial) | Próximos eventos, hero tipo flyer |
-| **Explorar** | Todos | Mapa + lista; filtros en Sprint 4 |
-| **Tiquetes** | `attendee` autenticado | Wallet QR; vacío si no hay compras |
-| **Parche** (yo) | Autenticado | Perfil, follows, membresías, salir |
-| **Operar** (o entrada desde detalle) | Quien tenga membresía | Mis eventos, puerta, métricas |
+| **Explorar** | Todos (lectura pública parcial) | Próximos eventos; rail “Esta noche” con countdown si hay same-day |
+| **Mapa** | Todos | Mapa + lista; clustering por densidad |
+| **Guardados** | Todos | Follows/fechas locales o sync; segmento Boletas = wallet |
+| **Cuenta** | Todos (label fijo) | Invitado: valor + CTA sheet; logueado: perfil |
+| **Operar** | Quien tenga membresía o promoter | Badge si hay evento hoy o invite pending |
 
-Flujos fuera de tabs: auth, detalle de evento, detalle de artista, checkout, scanner a pantalla completa, invitación profunda (`/invites/{token}`).
+Flujos fuera de tabs: auth sheet (OTP/Google), password/register promoter, detalle, checkout, scanner, invitación (`/invites/{token}`), completar perfil opcional.
 
-Invitados pueden ver agenda y detalle público. Compra, QR, follows, crear evento y puerta piden cuenta.
+Invitados exploran, siguen y guardan sin cuenta. Compra pide identidad liviana (OTP o Google) en el checkout. QR, crear evento y puerta piden sesión. El label de las tabs no muta con la sesión.
 
 ## Funcionalidades por sprint
 
@@ -178,7 +178,7 @@ Aforo en vivo (`GET .../door/live`): contador y últimos scans **sin** datos de 
 |----|----------|------------------------|
 | RC-016 | UI/UX | Pulido de navegación, vacíos, errores, accesibilidad (contraste del flyer B/N, tamaños de toque). |
 | RC-017 | Búsqueda y filtros | Fecha, subgénero, artista, texto `q`; bbox del mapa si el API lo expone. |
-| RC-018 | Recomendaciones | `GET /v1/me/recommendations` en Agenda; vacío honesto si no hay señales. |
+| RC-018 | Recomendaciones | `GET /v1/me/recommendations` en Explorar; vacío honesto si no hay señales. |
 | RC-019 | Posts / editorial | Aplazado: no hay lectura en la app. Blog futuro en `web-frontend` sobre `GET /v1/posts`. |
 | RC-020 | Rendimiento percibido | Listas virtualizadas, flyers con tamaño adecuado, check-in sin spinner largo (el cuello es la puerta, no el listado). |
 
@@ -219,7 +219,7 @@ Cada flujo de red tiene: **carga**, **vacío**, **error recuperable**, **éxito*
 
 | Flujo | Vacío | Error típico |
 |-------|-------|----------------|
-| Agenda | “Aún no hay fechas” | Reintentar listado |
+| Explorar | “Aún no hay fechas” | Reintentar listado |
 | Wallet | “No tienes tiquetes” + CTA explorar | Pago pendiente / fallido |
 | Puerta | “Apunta al QR” | Cámara denegada (ajustes del SO) |
 | Métricas | Ceros honestos antes de ventas | `FORBIDDEN` si no es staff |
@@ -252,7 +252,7 @@ Permisos de SO: cámara (scanner), opcional ubicación (centrar mapa; el pin del
 ## Checklist de aceptación
 
 - [ ] Registro y login; access corto + refresh en almacenamiento seguro; logout cierra la familia.
-- [ ] Invitado ve agenda y detalle; no compra ni escanea.
+- [ ] Invitado ve Explorar y detalle; no compra ni escanea.
 - [ ] Promoter crea evento con flyer, pin OSM y texto; el detalle público lo muestra.
 - [ ] El mapa no usa Google Maps; solo coordenadas de la API + MapLibre/OSM.
 - [ ] Artista tiene perfil; asistente sigue y ve lineup en el evento.

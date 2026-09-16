@@ -23,10 +23,10 @@ export function Field({ label, error, helper, className, multiline, onFocus, onB
       <TextInput
         className={cn(
           'min-h-11 rounded-cards border bg-muted px-ds-16 py-ds-12 font-favorit text-body tracking-favorit text-foreground',
-          focused || error ? 'border-foreground' : 'border-border',
+          focused ? 'border-neon' : error ? 'border-danger' : 'border-border',
           multiline && 'min-h-24 py-ds-16',
           Platform.select({
-            web: 'outline-none transition-colors focus:border-foreground focus:bg-background',
+            web: 'outline-none transition-colors focus:border-neon focus:bg-background',
           }),
           className
         )}
@@ -44,7 +44,7 @@ export function Field({ label, error, helper, className, multiline, onFocus, onB
         {...props}
       />
       {error ? (
-        <Text variant="helper" className="text-foreground">
+        <Text variant="helper" className="text-danger">
           {error}
         </Text>
       ) : helper ? (

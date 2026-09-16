@@ -15,7 +15,7 @@ export default function AppTabs() {
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Agenda</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Explorar</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/home.png')}
           renderingMode="template"
@@ -23,25 +23,23 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explorar</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Mapa</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/explore.png')}
           renderingMode="template"
         />
       </NativeTabs.Trigger>
 
-      {tabs.tickets ? (
-        <NativeTabs.Trigger name="tickets">
-          <NativeTabs.Trigger.Label>Tiquetes</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            src={require('@/assets/images/tabIcons/home.png')}
-            renderingMode="template"
-          />
-        </NativeTabs.Trigger>
-      ) : null}
+      <NativeTabs.Trigger name="tickets">
+        <NativeTabs.Trigger.Label>Guardados</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/home.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="parche">
-        <NativeTabs.Trigger.Label>Parche</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Cuenta</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require('@/assets/images/tabIcons/home.png')}
           renderingMode="template"
@@ -51,6 +49,7 @@ export default function AppTabs() {
       {tabs.operate ? (
         <NativeTabs.Trigger name="operate">
           <NativeTabs.Trigger.Label>Operar</NativeTabs.Trigger.Label>
+          {tabs.operateBadge > 0 ? <NativeTabs.Trigger.Badge>{String(tabs.operateBadge)}</NativeTabs.Trigger.Badge> : null}
           <NativeTabs.Trigger.Icon
             src={require('@/assets/images/tabIcons/explore.png')}
             renderingMode="template"

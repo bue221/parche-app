@@ -21,7 +21,7 @@ El asistente reserva aforo y paga. El tiquete `valid` no se muestra como QR hast
 
 Resumen: evento, tipo, total, política corta. Sin campos de tarjeta en Parche (pasarela externa).
 
-Invitado: login y retorno al checkout, no perder tipo elegido.
+Invitado: el checkout se abre igual; al confirmar, AuthSheet OTP/Google inline ([FEAT-038](feat-038-auth-otp.md)). No redirige a register. Nombre/teléfono van a [FEAT-041](feat-041-complete-profile.md) después.
 
 ## Flujo
 
@@ -47,7 +47,7 @@ Wallet Apple/Google Pay nativo salvo que la pasarela lo abra. Impresión (spec 0
 
 ## Checklist
 
-- [ ] Sin sesión no hay order.
+- [ ] Sin sesión no hay order (sí hay carrito + sheet).
 - [ ] CTA no crea dos orders por doble tap.
 - [ ] Tras paid no se salta la animación de impresión la primera vez.
 

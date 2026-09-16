@@ -46,7 +46,7 @@ export function ListingSkeleton() {
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <View className="gap-ds-16 rounded-cards border border-foreground bg-muted px-ds-24 py-ds-24">
+    <View className="gap-ds-16 rounded-cards border border-danger bg-danger-soft px-ds-24 py-ds-24">
       <Text>{message}</Text>
       {onRetry ? (
         <Button variant="outline" onPress={onRetry}>

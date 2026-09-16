@@ -1,4 +1,5 @@
-import { View } from 'react-native';
+import { Children, type ReactNode } from 'react';
+import { Platform, View } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
 import { Surface } from '@/components/surface';
@@ -6,7 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/text';
 import type { ParcheEvent, Ticket } from '@/data/types';
+import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { formatWhen, statusLabel } from '@/lib/format';
+import { cn } from '@/lib/utils';
+
+export const TICKET_CARD_MIN_PX = 280;
+export const TICKET_CARD_MAX_PX = 400;
+
+const desktopTicketGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: `repeat(auto-fill, minmax(${TICKET_CARD_MIN_PX}px, ${TICKET_CARD_MAX_PX}px))`,
+  gap: 24,
+  justifyContent: 'start',
+} as object;
 
 export function TicketCard({
   ticket,
@@ -17,8 +30,11 @@ export function TicketCard({
   event?: ParcheEvent;
   onShow?: () => void;
 }) {
+  const compact = useCompactLayout();
+  const frame = Platform.OS === 'web' && !compact ? 'w-full max-w-[400px]' : 'w-full';
+
   return (
-    <Surface elevated className="overflow-hidden p-0">
+    <Surface elevated className={cn('overflow-hidden p-0', frame)}>
       {event?.flyerUrl ? (
         <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />
       ) : (
@@ -41,7 +57,7 @@ export function TicketCard({
               {event?.venueName ?? ''}
             </Text>
           </View>
-          <Tag inverted={ticket.status === 'valid'} tone={ticket.status === 'valid' ? 'ink' : 'muted'}>
+          <Tag tone={ticket.status === 'valid' ? 'confirm' : ticket.status === 'reserved' ? 'amber' : 'muted'}>
             {statusLabel(ticket.status)}
           </Tag>
         </View>
@@ -55,5 +71,21 @@ export function TicketCard({
         {ticket.status === 'transferred' ? <Text variant="muted">Cedido</Text> : null}
       </View>
     </Surface>
+  );
+}
+
+/** Full-width stack on phone; 280–400px pass grid on desktop web. */
+export function TicketFeed({ children }: { children: ReactNode }) {
+  const compact = useCompactLayout();
+  if (Platform.OS !== 'web' || compact) {
+    return <View className="w-full gap-ds-16">{children}</View>;
+  }
+  return (
+    <View className="w-full" style={desktopTicketGridStyle}>
+      {Children.map(children, (child) => {
+        if (child == null || typeof child === 'boolean') return child;
+        return <View className="min-w-0 w-full max-w-[400px]">{child}</View>;
+      })}
+    </View>
   );
 }

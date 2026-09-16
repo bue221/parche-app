@@ -42,8 +42,8 @@ Fuente de producto: [PRD](../product/prd.md). Visual: [design.md](../ui/design.m
 | FEAT-002 | [Registro](feat-002-auth-register.md) | 1 |
 | FEAT-003 | [Inicio de sesión](feat-003-auth-login.md) | 1 |
 | FEAT-004 | [Sesión (refresh / logout)](feat-004-auth-session.md) | 1 |
-| FEAT-005 | [Agenda](feat-005-agenda.md) | 1 |
-| FEAT-006 | [Explorar mapa](feat-006-explore-map.md) | 1 |
+| FEAT-005 | [Explorar listado](feat-005-agenda.md) | 1 |
+| FEAT-006 | [Mapa](feat-006-explore-map.md) | 1 |
 | FEAT-007 | [Detalle de evento](feat-007-event-detail.md) | 1 |
 | FEAT-008 | [Crear evento](feat-008-event-create.md) | 1 |
 | FEAT-009 | [Editar evento](feat-009-event-edit.md) | 1 |
@@ -74,5 +74,10 @@ Fuente de producto: [PRD](../product/prd.md). Visual: [design.md](../ui/design.m
 | FEAT-034 | [Editorial / posts](feat-034-editorial-posts.md) | aplazado (blog web) |
 | FEAT-035 | [Deep links](feat-035-deep-links.md) | 1–3 |
 | FEAT-036 | [Permisos de dispositivo](feat-036-device-permissions.md) | 1–3 |
+| FEAT-037 | [Interés local](feat-037-local-interest.md) | 4 |
+| FEAT-038 | [Auth sheet y OTP](feat-038-auth-otp.md) | 4 |
+| FEAT-039 | [Login Google](feat-039-auth-google.md) | 4 |
+| FEAT-040 | [Tab Guardados](feat-040-saved-tab.md) | 4 |
+| FEAT-041 | [Completar perfil](feat-041-complete-profile.md) | 4 |
 
 **Impresión del tiquete:** no aparece el QR de golpe. Tras un pago `paid`, [FEAT-023](feat-023-ticket-print.md) reproduce una **impresora térmica**: el papel sale, el flyer se estampa, el QR se imprime al final. El wallet ([FEAT-024](feat-024-ticket-wallet.md)) guarda el resultado; no sustituye esa animación.

@@ -36,12 +36,22 @@ export type Artist = {
   avatarUrl?: string;
 };
 
+export type EventLineupArtist = Artist & {
+  startsAt?: string;
+};
+
+export type EventGalleryImage = {
+  id: string;
+  url: string;
+};
+
 export type ParcheEvent = {
   id: string;
   tenantId: string;
   ownerUserId: string;
   name: string;
   startsAt: string;
+  endsAt?: string;
   venueName: string;
   addressText: string;
   description: string;
@@ -50,6 +60,8 @@ export type ParcheEvent = {
   lng?: number;
   status: EventStatus;
   genre: string;
+  genres?: string[];
+  agePolicy?: string;
   rejectReason?: string;
   updatedAt: string;
 };
@@ -66,12 +78,15 @@ export type EventTrack = {
   title: string;
   url: string;
   sortOrder: number;
+  durationMs?: number;
+  previewExpiresAt?: string;
 };
 
 export type EventWithExtras = ParcheEvent & {
-  lineup: Artist[];
+  lineup: EventLineupArtist[];
   tracks: EventTrack[];
   ticketTypes: TicketType[];
+  gallery: EventGalleryImage[];
 };
 
 export type Membership = {
@@ -173,6 +188,7 @@ export type MockSnapshot = {
   orders: Order[];
   tickets: Ticket[];
   follows: Follow[];
+  eventSaves: { userId: string; eventId: string }[];
   scans: ScanLog[];
   uploads: Upload[];
   permissions: DevicePermissions;

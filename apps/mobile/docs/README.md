@@ -19,8 +19,8 @@ Do not implement a slice without its spec. Ticket issuance is [FEAT-023](feature
 | [features/feat-002-auth-register.md](features/feat-002-auth-register.md) | Registro |
 | [features/feat-003-auth-login.md](features/feat-003-auth-login.md) | Login |
 | [features/feat-004-auth-session.md](features/feat-004-auth-session.md) | Sesión refresh/logout |
-| [features/feat-005-agenda.md](features/feat-005-agenda.md) | Agenda |
-| [features/feat-006-explore-map.md](features/feat-006-explore-map.md) | Mapa explorar |
+| [features/feat-005-agenda.md](features/feat-005-agenda.md) | Explorar listado |
+| [features/feat-006-explore-map.md](features/feat-006-explore-map.md) | Mapa |
 | [features/feat-007-event-detail.md](features/feat-007-event-detail.md) | Detalle evento |
 | [features/feat-008-event-create.md](features/feat-008-event-create.md) | Crear evento |
 | [features/feat-009-event-edit.md](features/feat-009-event-edit.md) | Editar evento |
@@ -51,6 +51,11 @@ Do not implement a slice without its spec. Ticket issuance is [FEAT-023](feature
 | [features/feat-034-editorial-posts.md](features/feat-034-editorial-posts.md) | Editorial aplazado (blog web futuro) |
 | [features/feat-035-deep-links.md](features/feat-035-deep-links.md) | Deep links |
 | [features/feat-036-device-permissions.md](features/feat-036-device-permissions.md) | Permisos de dispositivo |
+| [features/feat-037-local-interest.md](features/feat-037-local-interest.md) | Seguir/guardar sin cuenta + sync |
+| [features/feat-038-auth-otp.md](features/feat-038-auth-otp.md) | Auth sheet y OTP |
+| [features/feat-039-auth-google.md](features/feat-039-auth-google.md) | Login Google |
+| [features/feat-040-saved-tab.md](features/feat-040-saved-tab.md) | Tab Guardados |
+| [features/feat-041-complete-profile.md](features/feat-041-complete-profile.md) | Completar perfil post-compra |
 
 ## How to add a rule doc
 

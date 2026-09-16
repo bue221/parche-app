@@ -19,7 +19,7 @@ export function ArtistRow({
   const body = (
     <View className="min-h-11 flex-row items-center gap-ds-12 py-ds-8">
       {artist.avatarUrl ? (
-        <Image source={{ uri: artist.avatarUrl }} className="size-12 rounded-full bg-muted" />
+        <Image source={{ uri: artist.avatarUrl }} className="size-12 rounded-full bg-muted" style={{ width: 48, height: 48 }} />
       ) : (
         <View className="size-12 items-center justify-center rounded-full bg-muted">
           <Text variant="caption" className="font-bold">

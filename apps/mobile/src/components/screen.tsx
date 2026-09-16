@@ -98,6 +98,7 @@ export function Screen({
       className={cn('flex-1 bg-background', className)}
       contentContainerStyle={padding}
       keyboardShouldPersistTaps="handled"
+      contentInsetAdjustmentBehavior="never"
       refreshControl={refreshControl}>
       {inner}
     </ScrollView>

@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '@/data/auth-store';
 import { api } from '@/data/client';
-import { primaryProfile, operateDensity } from '@/lib/profiles';
+import { isSameLocalDay, startOfDayISO, endOfDayISO } from '@/lib/format';
+import { useAuthStore } from '@/data/auth-store';
 import type { Membership, User } from '@/data/types';
+import { primaryProfile, operateDensity } from '@/lib/profiles';
+import { useMemo } from 'react';
 
 export function useAuthSnapshot() {
   const me = useAuthStore((s) => s.me);
@@ -37,12 +39,28 @@ export function useAuthSnapshot() {
 
 export function useTabVisibility() {
   const auth = useAuthSnapshot();
+  const invitesQuery = useQuery({
+    queryKey: ['invites'],
+    queryFn: () => api.auth.invites(),
+    enabled: auth.isLoggedIn,
+  });
+  const tonightQuery = useQuery({
+    queryKey: ['events', 'tonight-badge'],
+    queryFn: () => api.events.list({ from: startOfDayISO(), to: endOfDayISO() }),
+    enabled: auth.hasOperate,
+  });
+  const inviteCount = (invitesQuery.data ?? []).length;
+  const tonightCount = (tonightQuery.data ?? []).filter((event) =>
+    auth.memberships.some((m) => m.eventId === event.id && isSameLocalDay(event.startsAt))
+  ).length;
+  const operateBadge = inviteCount + tonightCount;
   return {
     agenda: true,
     explore: true,
-    tickets: auth.isLoggedIn,
+    tickets: true,
     parche: true,
     operate: auth.hasOperate,
+    operateBadge,
     auth,
   };
 }

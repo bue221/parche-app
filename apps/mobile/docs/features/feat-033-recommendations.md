@@ -7,12 +7,12 @@ Sugerencias para el asistente autenticado. Si no hay señales, se dice; no se in
 | Sprint | 4 |
 | RC | RC-018 |
 | Permiso UI | Attendee |
-| Pantallas | Bloque en Agenda |
+| Pantallas | Bloque en Explorar |
 
 ## Quick path
 
-1. Agenda autenticada pide `GET /v1/me/recommendations`.
-2. Muestra cards (mismo componente que Agenda).
+1. Explorar autenticada pide `GET /v1/me/recommendations`.
+2. Muestra cards (mismo componente que Explorar).
 3. Tap → detalle.
 
 ## Pantallas
@@ -23,7 +23,7 @@ Invitado: no hay bloque (no hay `me`).
 
 ## Flujo
 
-Fallo de API: ocultar, no romper Agenda.
+Fallo de API: ocultar, no romper Explorar.
 
 ## Estados
 
@@ -39,7 +39,7 @@ Entrenar el modelo en el teléfono. Explicabilidad larga.
 
 ## Checklist
 
-- [ ] Agenda completa sigue debajo.
+- [ ] Explorar completa sigue debajo.
 - [ ] Invitado no ve recomendaciones vacías raras.
 
 ## Relacionadas

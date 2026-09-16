@@ -27,6 +27,10 @@ export function rememberPrintSeen(ids: string[]): void {
   );
 }
 
+export function hasPrintSeen(id: string): boolean {
+  return printSeen.has(id);
+}
+
 export function pendingPrintTickets(userId: string): Ticket[] {
   return wallet.filter(
     (t) => t.userId === userId && t.status === 'valid' && t.token && !printSeen.has(t.id)

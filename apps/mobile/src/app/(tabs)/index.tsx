@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { useFilters } from '@/data/filters';
-import { endOfDayISO, monthRange, startOfDayISO, toDateInput, weekendRange } from '@/lib/format';
+import { endOfDayISO, monthRange, startOfDayISO, toDateInput, weekendRange, countdownTo, isSameLocalDay } from '@/lib/format';
 import { GENRE_CHIPS, hasActiveFilters } from '@/lib/genres';
 import { useAuthSnapshot } from '@/data/session';
 
@@ -36,7 +36,7 @@ function activeDateChip(from?: string, to?: string) {
   })?.id;
 }
 
-export default function AgendaScreen() {
+export default function ExplorarScreen() {
   const { isLoggedIn, isPromoter } = useAuthSnapshot();
   const filters = useFilters((s) => s.filters);
   const setFilters = useFilters((s) => s.setFilters);
@@ -52,7 +52,10 @@ export default function AgendaScreen() {
 
   const events = eventsQuery.data ?? [];
   const recs = recsQuery.data ?? [];
-  const error = eventsQuery.error ? 'No pudimos cargar la agenda' : null;
+  const tonight = events.filter((event) => isSameLocalDay(event.startsAt));
+  const featured = recs.length > 0 ? recs : events.slice(0, 8);
+  const railTitle = recs.length > 0 ? 'Para ti' : null;
+  const error = eventsQuery.error ? 'No pudimos cargar las fechas' : null;
   const filtered = hasActiveFilters(filters);
   const selectedDate = activeDateChip(filters.from, filters.to);
 
@@ -61,7 +64,8 @@ export default function AgendaScreen() {
       scroll
       refreshControl={<RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />}>
       <PageHeader
-        title="Agenda"
+        title="Explorar"
+        lead="Fechas cerca."
         actions={
           isPromoter ? (
             <Button onPress={() => router.push('/event/create' as Href)}>
@@ -73,19 +77,20 @@ export default function AgendaScreen() {
       <View className="mt-ds-16 gap-ds-12">
         <SearchBar value={filters.q} onPress={() => router.push('/filters' as Href)} />
         <ChipRow>
-          {DATE_CHIPS.map((chip) => (
-            <Chip
-              key={chip.id}
-              label={chip.label}
-              selected={selectedDate === chip.id}
-              onPress={() => {
-                if (selectedDate === chip.id) {
-                  setFilters({ ...filters, from: undefined, to: undefined });
-                  return;
-                }
-                setFilters({ ...filters, ...datePreset(chip.id) });
-              }}
-            />
+          {DATE_CHIPS.map((chip, index) => (
+            <FadeSlideIn key={chip.id} index={index}>
+              <Chip
+                label={chip.label}
+                selected={selectedDate === chip.id}
+                onPress={() => {
+                  if (selectedDate === chip.id) {
+                    setFilters({ ...filters, from: undefined, to: undefined });
+                    return;
+                  }
+                  setFilters({ ...filters, ...datePreset(chip.id) });
+                }}
+              />
+            </FadeSlideIn>
           ))}
           {GENRE_CHIPS.map((genre) => (
             <Chip
@@ -97,14 +102,44 @@ export default function AgendaScreen() {
           ))}
         </ChipRow>
       </View>
-      {isLoggedIn && recs.length > 0 ? (
+      {tonight.length > 0 ? (
         <View className="mt-ds-32 gap-ds-16">
-          <Text variant="headingSm">Para ti</Text>
+          <Text variant="headingSm">Esta noche en Bogotá</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {recs.map((event, index) => (
-              <View key={`rec-${event.id}`} style={{ width: 168 }}>
+            {tonight.map((event, index) => {
+              const left = countdownTo(event.startsAt);
+              return (
+                <View key={`tonight-${event.id}`} style={{ width: 168 }}>
+                  <FadeSlideIn index={index}>
+                    <EventCard
+                      event={event}
+                      layout="poster"
+                      onPress={() => router.push(`/event/${event.id}` as Href)}
+                    />
+                    {left ? (
+                      <Text variant="caption" className="mt-ds-8 uppercase text-neon">
+                        Puerta en {left}
+                      </Text>
+                    ) : null}
+                  </FadeSlideIn>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+      {featured.length > 0 && railTitle ? (
+        <View className="mt-ds-32 gap-ds-16">
+          <Text variant="headingSm">{railTitle}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {featured.map((event, index) => (
+              <View key={`feat-${event.id}`} style={{ width: 168 }}>
                 <FadeSlideIn index={index}>
-                  <EventCard event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
+                  <EventCard
+                    event={event}
+                    layout="poster"
+                    onPress={() => router.push(`/event/${event.id}` as Href)}
+                  />
                 </FadeSlideIn>
               </View>
             ))}

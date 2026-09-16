@@ -1,6 +1,6 @@
 # FEAT-011: Pin de mapa (publicación)
 
-El promoter suelta el pin donde ocurre la fiesta. Esa coordenada es la de Explorar y del detalle. El GPS del teléfono es atajo, no requisito.
+El promoter suelta el pin donde ocurre la fiesta. Esa coordenada es la de Mapa y del detalle. El GPS del teléfono es atajo, no requisito.
 
 | Campo | Valor |
 |-------|-------|
@@ -40,7 +40,7 @@ GeoJSON de contorno. Indoor maps.
 ## Checklist
 
 - [ ] Sin Google Maps.
-- [ ] Pin publicado = mismo punto en Explorar.
+- [ ] Pin publicado = mismo punto en Mapa.
 - [ ] Ubicación denegada no impide publicar.
 
 ## Relacionadas

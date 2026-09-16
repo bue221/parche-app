@@ -12,6 +12,8 @@ const PATTERNS = [
   '114131', '311141', '411131', '211412', '211214', '211232', '2331112',
 ];
 
+const QUIET_ZONE = 10;
+
 export function code128Modules(text: string): number[] {
   const payload = text.replace(/[^\x20-\x7E]/g, ' ');
   const codes = [104];
@@ -31,6 +33,22 @@ export function code128Modules(text: string): number[] {
     }
   }
   return modules;
+}
+
+/** Integer-module SVG so phone cameras can lock onto the bars. Flex views round widths and break Code 128. */
+export function code128Svg(text: string, height = 88): string {
+  const modules = code128Modules(text);
+  const content = modules.reduce((sum, weight) => sum + weight, 0);
+  const total = content + QUIET_ZONE * 2;
+  let x = QUIET_ZONE;
+  const bars: string[] = [`<rect width="${total}" height="${height}" fill="#ffffff"/>`];
+  modules.forEach((weight, index) => {
+    if (index % 2 === 0) {
+      bars.push(`<rect x="${x}" y="0" width="${weight}" height="${height}" fill="#000000"/>`);
+    }
+    x += weight;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${height}" preserveAspectRatio="none" shape-rendering="crispEdges">${bars.join('')}</svg>`;
 }
 
 export function compactTicketCode(jti: string): string {

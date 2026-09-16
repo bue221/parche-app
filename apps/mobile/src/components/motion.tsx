@@ -3,6 +3,7 @@ import { Pressable, View, type PressableProps } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { cn } from '@/lib/utils';
 
 export function PressScale({
   children,
@@ -32,8 +33,10 @@ export function PressScale({
       onPressOut={() => {
         if (!reduce) scale.value = withTiming(1, { duration: 120 });
       }}
-      className={className}>
-      <Animated.View style={style}>{children}</Animated.View>
+      className={cn('w-full', className)}>
+      <Animated.View className="w-full" style={style}>
+        {children}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -54,7 +57,7 @@ export function FadeSlideIn({
   return (
     <Animated.View
       className={className}
-      entering={FadeInDown.duration(280).delay(Math.min(index, 12) * 40)}>
+      entering={FadeInDown.duration(360).delay(Math.min(index, 12) * 40)}>
       {children}
     </Animated.View>
   );

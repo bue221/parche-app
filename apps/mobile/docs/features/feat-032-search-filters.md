@@ -7,7 +7,7 @@ El asistente recorta la agenda por fecha, subgénero, DJ y texto. El mapa puede 
 | Sprint | 4 |
 | RC | RC-017 |
 | Permiso UI | Público |
-| Pantallas | Sheet de filtros en Agenda y Explorar |
+| Pantallas | Sheet de filtros en Explorar y Mapa |
 
 ## Quick path
 
@@ -17,7 +17,7 @@ El asistente recorta la agenda por fecha, subgénero, DJ y texto. El mapa puede 
 
 ## Pantallas
 
-SearchBar + chips en Agenda. Pantalla compacta de filtros con CTA fijo. Sin color de acento. Bbox: al soltar el mapa en Explorar (debounce).
+SearchBar + chips en Explorar. Pantalla compacta de filtros con CTA fijo. Sin color de acento. Bbox: al soltar el mapa en Mapa (debounce).
 
 ## Flujo
 
@@ -37,7 +37,7 @@ Filtro por clubes (RC-023). ML.
 
 ## Checklist
 
-- [ ] Filtros de Agenda y mapa no divergen en params.
+- [ ] Filtros de Explorar y mapa no divergen en params.
 - [ ] Cambiar filtro no concatena páginas viejas.
 
 ## Relacionadas

@@ -10,9 +10,23 @@ import { ApiError } from '@/data/errors';
 import { refreshSession, revokeLocalSession } from '@/data/http';
 import { debugLog } from '@/data/log';
 import { hydratePrintSeen } from '@/data/ticket-cache';
+import { useInterestStore } from '@/data/interest-store';
+import { syncLocalInterest } from '@/data/interest-sync';
 import { getAccessExpiresAt, hasPersistedSession, hydrateRefresh } from '@/data/token-store';
 
 const REFRESH_SKEW_MS = 90 * 1000;
+
+async function hydrateServerInterest(): Promise<void> {
+  try {
+    const [following, saved] = await Promise.all([api.artists.following(), api.events.saved()]);
+    useInterestStore.getState().rememberFromServer(
+      following.map((artist) => artist.id),
+      saved.map((event) => event.id)
+    );
+  } catch {
+    debugLog('interest', 'server interest hydrate skipped');
+  }
+}
 
 function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'UNAUTHORIZED';
@@ -51,6 +65,7 @@ export function SessionLifecycle() {
     void (async () => {
       try {
         await hydratePrintSeen();
+        await useInterestStore.getState().hydrate();
         const refresh = await hydrateRefresh();
         if (!refresh) {
           return;
@@ -62,6 +77,7 @@ export function SessionLifecycle() {
         try {
           await api.auth.me();
           useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
+          void hydrateServerInterest().then(() => syncLocalInterest());
         } catch (err) {
           if (isUnauthorized(err)) {
             await revokeLocalSession();

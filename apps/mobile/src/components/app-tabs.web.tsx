@@ -17,16 +17,14 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="agenda" href="/" asChild>
-            <TabButton>Agenda</TabButton>
-          </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
             <TabButton>Explorar</TabButton>
           </TabTrigger>
-          {tabs.tickets ? (
-            <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
-              <TabButton>Tiquetes</TabButton>
-            </TabTrigger>
-          ) : null}
+          <TabTrigger name="explore" href="/explore" asChild>
+            <TabButton>Mapa</TabButton>
+          </TabTrigger>
+          <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
+            <TabButton>Tiquetes</TabButton>
+          </TabTrigger>
           <TabTrigger name="parche" href={'/parche' as Href} asChild>
             <TabButton>Parche</TabButton>
           </TabTrigger>

@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/data/auth-store';
 import { API_URL, rewriteMediaUrl } from '@/data/env';
 import { ApiError } from '@/data/errors';
+import { useInterestStore } from '@/data/interest-store';
 import { apiFetch, asRecord, mediaUrl, num, refreshSession, revokeLocalSession, str } from '@/data/http';
 import { createId } from '@/data/ids';
 import { mapEvent, mapEventDetail, mapMembership, mapTicketType, mapWalletTicket } from '@/data/mappers';
@@ -337,6 +338,49 @@ export const httpApi: ParcheApi = {
       await apiFetch('/v1/me/profiles/artist', { method: 'POST', auth: true, body: JSON.stringify({}) });
       return this.me();
     },
+    async requestOtp(email: string) {
+      await apiFetch('/v1/auth/otp/request', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+    },
+    async verifyOtp(email: string, code: string) {
+      const body = await apiFetch('/v1/auth/otp/verify', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase(), code: code.trim() }),
+      });
+      await applyTokens(body);
+      return this.me();
+    },
+    async oauthGoogle(idToken: string) {
+      const body = await apiFetch('/v1/auth/oauth', {
+        method: 'POST',
+        body: JSON.stringify({ provider: 'google', id_token: idToken }),
+      });
+      await applyTokens(body);
+      return this.me();
+    },
+    async syncInterest(input: { artistIds: string[]; eventIds: string[] }) {
+      await apiFetch('/v1/me/sync', {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({ artist_ids: input.artistIds, event_ids: input.eventIds }),
+      });
+    },
+    async invites() {
+      const body = await apiFetch('/v1/me/invites', { auth: true });
+      return itemsOf(body).map((row) => {
+        const m = asRecord(row);
+        return {
+          id: `${str(m.event_id)}:${str(m.role)}`,
+          eventId: str(m.event_id),
+          userId: useAuthStore.getState().me?.id ?? '',
+          email: useAuthStore.getState().me?.email ?? '',
+          role: str(m.role) as MembershipRole,
+          status: (str(m.status) || 'pending') as Membership['status'],
+        } satisfies Membership;
+      });
+    },
   },
 
   events: {
@@ -357,6 +401,26 @@ export const httpApi: ParcheApi = {
     },
     async get(id: string) {
       return hydrateEvent(id);
+    },
+    async save(id: string) {
+      await apiFetch(`/v1/events/${id}/save`, { method: 'POST', auth: true, body: JSON.stringify({}) });
+    },
+    async unsave(id: string) {
+      await apiFetch(`/v1/events/${id}/save`, { method: 'DELETE', auth: true });
+    },
+    async saved() {
+      const body = await apiFetch('/v1/me/saved-events', { auth: true });
+      return itemsOf(body).map(mapEvent);
+    },
+    async similar(id: string) {
+      try {
+        const body = await apiFetch(`/v1/events/${id}/similar`);
+        const rec = asRecord(body);
+        const events = Array.isArray(rec.events) ? rec.events : itemsOf(body);
+        return events.map(mapEvent);
+      } catch {
+        return [];
+      }
     },
     async create(input) {
       const tenantId = await ensureTenant();
@@ -487,7 +551,10 @@ export const httpApi: ParcheApi = {
       return list;
     },
     isFollowing(artistId) {
-      return useAuthStore.getState().followingIds.includes(artistId);
+      return (
+        useAuthStore.getState().followingIds.includes(artistId) ||
+        useInterestStore.getState().isFollowing(artistId)
+      );
     },
   },
 

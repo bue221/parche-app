@@ -11,9 +11,9 @@ Una sola pantalla cuenta la fecha: foto hero, copy Inter, lineup, mapa del pin, 
 
 ## Quick path
 
-1. Entrar desde Agenda, mapa o deep link.
+1. Entrar desde Explorar, mapa o deep link.
 2. Ver foto, fecha, venue, descripción, pin.
-3. CTA sticky: Comprar si hay tipos a la venta; si no, “Pronto”.
+3. CTA sticky: Comprar si hay tipos a la venta (abre checkout, auth sheet si hace falta); Guardar evento sin cuenta. Lineup: Seguir local.
 
 ## Pantallas
 
@@ -50,7 +50,7 @@ Editor inline de todo el evento (usa [FEAT-009](feat-009-event-edit.md)). Scanne
 
 - [ ] Invitado lee el detalle.
 - [ ] `door` ve entrar a scanner, no ingresos.
-- [ ] Pin coincide con Explorar.
+- [ ] Pin coincide con Mapa.
 
 ## Relacionadas
 

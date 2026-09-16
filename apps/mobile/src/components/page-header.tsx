@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils';
 
 export function PageHeader({
   eyebrow,
+  mark,
   title,
   lead,
   actions,
   className,
 }: {
   eyebrow?: string;
+  mark?: ReactNode;
   title: string;
   lead?: string;
   actions?: ReactNode;
@@ -24,7 +26,10 @@ export function PageHeader({
           {eyebrow}
         </Text>
       ) : null}
-      <Text variant="heading">{title}</Text>
+      <View className="flex-row items-center gap-ds-12">
+        {mark}
+        <Text variant="heading">{title}</Text>
+      </View>
       {lead ? <Text variant="muted">{lead}</Text> : null}
       {actions ? <View className="flex-row flex-wrap gap-ds-8">{actions}</View> : null}
     </View>

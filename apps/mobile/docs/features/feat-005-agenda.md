@@ -1,17 +1,17 @@
-# FEAT-005: Agenda
+# FEAT-005: Explorar (listado)
 
-El asistente ve las próximas fechas como un grid foto-first: imagen 4:5, día y venue debajo. Es el home de producto.
+El asistente ve las próximas fechas como un grid foto-first: imagen 4:5, día y venue debajo. Es el home de producto. El tab se llama **Explorar**; la ruta sigue siendo `/`.
 
 | Campo | Valor |
 |-------|-------|
 | Sprint | 1 |
 | RC | RC-004 |
 | Permiso UI | Público (opcional Bearer) |
-| Pantallas | Tab `Agenda` |
+| Pantallas | Tab `Explorar` (`index`) |
 
 ## Quick path
 
-1. Abrir Agenda.
+1. Abrir Explorar.
 2. Scroll de eventos próximos con flyer.
 3. Tap → [FEAT-007](feat-007-event-detail.md).
 
@@ -19,11 +19,12 @@ El asistente ve las próximas fechas como un grid foto-first: imagen 4:5, día y
 
 | Zona | Regla |
 |------|-------|
-| Hero | Título Inter + SearchBar + chips de día/género |
+| Hero | Título Inter “Explorar” + lead “Fechas cerca” + SearchBar + chips de día/género |
 | Lista | Card listing 16px, foto 4:5, fecha, nombre, venue; lift suave |
 | Pull-to-refresh | Invalida lista local |
+| Promoter | CTA **Crear fecha** en el header; no es el home de Operar |
 
-Sprint 4: bloque de [FEAT-033](feat-033-recommendations.md) encima de la lista, no en lugar de ella.
+Rail **Esta noche**: eventos same-day con countdown a `startsAt` (neon). Chips Hoy/Finde/Mes usan `FadeSlideIn` / `PressScale`. Sprint 4: [FEAT-033](feat-033-recommendations.md) (“Para ti”) encima de la lista, no en lugar de Esta noche.
 
 ## Flujo
 
@@ -43,13 +44,14 @@ Sprint 4: bloque de [FEAT-033](feat-033-recommendations.md) encima de la lista, 
 
 ## Fuera de alcance
 
-Mapa (Explorar). Crear evento (CTA solo si `promoter`, va a [FEAT-008](feat-008-event-create.md)).
+Mapa (tab Mapa). Crear evento (CTA solo si `promoter`, va a [FEAT-008](feat-008-event-create.md)).
 
 ## Checklist
 
 - [ ] Flyer + fecha visibles sin entrar al detalle.
 - [ ] Invitado puede leer la lista.
 - [ ] Refresh no deja eventos publicados hace un minuto fuera si el API ya los trae.
+- [ ] Promoter sigue viendo Crear fecha.
 
 ## Relacionadas
 

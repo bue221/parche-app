@@ -17,7 +17,7 @@ export function ArtistPreview({
   return (
     <Surface muted className="flex-row items-center gap-ds-16">
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} className="size-20 rounded-full bg-muted" />
+        <Image source={{ uri: avatarUrl }} className="size-20 rounded-full bg-muted" style={{ width: 80, height: 80 }} />
       ) : (
         <View className="size-20 items-center justify-center rounded-full bg-background">
           <Text variant="headingSm">{initials}</Text>

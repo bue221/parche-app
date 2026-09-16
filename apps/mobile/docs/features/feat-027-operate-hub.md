@@ -44,7 +44,7 @@ Chips de rol localizados: Owner / Manager / Puerta / Métricas. Status con `stat
 
 ## Flujo
 
-`GET /v1/me/memberships`. Vacío promoter sin eventos: CTA crear. Vacío door sin events: no debería verse el tab (revocados filtrados).
+`GET /v1/me/memberships`. Vacío promoter sin eventos: CTA crear. Vacío door sin events: no debería verse el tab (revocados filtrados). Badge: evento de membresía que empieza hoy **o** `GET /v1/me/invites` pending. En web, punto en `_layout.web.tsx`. En nativo, `NativeTabs.Trigger.Badge` si Expo lo expone; si no, el punto web es el fallback.
 
 ## Estados
 

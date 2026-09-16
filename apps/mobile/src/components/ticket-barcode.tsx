@@ -1,37 +1,30 @@
 import { View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 
 import { Text } from '@/components/ui/text';
-import { code128Modules } from '@/lib/code128';
+import { code128Svg } from '@/lib/code128';
 
 export function TicketBarcode({
   value,
   revealed,
   label,
+  height = 88,
 }: {
   value: string;
   revealed: boolean;
   label?: string;
+  height?: number;
 }) {
-  const modules = revealed && value ? code128Modules(value) : [];
-
-  if (!revealed) {
-    return (
-      <View className="h-12 w-full items-center justify-center bg-muted">
-        <Text variant="helper">Imprimiendo…</Text>
-      </View>
-    );
+  if (!revealed || !value) {
+    return <View className="w-full bg-ash-gray" style={{ height }} />;
   }
 
   return (
-    <View className="w-full gap-ds-8 bg-paper-white px-ds-4 py-ds-8">
-      <View className="h-12 flex-row items-stretch">
-        {modules.map((weight, index) => (
-          <View
-            key={`${index}-${weight}`}
-            className={index % 2 === 0 ? 'bg-pitch-black' : 'bg-paper-white'}
-            style={{ flex: weight }}
-          />
-        ))}
+    <View
+      accessibilityLabel={label ? `Código ${label}` : 'Código de barras'}
+      className="w-full gap-ds-12 bg-paper-white pt-ds-4">
+      <View className="w-full overflow-hidden bg-paper-white" style={{ height }}>
+        <SvgXml xml={code128Svg(value, height)} width="100%" height={height} />
       </View>
       <Text className="text-center font-favorit text-caption font-bold uppercase tracking-favorit text-pitch-black">
         {label ?? value.slice(-8)}

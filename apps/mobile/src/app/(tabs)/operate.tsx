@@ -2,7 +2,7 @@ import { useQueries } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { View } from 'react-native';
 
-import { EventCard } from '@/components/event-card';
+import { EventCard, EventFeed } from '@/components/event-card';
 import { EventStaffPrimary, buildEventStaffActions } from '@/components/event-staff-actions';
 import { EmptyState, ListingSkeleton } from '@/components/feedback';
 import { FadeSlideIn } from '@/components/motion';
@@ -43,6 +43,8 @@ export default function OperateHubScreen() {
   }));
   const tonight = density === 'door' ? pickTonight(rows) : null;
   const rest = tonight ? rows.filter((row) => row.membership.id !== tonight.membership.id) : rows;
+  const listingRows = density === 'door' ? (tonight ? [tonight] : []) : rest;
+  const rowRows = density === 'door' ? rest : [];
 
   const lead =
     density === 'door'
@@ -86,25 +88,29 @@ export default function OperateHubScreen() {
             lead={density === 'metrics' ? 'Las métricas aparecen cuando te sumen a una fecha.' : 'Cada quien entra con su cuenta. Nada de login compartido.'}
           />
         ) : null}
-        {tonight ? (
-          <FadeSlideIn index={0}>
-            <OperateEventBlock
-              userId={user.id}
-              membership={tonight.membership}
-              event={tonight.event}
-              loading={tonight.loading}
-              layout="listing"
-            />
-          </FadeSlideIn>
+        {listingRows.length > 0 ? (
+          <EventFeed>
+            {listingRows.map((row, index) => (
+              <FadeSlideIn key={row.membership.id} index={index} className="w-full">
+                <OperateEventBlock
+                  userId={user.id}
+                  membership={row.membership}
+                  event={row.event}
+                  loading={row.loading}
+                  layout="listing"
+                />
+              </FadeSlideIn>
+            ))}
+          </EventFeed>
         ) : null}
-        {rest.map((row, index) => (
-          <FadeSlideIn key={row.membership.id} index={index + (tonight ? 1 : 0)}>
+        {rowRows.map((row, index) => (
+          <FadeSlideIn key={row.membership.id} index={listingRows.length + index}>
             <OperateEventBlock
               userId={user.id}
               membership={row.membership}
               event={row.event}
               loading={row.loading}
-              layout={density === 'door' ? 'row' : 'listing'}
+              layout="row"
             />
           </FadeSlideIn>
         ))}
@@ -138,7 +144,7 @@ function OperateEventBlock({
   });
 
   return (
-    <View className="gap-ds-12">
+    <View className="w-full gap-ds-12">
       <EventCard
         event={cardEvent}
         layout={layout}

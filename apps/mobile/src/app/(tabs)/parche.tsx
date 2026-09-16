@@ -6,11 +6,12 @@ import { View } from 'react-native';
 
 import { ArtistPreview } from '@/components/artist-preview';
 import { ArtistRow } from '@/components/artist-row';
-import { EventCard } from '@/components/event-card';
+import { EventCard, EventFeed } from '@/components/event-card';
 import { EmptyState, ErrorState } from '@/components/feedback';
 import { Field } from '@/components/field';
 import { MediaPicker } from '@/components/media-picker';
 import { PageHeader } from '@/components/page-header';
+import { ProfileMascot } from '@/components/profile-mascot';
 import { Screen } from '@/components/screen';
 import { SettingsRow } from '@/components/settings-row';
 import { Surface } from '@/components/surface';
@@ -24,12 +25,15 @@ import { userMessage } from '@/data/errors';
 import { debugLog } from '@/data/log';
 import { toast } from '@/data/toast-store';
 import { useAuthSnapshot, usePrimaryProfile } from '@/data/session';
+import { useAuthSheet } from '@/data/auth-sheet-store';
 import type { Artist, Membership, ParcheEvent, User } from '@/data/types';
-import { membershipRoleLabel, profileLabel } from '@/lib/profiles';
+import { useTheme } from '@/hooks/use-theme';
+import { membershipRoleLabel, profileLabel, profileMascot } from '@/lib/profiles';
 
 export default function ParcheScreen() {
   const { isLoggedIn, user, memberships, isAdmin, isPromoter } = useAuthSnapshot();
   const { primary, density } = usePrimaryProfile();
+  const openAuth = useAuthSheet((s) => s.open);
   const [name, setName] = useState(user?.displayName ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -63,18 +67,23 @@ export default function ParcheScreen() {
 
   if (!isLoggedIn || !user) {
     return (
-      <Screen center>
-        <View className="max-w-xl gap-ds-24">
-          <PageHeader title="Parche" lead="Entra para wallet, follows y tus fechas." />
-          <View className="flex-row flex-wrap gap-ds-8">
-            <ThemeToggle />
-            <Button onPress={() => router.push('/auth/login' as Href)}>
-              <Text>Entrar</Text>
-            </Button>
-            <Button variant="outline" onPress={() => router.push('/auth/register' as Href)}>
-              <Text>Crear cuenta</Text>
-            </Button>
-          </View>
+      <Screen>
+        <PageHeader title="Cuenta" lead="Guarda boletas y sigue artistas." />
+        <View className="mt-ds-24 max-w-xl gap-ds-16">
+          <Surface elevated>
+            <Text variant="subheading">Tu parche, cuando quieras</Text>
+            <Text variant="muted" className="mt-ds-8">
+              Explora y guarda sin cuenta. Entra al comprar o para ver tus QRs.
+            </Text>
+            <View className="mt-ds-16">
+              <Button onPress={() => openAuth()}>
+                <Text>Entrar</Text>
+              </Button>
+            </View>
+          </Surface>
+        </View>
+        <View className="mt-ds-32 max-w-xl">
+          <SettingsRow label="Apariencia" trailing={<ThemeToggle />} />
         </View>
       </Screen>
     );
@@ -106,7 +115,12 @@ export default function ParcheScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Parche" lead={lead} />
+      <PageHeader
+        eyebrow={profileMascot(primary).name}
+        mark={<ProfileMascot profile={primary} size={32} />}
+        title="Parche"
+        lead={lead}
+      />
       <IdentityHeader user={user} />
       <View className="mt-ds-16 flex-row items-center gap-ds-8">
         <ThemeToggle />
@@ -158,7 +172,7 @@ export default function ParcheScreen() {
           <SettingsRow label="Mis tiquetes" detail="Wallet" onPress={() => router.push('/tickets' as Href)} />
         ) : null}
         {tonight ? (
-          <View className="gap-ds-12">
+          <View className="w-full gap-ds-12">
             <Text variant="headingSm">Esta noche</Text>
             <EventCard
               event={tonight}
@@ -200,11 +214,12 @@ export default function ParcheScreen() {
 }
 
 function IdentityHeader({ user }: { user: Omit<User, 'password'> }) {
+  const theme = useTheme();
   const initials = user.displayName.slice(0, 2).toUpperCase();
   return (
     <View className="mt-ds-16 items-center gap-ds-12">
       {user.avatarUrl ? (
-        <Image source={{ uri: user.avatarUrl }} className="size-28 rounded-full bg-muted" />
+        <Image source={{ uri: user.avatarUrl }} className="size-28 rounded-full bg-muted" style={{ width: 112, height: 112 }} />
       ) : (
         <View className="size-28 items-center justify-center rounded-full bg-muted">
           <Text variant="heading">{initials}</Text>
@@ -216,7 +231,10 @@ function IdentityHeader({ user }: { user: Omit<User, 'password'> }) {
       <Text variant="muted">{user.email}</Text>
       <View className="flex-row flex-wrap justify-center gap-ds-8">
         {user.profiles.map((profile) => (
-          <Tag key={profile} tone="muted">
+          <Tag
+            key={profile}
+            tone="muted"
+            icon={<ProfileMascot profile={profile} size={14} knockout={theme.backgroundElement} />}>
             {profileLabel(profile)}
           </Tag>
         ))}
@@ -295,16 +313,17 @@ function PromoterDates({
           onAction={() => router.push('/event/create' as Href)}
         />
       ) : (
-        owned.map((membership) => {
-          const event = events[memberships.indexOf(membership)];
-          if (!event) return null;
-          return (
-            <View key={membership.id} className="gap-ds-8">
-              <EventCard event={event} layout="listing" onPress={() => router.push(`/event/${event.id}` as Href)} />
-              <Text variant="helper">{membershipRoleLabel(membership.role)}</Text>
-            </View>
-          );
-        })
+        <EventFeed>
+          {owned
+            .map((membership) => ({ membership, event: events[memberships.indexOf(membership)] }))
+            .filter((row): row is { membership: Membership; event: ParcheEvent } => Boolean(row.event))
+            .map(({ membership, event }) => (
+              <View key={membership.id} className="w-full gap-ds-8">
+                <EventCard event={event} layout="listing" onPress={() => router.push(`/event/${event.id}` as Href)} />
+                <Text variant="helper">{membershipRoleLabel(membership.role)}</Text>
+              </View>
+            ))}
+        </EventFeed>
       )}
     </View>
   );

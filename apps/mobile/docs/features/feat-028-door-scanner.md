@@ -22,14 +22,14 @@ Cámara full bleed + overlay B/N. Resultado a pantalla casi completa:
 
 | Código | UI | Color |
 |--------|-----|-------|
-| `approved` | PASA | `confirm` |
-| `duplicate` | YA USADO | chrome B/N, no verde |
-| `invalid` | INVÁLIDO | B/N |
-| `wrong_event` | OTRO EVENTO | B/N |
-| `expired` | VENCIDO | B/N |
-| `forbidden` | SIN PERMISO | salir a Operar |
+| `approved` | PASA | `confirm` (volt) |
+| `duplicate` | YA USADO | `amber` |
+| `invalid` | INVÁLIDO | `danger` |
+| `wrong_event` | OTRO EVENTO | `danger` |
+| `expired` | VENCIDO | `danger` |
+| `forbidden` | SIN PERMISO | `danger`; salir a Operar |
 
-Volver a apuntar tras ~1.5 s. No decidir approved en el cliente.
+El resultado se queda a pantalla completa hasta **Continuar**. No decidir approved en el cliente.
 
 Aforo compacto en esquina: [FEAT-029](feat-029-door-live.md).
 

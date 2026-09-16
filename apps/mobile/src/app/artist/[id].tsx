@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
-import { setPendingPath, useAuthSnapshot } from '@/data/session';
+import { toggleFollow } from '@/data/interest-sync';
+import { useInterestStore } from '@/data/interest-store';
+import { useAuthSnapshot } from '@/data/session';
 
 export default function ArtistPublicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,7 +24,8 @@ export default function ArtistPublicScreen() {
     queryKey: ['artist', id],
     queryFn: () => api.artists.get(id),
   });
-  const following = api.artists.isFollowing(id);
+  const localFollowing = useInterestStore((s) => s.artistIds.includes(id));
+  const following = api.artists.isFollowing(id) || localFollowing;
 
   if (error) {
     return (
@@ -57,7 +60,7 @@ export default function ArtistPublicScreen() {
       <BackBar />
       <View className="items-center gap-ds-12">
         {artist.avatarUrl ? (
-          <Image source={{ uri: artist.avatarUrl }} className="size-28 rounded-full bg-muted" />
+          <Image source={{ uri: artist.avatarUrl }} className="size-28 rounded-full bg-muted" style={{ width: 112, height: 112 }} />
         ) : (
           <View className="size-28 items-center justify-center rounded-full bg-muted">
             <Text variant="heading">{artist.stageName.slice(0, 2).toUpperCase()}</Text>
@@ -77,12 +80,7 @@ export default function ArtistPublicScreen() {
           <Button
             variant={following ? 'outline' : 'default'}
             onPress={() => {
-              if (!isLoggedIn) {
-                setPendingPath(`/artist/${id}`);
-                router.push('/auth/login' as Href);
-                return;
-              }
-              void (following ? api.artists.unfollow(id) : api.artists.follow(id)).then(() =>
+              void toggleFollow(id, isLoggedIn).then(() =>
                 queryClient.invalidateQueries({ queryKey: ['artist', id] })
               );
             }}>

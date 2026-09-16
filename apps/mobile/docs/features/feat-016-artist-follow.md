@@ -6,7 +6,7 @@ El asistente sigue DJs para enterarse de fechas. No es un feed social de posts.
 |-------|-------|
 | Sprint | 2 |
 | RC | RC-009 |
-| Permiso UI | `attendee` autenticado |
+| Permiso UI | Público (local); API con access |
 | Pantallas | Botón en perfil artista; lista en Parche |
 
 ## Quick path
@@ -23,7 +23,7 @@ Botón outlined / filled según estado. Lista `GET /v1/me/following`.
 
 ## Flujo
 
-Sin sesión: login y retorno al perfil, luego no auto-follow mágico salvo que el usuario pulse de nuevo (KISS: no seguir implícito post-login).
+Sin sesión: follow local inmediato ([FEAT-037](feat-037-local-interest.md)). Con sesión: API. Al crear cuenta, sync. Lineup del evento también ofrece Seguir.
 
 ## Estados
 

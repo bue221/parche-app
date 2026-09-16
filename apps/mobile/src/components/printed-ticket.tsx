@@ -11,11 +11,11 @@ import Animated, {
 import { TicketBarcode } from '@/components/ticket-barcode';
 import { Text } from '@/components/ui/text';
 import { ticketScanValue } from '@/lib/code128';
-import { formatWhen } from '@/lib/format';
+import { cityFromAddress, formatTicketDate, formatTicketTime, ticketStubCode } from '@/lib/ticket-label';
 import { cn } from '@/lib/utils';
 import type { EventWithExtras, Ticket, TicketType } from '@/data/types';
 
-const HOLES = Array.from({ length: 11 }, (_, i) => i);
+const HOLES = Array.from({ length: 15 }, (_, i) => i);
 
 export function PrintedTicket({
   ticket,
@@ -30,7 +30,7 @@ export function PrintedTicket({
   printing: boolean;
   reduceMotion?: boolean;
 }) {
-  const feed = useSharedValue(reduceMotion ? 0 : 320);
+  const feed = useSharedValue(reduceMotion ? 0 : 420);
   const stamp = useSharedValue(reduceMotion ? 1 : 0);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function PrintedTicket({
       stamp.value = 1;
       return;
     }
-    feed.value = 320;
+    feed.value = 420;
     stamp.value = 0;
     if (printing) {
       feed.value = withTiming(0, { duration: 1100 });
@@ -52,43 +52,70 @@ export function PrintedTicket({
   }));
   const stampStyle = useAnimatedStyle(() => ({
     opacity: stamp.value,
-    transform: [{ rotate: '-12deg' }, { scale: 0.85 + stamp.value * 0.15 }],
+    transform: [{ rotate: '-22deg' }, { scale: 0.85 + stamp.value * 0.15 }],
   }));
 
   const code = ticketScanValue(ticket);
+  const stub = ticketStubCode(event?.name, ticket.id);
 
   return (
-    <View className="min-h-[22rem] overflow-hidden">
+    <View className="min-h-[26rem] overflow-hidden">
       <Animated.View style={paperStyle}>
-        <View className="mx-auto w-full max-w-[18rem] bg-paper-white">
-          <View className="flex-row justify-between px-ds-8">
+        <View className="w-full bg-paper-white">
+          <View className="flex-row justify-between px-ds-12 pt-ds-8">
             {HOLES.map((hole) => (
-              <View key={hole} className="size-2.5 -translate-y-1/2 rounded-full bg-muted" />
+              <View key={hole} className="size-2 rounded-full bg-charcoal" />
             ))}
           </View>
-          <View className="gap-ds-16 px-ds-20 pb-ds-20 pt-ds-4">
+          <View className="relative gap-ds-16 px-ds-20 pb-ds-24 pt-ds-8">
             <TicketLine delay={220} active={printing} reduce={reduceMotion} className="flex-row justify-between">
-              <Text className="font-favorit text-caption font-bold uppercase text-pitch-black">Parche</Text>
-              <Text className="font-favorit text-caption font-bold uppercase text-stone">En vivo</Text>
+              <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-pitch-black">
+                Parche
+              </Text>
+              <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-stone">
+                En vivo
+              </Text>
             </TicketLine>
-            <TicketLine delay={480} active={printing} reduce={reduceMotion} className="relative">
-              <Text className="font-foggy text-[40px] uppercase leading-none text-pitch-black">{event?.name ?? 'Entrada'}</Text>
+            <View className="relative">
+              <TicketLine delay={480} active={printing} reduce={reduceMotion}>
+                <Text
+                  className="pr-16 font-foggy text-[44px] uppercase leading-[0.85] text-pitch-black"
+                  numberOfLines={2}>
+                  {event?.name ?? 'Entrada'}
+                </Text>
+              </TicketLine>
               <Animated.View
-                style={stampStyle}
-                className="absolute -right-1 top-3 rounded-sm border-[3px] border-pitch-black bg-confirm px-ds-8 py-ds-4">
-                <Text className="font-favorit text-caption font-bold uppercase text-pitch-black">Confirmada</Text>
+                pointerEvents="none"
+                style={[stampStyle, { position: 'absolute', right: -4, top: 12, zIndex: 2 }]}>
+                <View className="rounded-sm border-[3px] border-pitch-black bg-confirm px-ds-8 py-ds-4">
+                  <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-pitch-black">
+                    Confirmada
+                  </Text>
+                </View>
               </Animated.View>
-            </TicketLine>
-            <TicketLine delay={760} active={printing} reduce={reduceMotion} className="flex-row flex-wrap gap-ds-12">
+            </View>
+            <TicketLine delay={760} active={printing} reduce={reduceMotion} className="flex-row gap-ds-12">
               <Meta label="Lugar" value={event?.venueName ?? '—'} />
-              <Meta label="Cuando" value={event ? formatWhen(event.startsAt) : '—'} />
+              <Meta label="Ciudad" value={cityFromAddress(event?.addressText)} />
             </TicketLine>
-            <TicketLine delay={1040} active={printing} reduce={reduceMotion} className="flex-row justify-between border-t border-dashed border-pitch-black/30 pt-ds-16">
-              <Text className="font-favorit text-caption font-bold uppercase text-pitch-black">{type?.name ?? 'General'}</Text>
-              <Text className="font-favorit text-caption font-bold uppercase text-pitch-black">{code.slice(-8)}</Text>
+            <TicketLine delay={980} active={printing} reduce={reduceMotion} className="flex-row gap-ds-12">
+              <Meta label="Fecha" value={event ? formatTicketDate(event.startsAt) : '—'} />
+              <Meta label="Hora" value={event ? formatTicketTime(event.startsAt) : '—'} />
             </TicketLine>
-            <TicketLine delay={1280} active={printing} reduce={reduceMotion}>
-              <TicketBarcode value={code} revealed={printing || Boolean(reduceMotion)} label={code.slice(-8)} />
+            <TicketLine
+              delay={1180}
+              active={printing}
+              reduce={reduceMotion}
+              className="flex-row items-center justify-between border-t border-dashed border-pitch-black/25 pt-ds-16">
+              <Text className="font-favorit text-body-sm font-bold uppercase tracking-favorit text-pitch-black">
+                Puerta
+              </Text>
+              <Text className="font-favorit text-body-sm font-bold uppercase tracking-favorit text-pitch-black">
+                {type?.name ?? 'General'}
+              </Text>
+            </TicketLine>
+            <TicketLine delay={1380} active={printing} reduce={reduceMotion}>
+              <TicketBarcode value={code} revealed={printing || Boolean(reduceMotion)} label={stub} height={96} />
             </TicketLine>
           </View>
         </View>
@@ -99,8 +126,8 @@ export function PrintedTicket({
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <View className="min-w-[40%] flex-1">
-      <Text className="font-favorit text-caption font-bold uppercase text-stone">{label}</Text>
+    <View className="w-1/2 pr-ds-8">
+      <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-stone">{label}</Text>
       <Text className="font-favorit text-body-sm font-bold uppercase text-pitch-black" numberOfLines={2}>
         {value}
       </Text>
@@ -144,8 +171,8 @@ function TicketLine({
   }));
 
   return (
-    <Animated.View style={style} className={cn(className)}>
-      {children}
+    <Animated.View style={style}>
+      <View className={cn(className)}>{children}</View>
     </Animated.View>
   );
 }

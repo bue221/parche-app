@@ -1,6 +1,8 @@
+import { rewritePreviewUrl } from '@/data/env';
 import { mediaUrl, num, str, asRecord } from '@/data/http';
 import type {
-  Artist,
+  EventGalleryImage,
+  EventLineupArtist,
   EventStatus,
   EventWithExtras,
   Membership,
@@ -27,13 +29,14 @@ export function mapStatus(raw: string): EventStatus {
 export function mapEvent(raw: unknown): ParcheEvent {
   const e = asRecord(raw);
   const flyer = asRecord(e.flyer);
-  const genres = Array.isArray(e.genres) ? e.genres.map((g) => String(g)) : [];
+  const genres = Array.isArray(e.genres) ? e.genres.map((g) => String(g)).filter(Boolean) : [];
   return {
     id: str(e.id),
     tenantId: str(e.tenant_id),
     ownerUserId: str(e.created_by),
     name: str(e.title) || str(e.name),
     startsAt: str(e.starts_at),
+    endsAt: str(e.ends_at) || undefined,
     venueName: str(e.venue_name),
     addressText: str(e.address_text),
     description: str(e.description),
@@ -42,6 +45,8 @@ export function mapEvent(raw: unknown): ParcheEvent {
     lng: typeof e.lng === 'number' ? e.lng : undefined,
     status: mapStatus(str(e.status)),
     genre: genres[0] ?? 'techno',
+    genres,
+    agePolicy: str(e.age_policy) || undefined,
     rejectReason: str(e.reject_reason) || undefined,
     updatedAt: str(e.updated_at),
   };
@@ -53,6 +58,7 @@ export function mapEventDetail(raw: unknown): EventWithExtras {
   const lineupRaw = Array.isArray(e.lineup) ? e.lineup : [];
   const tracksRaw = Array.isArray(e.tracks) ? e.tracks : [];
   const typesRaw = Array.isArray(e.ticket_types) ? e.ticket_types : [];
+  const galleryRaw = Array.isArray(e.gallery) ? e.gallery : [];
   return {
     ...base,
     lineup: lineupRaw.map((row) => {
@@ -62,20 +68,33 @@ export function mapEventDetail(raw: unknown): EventWithExtras {
         id: str(a.artist_id) || str(a.id),
         stageName: str(a.name),
         bio: '',
-        avatarUrl: mediaUrl(avatar.public_url),
-      } satisfies Artist;
+        avatarUrl: mediaUrl(avatar.public_url) ?? mediaUrl(avatar.thumb_url),
+        startsAt: str(a.starts_at) || undefined,
+      } satisfies EventLineupArtist;
     }),
     tracks: tracksRaw.map((row, i) => {
       const t = asRecord(row);
+      const preview = str(t.preview_url);
       return {
         id: str(t.id),
         eventId: base.id,
         title: str(t.title),
-        url: mediaUrl(t.preview_url) ?? '',
+        url: preview ? rewritePreviewUrl(preview) : '',
         sortOrder: num(t.position, i),
+        durationMs: typeof t.duration_ms === 'number' ? t.duration_ms : undefined,
+        previewExpiresAt: str(t.preview_expires_at) || undefined,
       };
     }),
     ticketTypes: typesRaw.map(mapTicketType),
+    gallery: galleryRaw
+      .map((row): EventGalleryImage | null => {
+        const img = asRecord(row);
+        const url = mediaUrl(img.public_url) ?? mediaUrl(img.thumb_url);
+        const id = str(img.id);
+        if (!id || !url) return null;
+        return { id, url };
+      })
+      .filter((row): row is EventGalleryImage => Boolean(row)),
   };
 }
 

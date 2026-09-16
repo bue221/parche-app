@@ -11,10 +11,71 @@ export const DEMO_ACCOUNTS = [
   { email: 'luna@parche.test', label: 'Artista' },
 ] as const;
 
-/** MinIO inside Compose is minio:9000; the host publishes 9000. */
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === 'minio' || host === '0.0.0.0';
+}
+
+/** MinIO inside Compose is minio:9000. Phones cannot open that host, so loopback media goes through the API. */
 export function rewriteMediaUrl(url: string): string {
   if (!url) {
     return url;
   }
-  return url.replace('http://minio:9000', 'http://localhost:9000').replace('https://minio:9000', 'http://localhost:9000');
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/')) {
+    return `${API_URL}${toApiMediaPath(trimmed)}`;
+  }
+
+  try {
+    const parsed = new URL(trimmed.replace(/https?:\/\/minio:9000/gi, 'http://localhost:9000'));
+    if (isLoopbackHost(parsed.hostname)) {
+      const path = parsed.pathname.replace(/^\/parche(?=\/|$)/, '');
+      return `${API_URL}${toApiMediaPath(path)}`;
+    }
+    return parsed.toString();
+  } catch {
+    return trimmed.replace(/https?:\/\/minio:9000/gi, 'http://localhost:9000');
+  }
+}
+
+/**
+ * Audio masters stay off GET /v1/media. 45s previews (`*.preview.mp3`) can use the media proxy
+ * so browsers never need a MinIO host rewrite that invalidates the signature.
+ */
+export function rewritePreviewUrl(url: string): string {
+  if (!url) {
+    return url;
+  }
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/')) {
+    return `${API_URL}${trimmed}`;
+  }
+  try {
+    const parsed = new URL(trimmed.replace(/https?:\/\/minio:9000/gi, 'http://localhost:9000'));
+    const preview =
+      parsed.pathname.includes('/audio/') &&
+      (parsed.pathname.endsWith('.preview.mp3') || parsed.pathname.endsWith('.preview.m4a'));
+    if (isLoopbackHost(parsed.hostname) && preview) {
+      return rewriteMediaUrl(trimmed);
+    }
+    return parsed.toString();
+  } catch {
+    return trimmed.replace(/https?:\/\/minio:9000/gi, 'http://localhost:9000');
+  }
+}
+
+function toApiMediaPath(path: string): string {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  if (normalized.startsWith('/v1/media/')) {
+    return normalized;
+  }
+  if (normalized === '/v1/media') {
+    return normalized;
+  }
+  if (normalized.startsWith('/media/')) {
+    return `/v1/media/${normalized.slice('/media/'.length)}`;
+  }
+  if (normalized === '/media') {
+    return '/v1/media';
+  }
+  return `/v1/media${normalized}`;
 }

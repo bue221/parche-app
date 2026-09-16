@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { PressScale } from '@/components/motion';
 import { Tag } from '@/components/ui/tag';
 
 export function ChipRow({ children }: { children: ReactNode }) {
@@ -21,11 +22,11 @@ export function Chip({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
-      <Tag inverted={selected} tone={selected ? 'ink' : 'muted'}>
+    <PressScale onPress={onPress} className="w-auto" accessibilityRole="button">
+      <Tag tone={selected ? 'neon' : 'muted'}>
         {label}
       </Tag>
-    </Pressable>
+    </PressScale>
   );
 }
 

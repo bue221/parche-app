@@ -12,6 +12,7 @@ import { userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
 import { debugLog } from '@/data/log';
 import { takePendingPath } from '@/data/session';
+import { syncLocalInterest } from '@/data/interest-sync';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -25,6 +26,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       await api.auth.login(email, password);
+      await syncLocalInterest();
       const pending = takePendingPath();
       router.replace((pending ?? '/') as Href);
     } catch (err) {

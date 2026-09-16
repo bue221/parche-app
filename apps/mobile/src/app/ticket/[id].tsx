@@ -5,13 +5,13 @@ import { View } from 'react-native';
 
 import { BackBar } from '@/components/back-bar';
 import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
-import { PrintedTicket } from '@/components/printed-ticket';
 import { Screen } from '@/components/screen';
-import { Surface } from '@/components/surface';
+import { TicketPass } from '@/components/ticket-pass';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
+import { hasPrintSeen } from '@/data/ticket-cache';
 import { ticketScanValue } from '@/lib/code128';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
@@ -31,7 +31,7 @@ export default function TicketScreen() {
   });
 
   useEffect(() => {
-    if (ticket?.status === 'valid' && ticket.token && ticket.printSeenByUserIds.length === 0) {
+    if (ticket?.status === 'valid' && ticket.token && !hasPrintSeen(ticket.id) && ticket.printSeenByUserIds.length === 0) {
       router.replace(`/tickets/print?ticketId=${ticket.id}` as Href);
     }
   }, [ticket]);
@@ -59,14 +59,14 @@ export default function TicketScreen() {
       <BackBar />
       <View className="items-center gap-ds-16">
         <Text variant="heading">Tu entrada</Text>
-        <Surface muted className="w-full overflow-hidden bg-muted p-ds-16">
-          {live ? (
-            <PrintedTicket ticket={ticket} event={eventQuery.data ?? undefined} type={type} printing reduceMotion />
-          ) : (
-            <Text>Ya ingresaste o el código no está vivo.</Text>
-          )}
-        </Surface>
+        <Text variant="muted" className="text-center">
+          Sube el brillo y muestra el QR en puerta.
+        </Text>
+        <View className="w-full max-w-[400px] rounded-cards bg-charcoal p-ds-8">
+          <TicketPass ticket={ticket} event={eventQuery.data ?? undefined} type={type} />
+        </View>
         {ticket.status === 'used' ? <Text variant="muted">Ya ingresaste</Text> : null}
+        {ticket.status === 'transferred' ? <Text variant="muted">Este código ya no está vivo</Text> : null}
         {live ? (
           <Button variant="outline" onPress={() => router.push(`/ticket/${id}/transfer` as Href)}>
             <Text>Ceder</Text>

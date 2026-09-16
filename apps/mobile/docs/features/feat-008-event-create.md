@@ -11,7 +11,7 @@ El promoter arma una fecha en un wizard flyer-first. Sin pin ni flyer no hay env
 
 ## Quick path
 
-1. Operar o CTA Agenda (solo promoter) → crear.
+1. Operar o CTA Explorar (solo promoter) → crear.
 2. Flyer (preview 4:5) → Datos → Pin → Review con `EventCard` listing.
 3. Guardar borrador abre el checklist de listing. Enviar a revisión abre el detalle.
 

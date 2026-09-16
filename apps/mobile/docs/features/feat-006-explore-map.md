@@ -1,17 +1,17 @@
-# FEAT-006: Explorar mapa
+# FEAT-006: Mapa
 
-El mapa muestra pines de eventos publicados. Teselas OSM + MapLibre. El usuario descubre por geografía, no por Google.
+El mapa muestra pines de eventos publicados. Teselas OSM + MapLibre. El usuario descubre por geografía, no por Google. El tab se llama **Mapa**; la ruta sigue siendo `/explore`.
 
 | Campo | Valor |
 |-------|-------|
 | Sprint | 1 (pines); 4 bbox/filtros |
 | RC | RC-004, RC-017 |
 | Permiso UI | Público |
-| Pantallas | Tab `Explorar` |
+| Pantallas | Tab `Mapa` |
 
 ## Quick path
 
-1. Abrir Explorar: mapa con pines `lat`/`lng` de la API.
+1. Abrir Mapa: mapa con pines `lat`/`lng` de la API.
 2. Tap pin → bottom sheet con card listing.
 3. Tap sheet → [FEAT-007](feat-007-event-detail.md).
 
@@ -19,19 +19,19 @@ El mapa muestra pines de eventos publicados. Teselas OSM + MapLibre. El usuario 
 
 | Pieza | Regla |
 |-------|-------|
-| Mapa | MapLibre + OSM. Cero SDK Google/Mapbox de producto |
+| Mapa | Leaflet en WebView + OSM + `leaflet.markercluster` (CDN). Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
 | Lista/mapa | SearchBar flotante. Pin abre `BottomSheet`. Wide web: lista al lado |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo
 
-Misma fuente que Agenda: `GET /v1/events`. Sprint 4: `min_lat`, `min_lng`, `max_lat`, `max_lng` al mover el viewport.
+Misma fuente que Explorar: `GET /v1/events`. Sprint 4: `min_lat`, `min_lng`, `max_lat`, `max_lng` al mover el viewport.
 
 El pin de publicación es [FEAT-011](feat-011-map-pin.md), no esta pantalla.
 
 ## Estados
 
-Sin eventos en vista: mapa vacío + copy. GPS denegado: mapa default Bogotá.
+Sin eventos en vista: mapa vacío + copy (“vuelve a Explorar”). GPS denegado: mapa default Bogotá.
 
 ## Contrato
 

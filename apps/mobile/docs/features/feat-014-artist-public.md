@@ -17,7 +17,7 @@ El asistente ve quién toca: bio, próximos eventos, follow.
 
 ## Pantallas
 
-Hero B/N. Lista de eventos reutiliza card de Agenda. Dueño ve CTA “editar”.
+Hero B/N. Lista de eventos reutiliza card de Explorar. Dueño ve CTA “editar”.
 
 ## Flujo
 

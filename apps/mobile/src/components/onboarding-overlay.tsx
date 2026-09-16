@@ -9,7 +9,7 @@ import { useOnboarding } from '@/data/onboarding-store';
 
 const SLIDES = [
   {
-    kicker: 'Agenda',
+    kicker: 'Explorar',
     title: 'Encuentra el parche',
     body: 'Fotos, mapa y el día. Toca y ves lineup y boleta.',
   },

@@ -1,11 +1,14 @@
 import '@/lib/silence-web-linking';
+import '@/lib/nativewind-interop';
 
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AuthSheetHost } from '@/components/auth-sheet-host';
 import { DeepLinkListener } from '@/components/deep-link-listener';
 import { OnboardingOverlay } from '@/components/onboarding-overlay';
 import { SessionLifecycle } from '@/components/session-lifecycle';
@@ -31,17 +34,27 @@ export default function RootLayout() {
   }
 
   return (
-    <AppQueryProvider>
-      <ThemeProvider value={NAV_THEME[scheme]}>
-        <ThemeRoot>
-          <AnimatedSplashOverlay />
-          <OnboardingOverlay />
-          <SessionLifecycle />
-          <DeepLinkListener />
-          <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
-          <ToastHost />
-        </ThemeRoot>
-      </ThemeProvider>
-    </AppQueryProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppQueryProvider>
+        <ThemeProvider value={NAV_THEME[scheme]}>
+          <ThemeRoot>
+            <AnimatedSplashOverlay />
+            <OnboardingOverlay />
+            <SessionLifecycle />
+            <DeepLinkListener />
+            <AuthSheetHost />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'fade',
+                contentStyle: { backgroundColor: NAV_THEME[scheme].colors.background },
+              }}>
+              <Stack.Screen name="auth" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+            </Stack>
+            <ToastHost />
+          </ThemeRoot>
+        </ThemeProvider>
+      </AppQueryProvider>
+    </GestureHandlerRootView>
   );
 }

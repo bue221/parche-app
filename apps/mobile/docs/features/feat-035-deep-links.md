@@ -26,7 +26,7 @@ Un link abre la pantalla correcta, con login en el medio si hace falta, sin perd
 
 ## Flujo
 
-Link inválido: Agenda + toast “No encontramos eso”. Cold start y app ya abierta se comportan igual.
+Link inválido: Explorar + toast “No encontramos eso”. Cold start y app ya abierta se comportan igual.
 
 ## Estados
 

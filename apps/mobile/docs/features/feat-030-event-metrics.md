@@ -27,7 +27,7 @@ Sprint 4: `GET /v1/tenants/{id}/metrics` para owner del colectivo, pantalla apar
 
 ## Estados
 
-Sin ventas: ceros honestos, no empty genérico de Agenda.
+Sin ventas: ceros honestos, no empty genérico de Explorar.
 
 ## Contrato
 

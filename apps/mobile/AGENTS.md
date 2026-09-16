@@ -14,13 +14,13 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 |------|--------|
 | [docs/README.md](docs/README.md) | Index of all project rule docs |
 | [docs/product/prd.md](docs/product/prd.md) | App product: features, personas, sprints, QR/door, navigation |
-| [docs/features/README.md](docs/features/README.md) | Catalog of atomic screen/flow specs (`feat-001` … `feat-036`) |
+| [docs/features/README.md](docs/features/README.md) | Catalog of atomic screen/flow specs (`feat-001` … `feat-041`) |
 | [docs/features/feat-001-shell-navigation.md](docs/features/feat-001-shell-navigation.md) | Tabs and stacks |
 | [docs/features/feat-002-auth-register.md](docs/features/feat-002-auth-register.md) | Register |
 | [docs/features/feat-003-auth-login.md](docs/features/feat-003-auth-login.md) | Login |
 | [docs/features/feat-004-auth-session.md](docs/features/feat-004-auth-session.md) | Session refresh/logout |
-| [docs/features/feat-005-agenda.md](docs/features/feat-005-agenda.md) | Agenda list |
-| [docs/features/feat-006-explore-map.md](docs/features/feat-006-explore-map.md) | Explore map |
+| [docs/features/feat-005-agenda.md](docs/features/feat-005-agenda.md) | Explorar listado |
+| [docs/features/feat-006-explore-map.md](docs/features/feat-006-explore-map.md) | Mapa |
 | [docs/features/feat-007-event-detail.md](docs/features/feat-007-event-detail.md) | Event detail |
 | [docs/features/feat-008-event-create.md](docs/features/feat-008-event-create.md) | Create event |
 | [docs/features/feat-009-event-edit.md](docs/features/feat-009-event-edit.md) | Edit event |
@@ -51,5 +51,10 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 | [docs/features/feat-034-editorial-posts.md](docs/features/feat-034-editorial-posts.md) | Editorial deferred (future web blog) |
 | [docs/features/feat-035-deep-links.md](docs/features/feat-035-deep-links.md) | Deep links |
 | [docs/features/feat-036-device-permissions.md](docs/features/feat-036-device-permissions.md) | Device permissions |
+| [docs/features/feat-037-local-interest.md](docs/features/feat-037-local-interest.md) | Local follows/saves + sync |
+| [docs/features/feat-038-auth-otp.md](docs/features/feat-038-auth-otp.md) | Auth sheet and OTP |
+| [docs/features/feat-039-auth-google.md](docs/features/feat-039-auth-google.md) | Google sign-in |
+| [docs/features/feat-040-saved-tab.md](docs/features/feat-040-saved-tab.md) | Saved tab |
+| [docs/features/feat-041-complete-profile.md](docs/features/feat-041-complete-profile.md) | Optional complete profile |
 | [docs/ui/design.md](docs/ui/design.md) | Visual system: light/dark tokens, type, components, assets |
 | [docs/ui/ux.md](docs/ui/ux.md) | Motion, cards, forms, feedback, shell hit targets |

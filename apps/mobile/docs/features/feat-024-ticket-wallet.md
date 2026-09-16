@@ -7,7 +7,7 @@ Lista de lo que el asistente puede mostrar en puerta. Es el archivo, no la celeb
 | Sprint | 3 |
 | RC | RC-012 |
 | Permiso UI | Attendee autenticado |
-| Pantallas | Tab `Tiquetes` |
+| Pantallas | Segmento **Boletas** en tab Guardados ([FEAT-040](feat-040-saved-tab.md)) |
 
 ## Quick path
 
@@ -17,7 +17,7 @@ Lista de lo que el asistente puede mostrar en puerta. Es el archivo, no la celeb
 
 ## Pantallas
 
-Cards tipo pase (foto ancha + estado + Mostrar). Pull-to-refresh.
+Cards tipo pase (foto ancha + estado + Mostrar). En teléfono, ancho completo. En web desktop, grilla 280–400px (mismo criterio que Explorar: el flyer no estira a `MaxContentWidth`). Pull-to-refresh.
 
 | Estado ticket | Lista |
 |---------------|-------|
@@ -29,7 +29,7 @@ Cards tipo pase (foto ancha + estado + Mostrar). Pull-to-refresh.
 
 ## Flujo
 
-`GET /v1/me/tickets`. Vacío: “Tu primera fecha” + CTA Agenda.
+`GET /v1/me/tickets`. Vacío autenticado: “Tu primera fecha” + CTA Explorar. Invitado en Boletas: CTA suave para entrar; el tab muestra Guardados locales por default.
 
 ## Estados
 
@@ -45,7 +45,7 @@ Reventa marketplace. Apple Wallet pass (backlog). La animación de emisión (023
 
 ## Checklist
 
-- [ ] Tab inexistente si no hay sesión.
+- [ ] Tab visible sin sesión; Boletas no es un muro de login.
 - [ ] Primera compra no salta la impresión.
 - [ ] Used no parece válido.
 

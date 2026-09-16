@@ -30,7 +30,7 @@ function OsmMapInner({
   className,
 }: OsmMapProps) {
   const dark = useResolvedColorScheme() === 'dark';
-  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark);
+  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
@@ -71,9 +71,10 @@ function OsmMapInner({
     <View
       className={cn(
         'overflow-hidden',
-        fill ? 'min-h-[280px] flex-1' : 'h-80 rounded-cards border border-border',
+        fill ? 'min-h-0 flex-1' : 'h-80 rounded-cards border border-border',
         className
-      )}>
+      )}
+      style={fill ? { flex: 1, height: '100%' } : undefined}>
       <iframe
         ref={iframeRef}
         title="Mapa OSM"
@@ -84,7 +85,7 @@ function OsmMapInner({
           frame.parcheMapEmit = (raw) => onRawRef.current(raw);
           frame.postMessage(JSON.stringify({ type: 'select', id: selectedIdRef.current ?? null }), '*');
         }}
-        style={{ width: '100%', height: '100%', minHeight: 320, border: 0 }}
+        style={{ width: '100%', height: '100%', minHeight: fill ? 0 : 320, border: 0 }}
       />
     </View>
   );
