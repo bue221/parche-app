@@ -1165,7 +1165,7 @@ export const mockApi = {
         id: createId('up'),
         kind,
         mime,
-        url: `https://picsum.photos/seed/${createId('media')}/800/1000`,
+        url: `https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=800&h=1000&q=80&sig=${createId('media')}`,
         ownerUserId: session.userId,
         eventId,
         confirmed: true,

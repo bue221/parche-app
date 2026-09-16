@@ -4,31 +4,35 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#eeeeee',
-    backgroundSelected: '#d6f6ff',
-    textSecondary: '#595959',
-    textMuted: '#808080',
-    charcoal: '#333333',
-    border: '#d9d9d9',
-    confirm: '#7ffeb1',
+    text: '#0b0b12',
+    background: '#f4f4f7',
+    surface: '#ffffff',
+    backgroundElement: '#ececf1',
+    backgroundSelected: '#ece6ff',
+    textSecondary: '#5c5c6e',
+    textMuted: '#8a8a9b',
+    charcoal: '#1c1c26',
+    border: 'rgba(11, 11, 18, 0.1)',
+    aurora: '#b8a4ff',
     neon: '#3ddcff',
+    confirm: '#7ffeb1',
     volt: '#7ffeb1',
     amber: '#ffc44d',
     danger: '#ff4d3d',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#333333',
-    backgroundSelected: '#0a2830',
-    textSecondary: '#808080',
-    textMuted: '#808080',
-    charcoal: '#eeeeee',
-    border: '#333333',
-    confirm: '#7ffeb1',
+    text: '#f5f5f8',
+    background: '#07070c',
+    surface: '#12121a',
+    backgroundElement: '#1c1c26',
+    backgroundSelected: '#2a2248',
+    textSecondary: '#9a9aab',
+    textMuted: '#8a8a9b',
+    charcoal: '#ececf1',
+    border: 'rgba(245, 245, 248, 0.1)',
+    aurora: '#b8a4ff',
     neon: '#3ddcff',
+    confirm: '#7ffeb1',
     volt: '#7ffeb1',
     amber: '#ffc44d',
     danger: '#ff4d3d',
@@ -73,10 +77,10 @@ export const Spacing = {
 } as const;
 
 export const Radii = {
-  small: 4,
-  cards: 16,
-  images: 16,
-  navelements: 20,
+  small: 8,
+  cards: 20,
+  images: 20,
+  navelements: 28,
   buttons: 40,
   tags: 100,
 } as const;
@@ -85,4 +89,4 @@ export const BottomTabInset = Platform.select({ ios: 88, android: 88, web: 0 }) 
 export const WebNavHeight = 72;
 export const WebCompactTop = 56;
 export const WebCompactBottom = 72;
-export const MaxContentWidth = 1440;
+export const MaxContentWidth = 1280;

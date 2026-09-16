@@ -52,7 +52,7 @@ Drawer hamburguesa. Navegación de la web Next. Personalización de tabs por el 
 
 - [ ] Invitado ve Guardados (local) y Cuenta; no ve Operar.
 - [ ] Staff de un solo evento ve Operar; no ve métricas de otros tenants.
-- [ ] Chrome B/N; tab bar con tokens semánticos (`neon` en activo).
+- [ ] Chrome semántico (canvas + surface); tab bar con tokens (`aurora` en activo, `primary` inverso en CTAs).
 - [ ] Parche logueado no se aplana a settings: sigue el home de perfil primario.
 
 ## Relacionadas

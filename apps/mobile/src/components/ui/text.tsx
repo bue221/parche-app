@@ -6,7 +6,7 @@ import { Platform, Text as RNText, type Role } from 'react-native';
 
 const textVariants = cva(
   cn(
-    'font-favorit text-foreground tracking-favorit',
+    'font-favorit text-foreground',
     Platform.select({
       web: 'select-text font-feature-parche',
     })
@@ -14,25 +14,25 @@ const textVariants = cva(
   {
     variants: {
       variant: {
-        default: 'text-body font-normal text-foreground',
-        caption: 'text-caption font-normal text-foreground',
-        bodySm: 'text-body-sm font-normal text-foreground',
-        subheading: 'text-subheading font-normal text-foreground',
-        headingSm: 'text-heading-sm font-bold text-foreground',
-        heading: 'text-heading font-bold text-foreground',
+        default: 'text-body font-normal tracking-normal text-foreground',
+        caption: 'text-caption font-bold uppercase tracking-favorit text-foreground',
+        bodySm: 'text-body-sm font-normal tracking-normal text-foreground',
+        subheading: 'text-subheading font-bold tracking-tight text-foreground',
+        headingSm: 'text-heading-sm font-bold tracking-tight text-foreground',
+        heading: 'text-heading font-bold tracking-tight text-foreground',
         display: 'font-foggy text-display font-normal leading-none tracking-normal pt-1 text-foreground',
         h1: 'font-foggy text-display font-normal leading-none tracking-normal pt-1 text-foreground',
-        h2: 'text-heading font-bold text-foreground',
-        h3: 'text-heading-sm font-bold text-foreground',
-        h4: 'text-subheading font-bold text-foreground',
-        p: 'text-body font-normal text-foreground',
-        blockquote: 'text-body text-muted-foreground',
-        code: 'font-mono text-caption',
-        lead: 'text-subheading text-muted-foreground font-normal',
-        large: 'text-subheading font-bold',
-        small: 'text-body-sm font-normal text-foreground',
-        muted: 'text-body-sm text-muted-foreground font-normal',
-        helper: 'text-caption text-stone font-quiet',
+        h2: 'text-heading font-bold tracking-tight text-foreground',
+        h3: 'text-heading-sm font-bold tracking-tight text-foreground',
+        h4: 'text-subheading font-bold tracking-tight text-foreground',
+        p: 'text-body font-normal tracking-normal text-foreground',
+        blockquote: 'text-body tracking-normal text-muted-foreground',
+        code: 'font-mono text-caption tracking-normal',
+        lead: 'text-body tracking-normal text-muted-foreground font-normal',
+        large: 'text-subheading font-bold tracking-tight',
+        small: 'text-body-sm font-normal tracking-normal text-foreground',
+        muted: 'text-body-sm tracking-normal text-muted-foreground font-normal',
+        helper: 'text-caption text-stone font-quiet tracking-normal normal-case',
       },
     },
     defaultVariants: {

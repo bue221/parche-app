@@ -78,7 +78,7 @@ export default function ExploreScreen() {
           </View>
         </View>
         {wide ? (
-          <View className="border-l border-border bg-background" style={{ width: 360 }}>
+          <View className="border-l border-border bg-surface" style={{ width: 360 }}>
             <View className="flex-row items-center justify-between border-b border-border px-ds-16 py-ds-16">
               <View>
                 <Text variant="headingSm">Fechas</Text>

@@ -23,7 +23,7 @@ export function Chip({
 }) {
   return (
     <PressScale onPress={onPress} className="w-auto" accessibilityRole="button">
-      <Tag tone={selected ? 'neon' : 'muted'}>
+      <Tag tone={selected ? 'aurora' : 'muted'}>
         {label}
       </Tag>
     </PressScale>

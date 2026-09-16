@@ -117,7 +117,7 @@ export default function ExplorarScreen() {
                       onPress={() => router.push(`/event/${event.id}` as Href)}
                     />
                     {left ? (
-                      <Text variant="caption" className="mt-ds-8 uppercase text-neon">
+                      <Text variant="caption" className="mt-ds-8 uppercase text-aurora">
                         Puerta en {left}
                       </Text>
                     ) : null}

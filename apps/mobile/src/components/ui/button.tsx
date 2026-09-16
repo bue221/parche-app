@@ -7,20 +7,25 @@ const buttonVariants = cva(
   cn(
     'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3 shadow-none',
     Platform.select({
-      web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-neon disabled:pointer-events-none',
+      web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-aurora disabled:pointer-events-none',
     })
   ),
   {
     variants: {
       variant: {
         default: cn('bg-primary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
+        signal: cn('bg-aurora active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
         confirm: cn('bg-confirm active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
         outline: cn(
-          'border border-foreground bg-transparent active:bg-muted',
+          'border border-border bg-transparent active:bg-muted',
           Platform.select({ web: 'hover:bg-muted' })
         ),
         secondary: cn('bg-secondary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
         ghost: cn('bg-transparent active:bg-muted', Platform.select({ web: 'hover:bg-muted' })),
+        glass: cn(
+          'border border-border bg-glass active:opacity-80',
+          Platform.select({ web: 'hover:bg-muted backdrop-blur-xl' })
+        ),
         link: 'min-h-0 bg-transparent px-0 py-0',
         destructive: cn(
           'border border-danger bg-danger-soft active:opacity-80',
@@ -50,11 +55,13 @@ const buttonTextVariants = cva(
     variants: {
       variant: {
         default: 'text-primary-foreground',
+        signal: 'text-pitch-black',
         confirm: 'text-pitch-black',
         outline: 'text-foreground',
         secondary: 'text-secondary-foreground',
         ghost: 'text-foreground',
-        link: 'text-neon normal-case',
+        glass: 'text-foreground',
+        link: 'text-aurora normal-case tracking-normal',
         destructive: 'text-pitch-black',
       },
       size: {

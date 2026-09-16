@@ -29,7 +29,7 @@ export function BottomSheet({
         onPress={onClose}
       />
       <View
-        className="max-h-[72%] rounded-t-[24px] border-t border-border bg-background px-ds-16 pt-ds-12"
+        className="max-h-[72%] rounded-t-[24px] border-t border-border bg-surface px-ds-16 pt-ds-12"
         style={{ paddingBottom: Math.max(insets.bottom, 16) + 8 }}>
         <View className="mb-ds-12 h-1 w-12 self-center rounded-full bg-muted" />
         {title ? (

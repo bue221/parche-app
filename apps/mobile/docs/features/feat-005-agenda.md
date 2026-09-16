@@ -24,7 +24,7 @@ El asistente ve las próximas fechas como un grid foto-first: imagen 4:5, día y
 | Pull-to-refresh | Invalida lista local |
 | Promoter | CTA **Crear fecha** en el header; no es el home de Operar |
 
-Rail **Esta noche**: eventos same-day con countdown a `startsAt` (neon). Chips Hoy/Finde/Mes usan `FadeSlideIn` / `PressScale`. Sprint 4: [FEAT-033](feat-033-recommendations.md) (“Para ti”) encima de la lista, no en lugar de Esta noche.
+Rail **Esta noche**: eventos same-day con countdown a `startsAt` (aurora). Chips Hoy/Finde/Mes usan `FadeSlideIn` / `PressScale`. Sprint 4: [FEAT-033](feat-033-recommendations.md) (“Para ti”) encima de la lista, no en lugar de Esta noche.
 
 ## Flujo
 

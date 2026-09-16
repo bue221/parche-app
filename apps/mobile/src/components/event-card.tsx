@@ -39,8 +39,8 @@ export function EventCard({
       <PressScale onPress={onPress} className="w-full">
         <View
           className={cn(
-            'min-h-11 w-full flex-row items-center gap-ds-12 rounded-cards border bg-background p-ds-12 shadow-card',
-            selected ? 'border-neon' : 'border-border'
+            'min-h-11 w-full flex-row items-center gap-ds-12 rounded-cards border bg-surface p-ds-12 shadow-card',
+            selected ? 'border-aurora' : 'border-border'
           )}
           style={cardShadowStyle}>
           <PosterThumb event={event} className="size-16 rounded-images" />
@@ -94,7 +94,7 @@ export function EventCard({
         <View
           className={cn(
             'relative overflow-hidden rounded-images bg-muted shadow-card',
-            selected ? 'border border-neon' : 'border border-transparent'
+            selected ? 'border border-aurora' : 'border border-transparent'
           )}
           style={cardShadowStyle}>
           <PosterThumb event={event} listing />

@@ -20,7 +20,7 @@ export function Surface({
   const body = (
     <View
       className={cn(
-        'rounded-cards border border-border bg-background p-ds-16',
+        'rounded-cards border border-border bg-surface p-ds-16',
         muted && 'bg-muted',
         elevated && 'shadow-card',
         className

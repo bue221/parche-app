@@ -13,8 +13,8 @@ export default function TabsLayout() {
   const scheme = useResolvedColorScheme();
   const colors = Colors[scheme];
   const tabs = useTabVisibility();
-  const tint = iosPair('#3DDCFF', '#3DDCFF', colors.neon);
-  const muted = iosPair('#595959', '#808080', colors.textMuted);
+  const tint = iosPair('#B8A4FF', '#B8A4FF', colors.aurora);
+  const muted = iosPair('#5C5C6E', '#9A9AAB', colors.textMuted);
   const screen = { backgroundColor: colors.background };
 
   return (

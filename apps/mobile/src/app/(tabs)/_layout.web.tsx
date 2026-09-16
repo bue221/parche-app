@@ -57,7 +57,7 @@ function NavLink({
 }) {
   const compact = useCompactLayout();
   const theme = useTheme();
-  const color = isFocused ? theme.neon : theme.textMuted;
+  const color = isFocused ? theme.aurora : theme.textMuted;
 
   return (
     <Pressable
@@ -74,7 +74,7 @@ function NavLink({
           <Text
             variant="caption"
             numberOfLines={2}
-            className={cn('text-center font-normal normal-case', isFocused ? 'text-neon' : 'text-muted-foreground')}>
+            className={cn('text-center font-normal normal-case tracking-normal', isFocused ? 'text-aurora' : 'text-muted-foreground')}>
             {children}
           </Text>
         </View>
@@ -82,8 +82,8 @@ function NavLink({
         <Text
           variant="caption"
           className={cn(
-            'rounded-tags px-ds-16 py-ds-8 font-normal normal-case',
-            isFocused ? 'bg-neon text-pitch-black' : 'text-muted-foreground'
+            'rounded-tags px-ds-16 py-ds-8 font-normal normal-case tracking-normal',
+            isFocused ? 'bg-aurora text-pitch-black' : 'text-muted-foreground'
           )}>
           {children}
         </Text>

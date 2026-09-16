@@ -153,7 +153,7 @@ export default function EventDetailScreen() {
   const meta = (
     <View className="gap-ds-12">
       <View className="flex-row flex-wrap gap-ds-8">
-        <Tag tone={event.status === 'published' ? 'neon' : event.status === 'rejected' ? 'danger' : 'muted'}>
+        <Tag tone={event.status === 'published' ? 'aurora' : event.status === 'rejected' ? 'danger' : 'muted'}>
           {statusLabel(event.status)}
         </Tag>
         {genres.map((genre) => (

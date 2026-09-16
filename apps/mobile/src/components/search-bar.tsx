@@ -18,7 +18,7 @@ export function SearchBar({
   const label = value?.trim() ? value : placeholder;
   return (
     <PressScale onPress={onPress}>
-      <View className="min-h-11 flex-row items-center gap-ds-12 rounded-buttons border border-border bg-muted px-ds-16 py-ds-12">
+      <View className="min-h-11 flex-row items-center gap-ds-12 rounded-buttons border border-border bg-surface px-ds-16 py-ds-12">
         <Search size={18} color={theme.textMuted} strokeWidth={2} />
         <Text variant="bodySm" className={value?.trim() ? 'text-foreground' : 'text-muted-foreground'} numberOfLines={1}>
           {label}

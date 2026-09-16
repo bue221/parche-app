@@ -253,7 +253,7 @@ export function EventWizard({
           <View className="flex-row flex-wrap gap-ds-8">
             {GENRE_CHIPS.map((item) => (
               <Pressable key={item} onPress={() => setGenre(item)}>
-                <Tag inverted={genre === item} tone={genre === item ? 'neon' : 'muted'}>
+                <Tag inverted={genre === item} tone={genre === item ? 'aurora' : 'muted'}>
                   {item}
                 </Tag>
               </Pressable>

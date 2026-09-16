@@ -22,11 +22,11 @@ export function Field({ label, error, helper, className, multiline, onFocus, onB
       </Text>
       <TextInput
         className={cn(
-          'min-h-11 rounded-cards border bg-muted px-ds-16 py-ds-12 font-favorit text-body tracking-favorit text-foreground',
-          focused ? 'border-neon' : error ? 'border-danger' : 'border-border',
+          'min-h-11 rounded-cards border bg-surface px-ds-16 py-ds-12 font-favorit text-body tracking-normal text-foreground',
+          focused ? 'border-aurora' : error ? 'border-danger' : 'border-border',
           multiline && 'min-h-24 py-ds-16',
           Platform.select({
-            web: 'outline-none transition-colors focus:border-neon focus:bg-background',
+            web: 'outline-none transition-colors focus:border-aurora focus:bg-surface',
           }),
           className
         )}

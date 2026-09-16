@@ -156,7 +156,7 @@ export function SessionLifecycle() {
   return (
     <Modal visible={revoked} transparent animationType="fade">
       <View className="flex-1 items-center justify-center bg-pitch-black/80 px-ds-24">
-        <View className="w-full max-w-sm gap-ds-16 rounded-cards bg-background p-ds-24">
+        <View className="w-full max-w-sm gap-ds-16 rounded-cards bg-surface p-ds-24">
           <Text variant="headingSm">Sesión cerrada</Text>
           <Text variant="muted">Vuelve a entrar para seguir.</Text>
           <Button
