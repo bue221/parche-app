@@ -16,8 +16,8 @@ export function ArtistRow({
   trailing?: ReactNode;
 }) {
   const initials = artist.stageName.slice(0, 2).toUpperCase();
-  const body = (
-    <View className="min-h-11 flex-row items-center gap-ds-12 py-ds-8">
+  const content = (
+    <View className="min-h-11 min-w-0 flex-1 flex-row items-center gap-ds-12 py-ds-8">
       {artist.avatarUrl ? (
         <Image source={{ uri: artist.avatarUrl }} className="size-12 rounded-full bg-muted" style={{ width: 48, height: 48 }} />
       ) : (
@@ -37,13 +37,19 @@ export function ArtistRow({
           </Text>
         ) : null}
       </View>
-      {trailing}
     </View>
   );
 
-  if (!onPress) {
-    return body;
-  }
-
-  return <PressScale onPress={onPress}>{body}</PressScale>;
+  return (
+    <View className="flex-row items-center gap-ds-8">
+      {onPress ? (
+        <PressScale onPress={onPress} className="min-w-0 flex-1">
+          {content}
+        </PressScale>
+      ) : (
+        content
+      )}
+      {trailing}
+    </View>
+  );
 }
