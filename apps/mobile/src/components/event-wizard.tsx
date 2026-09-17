@@ -237,12 +237,15 @@ export function EventWizard({
     ) : step === 1 ? (
       <FormSection title="Datos">
         <Field label="Nombre" value={name} onChangeText={setName} error={nameError} />
-        <DateTimeField label="Fecha y hora" value={startsAt} onChange={setStartsAt} />
-        {dateError ? (
-          <Text variant="helper" className="text-foreground">
-            {dateError}
-          </Text>
-        ) : null}
+        <DateTimeField
+          label="Fecha y hora"
+          value={startsAt}
+          onChange={(next) => {
+            setStartsAt(next);
+            if (dateError) setDateError(undefined);
+          }}
+          error={dateError}
+        />
         <Field label="Venue" value={venueName} onChangeText={setVenueName} />
         <Field label="Dirección" value={addressText} onChangeText={setAddressText} />
         <Field label="Descripción" value={description} onChangeText={setDescription} multiline />
