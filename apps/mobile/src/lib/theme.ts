@@ -37,6 +37,12 @@ export const THEME = {
     shadowCard: '0 18px 50px rgba(11, 11, 18, 0.08)',
     shadowGlass: '0 10px 40px rgba(11, 11, 18, 0.08)',
     shadowTab: '0 -10px 28px rgba(11, 11, 18, 0.14)',
+    shadowControl: '0 1px 2px rgba(11, 11, 18, 0.05), 0 6px 16px rgba(11, 11, 18, 0.06)',
+    shadowButton: '0 2px 4px rgba(11, 11, 18, 0.08), 0 10px 22px rgba(11, 11, 18, 0.14)',
+    shadowSignal: '0 2px 4px rgba(184, 164, 255, 0.35), 0 10px 24px rgba(184, 164, 255, 0.42)',
+    shadowConfirm: '0 2px 4px rgba(127, 254, 177, 0.28), 0 10px 22px rgba(127, 254, 177, 0.28)',
+    shadowFocus: '0 0 0 3px rgba(184, 164, 255, 0.28), 0 8px 20px rgba(184, 164, 255, 0.22)',
+    shadowError: '0 0 0 3px rgba(255, 77, 61, 0.22), 0 6px 16px rgba(255, 77, 61, 0.14)',
   },
   dark: {
     background: '#07070c',
@@ -73,6 +79,12 @@ export const THEME = {
     shadowCard: '0 22px 50px rgba(0, 0, 0, 0.45)',
     shadowGlass: '0 12px 40px rgba(0, 0, 0, 0.35)',
     shadowTab: '0 -12px 32px rgba(0, 0, 0, 0.55)',
+    shadowControl: '0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 18px rgba(0, 0, 0, 0.38)',
+    shadowButton: '0 2px 6px rgba(0, 0, 0, 0.4), 0 12px 26px rgba(0, 0, 0, 0.5)',
+    shadowSignal: '0 2px 8px rgba(184, 164, 255, 0.32), 0 12px 28px rgba(184, 164, 255, 0.28)',
+    shadowConfirm: '0 2px 8px rgba(127, 254, 177, 0.22), 0 12px 26px rgba(127, 254, 177, 0.18)',
+    shadowFocus: '0 0 0 3px rgba(184, 164, 255, 0.32), 0 10px 24px rgba(184, 164, 255, 0.24)',
+    shadowError: '0 0 0 3px rgba(255, 77, 61, 0.28), 0 8px 18px rgba(255, 77, 61, 0.2)',
   },
 } as const;
 
@@ -141,6 +153,12 @@ function cssVars(t: (typeof THEME)[keyof typeof THEME]) {
     '--shadow-card': t.shadowCard,
     '--shadow-glass': t.shadowGlass,
     '--shadow-tab': t.shadowTab,
+    '--shadow-control': t.shadowControl,
+    '--shadow-button': t.shadowButton,
+    '--shadow-signal': t.shadowSignal,
+    '--shadow-confirm': t.shadowConfirm,
+    '--shadow-focus': t.shadowFocus,
+    '--shadow-error': t.shadowError,
   });
 }
 

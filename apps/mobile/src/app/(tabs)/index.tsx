@@ -1,23 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
-import {
-  Calendar,
-  CalendarDays,
-  Cloud,
-  Disc,
-  Disc3,
-  Factory,
-  LayoutGrid,
-  Mic2,
-  Music2,
-  Sun,
-  Waves,
-  type LucideIcon,
-} from 'lucide-react-native';
 import { RefreshControl, View } from 'react-native';
 
-import { Chip, ChipRow } from '@/components/chip-row';
 import { EventCard, EventGrid, EventGridItem } from '@/components/event-card';
+import { ExploreChips } from '@/components/explore-chips';
 import { EmptyState, ErrorState, ListingSkeleton } from '@/components/feedback';
 import { FadeSlideIn } from '@/components/motion';
 import { Screen } from '@/components/screen';
@@ -28,25 +14,9 @@ import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { useFilters } from '@/data/filters';
 import { useAuthSnapshot } from '@/data/session';
-import { activeDateChip, DATE_CHIPS, datePreset, genreRails, matchesExploreFilters } from '@/lib/explore-rails';
+import { activeDateChip, datePreset, genreRails, matchesExploreFilters } from '@/lib/explore-rails';
 import { countdownTo, isSameLocalDay } from '@/lib/format';
-import { GENRE_CHIPS, hasActiveFilters } from '@/lib/genres';
-
-const DATE_ICONS: Record<(typeof DATE_CHIPS)[number]['id'], LucideIcon> = {
-  hoy: Sun,
-  finde: Calendar,
-  mes: CalendarDays,
-};
-
-const GENRE_ICONS: Record<(typeof GENRE_CHIPS)[number], LucideIcon> = {
-  techno: Disc3,
-  industrial: Factory,
-  house: Music2,
-  trance: Waves,
-  ambient: Cloud,
-  club: Disc,
-  concierto: Mic2,
-};
+import { hasActiveFilters } from '@/lib/genres';
 
 export default function ExplorarScreen() {
   const { isLoggedIn, isPromoter } = useAuthSnapshot();
@@ -69,7 +39,6 @@ export default function ExplorarScreen() {
   const error = eventsQuery.error ? 'No pudimos cargar las fechas' : null;
   const filtered = hasActiveFilters(filters);
   const selectedDate = activeDateChip(filters.from, filters.to);
-  const todoSelected = !selectedDate && !filters.genre;
 
   function openEvent(id: string) {
     router.push(`/event/${id}` as Href);
@@ -86,42 +55,7 @@ export default function ExplorarScreen() {
             <Text>Crear fecha</Text>
           </Button>
         ) : null}
-        <ChipRow>
-          <FadeSlideIn index={0}>
-            <Chip
-              label="Todo"
-              icon={LayoutGrid}
-              selected={todoSelected}
-              onPress={() => setFilters({ ...filters, from: undefined, to: undefined, genre: undefined })}
-            />
-          </FadeSlideIn>
-          {DATE_CHIPS.map((chip, index) => (
-            <FadeSlideIn key={chip.id} index={index + 1}>
-              <Chip
-                label={chip.label}
-                icon={DATE_ICONS[chip.id]}
-                selected={selectedDate === chip.id}
-                onPress={() => {
-                  if (selectedDate === chip.id) {
-                    setFilters({ ...filters, from: undefined, to: undefined });
-                    return;
-                  }
-                  setFilters({ ...filters, ...datePreset(chip.id) });
-                }}
-              />
-            </FadeSlideIn>
-          ))}
-          {GENRE_CHIPS.map((genre, index) => (
-            <FadeSlideIn key={genre} index={index + DATE_CHIPS.length + 1}>
-              <Chip
-                label={genre}
-                icon={GENRE_ICONS[genre]}
-                selected={filters.genre === genre}
-                onPress={() => setFilters({ ...filters, genre: filters.genre === genre ? undefined : genre })}
-              />
-            </FadeSlideIn>
-          ))}
-        </ChipRow>
+        <ExploreChips />
       </View>
       {tonight.length > 0 ? (
         <View className="mt-ds-32">

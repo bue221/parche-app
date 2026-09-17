@@ -1,17 +1,22 @@
-import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import { type ReactNode } from 'react';
+import { Platform, ScrollView, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { PressScale } from '@/components/motion';
 import { Icon } from '@/components/ui/icon';
-import { Tag } from '@/components/ui/tag';
+import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
+import { controlShadowStyle } from '@/lib/control-chrome';
+import { cn } from '@/lib/utils';
 
 const PITCH_BLACK = '#0B0B12';
 
 export function ChipRow({ children }: { children: ReactNode }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 8, paddingVertical: 8, paddingRight: 8 }}>
       {children}
     </ScrollView>
   );
@@ -29,21 +34,33 @@ export function Chip({
   icon?: LucideIcon;
 }) {
   const theme = useTheme();
+
   return (
     <PressScale onPress={onPress} className="w-auto" accessibilityRole="button" accessibilityLabel={label}>
-      <Tag
-        tone={selected ? 'aurora' : 'muted'}
-        icon={
-          icon ? (
-            <Icon as={icon} size={14} color={selected ? PITCH_BLACK : theme.textMuted} />
-          ) : undefined
-        }>
-        {label}
-      </Tag>
+      <View
+        className={cn(
+          'min-h-11 flex-row items-center gap-ds-8 rounded-tags border px-ds-16 py-ds-8',
+          selected ? 'border-aurora bg-aurora shadow-focus' : 'border-border bg-surface shadow-control',
+          selected && 'scale-[1.03]',
+          Platform.select({
+            web: 'transition-[background-color,border-color,box-shadow,transform] duration-150',
+          })
+        )}
+        style={controlShadowStyle(selected ? 'focus' : 'idle')}>
+        {icon ? (
+          <Icon as={icon} size={16} color={selected ? PITCH_BLACK : theme.textSecondary} strokeWidth={2.25} />
+        ) : null}
+        <Text
+          variant="caption"
+          className="font-bold uppercase"
+          style={{ color: selected ? PITCH_BLACK : theme.text }}>
+          {label}
+        </Text>
+      </View>
     </PressScale>
   );
 }
 
 export function ChipWrap({ children }: { children: ReactNode }) {
-  return <View className="flex-row flex-wrap gap-ds-8">{children}</View>;
+  return <View className="flex-row flex-wrap gap-ds-8 py-ds-4">{children}</View>;
 }

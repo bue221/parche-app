@@ -1,11 +1,9 @@
 import { type Href } from 'expo-router';
 import { Tabs, TabList, TabTrigger, TabSlot, TabTriggerSlotProps, TabListProps } from 'expo-router/ui';
-import { Map, Search, Ticket, UserRound, Wrench } from 'lucide-react-native';
-import type { ComponentType } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BrandLockup } from '@/components/brand-lockup';
-import { TabBar, TabBarItem } from '@/components/tab-bar';
+import { TabBar, TabBarItem, TAB_GLYPHS, type TabGlyph } from '@/components/tab-bar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Text } from '@/components/ui/text';
 import { useAuthSnapshot, usePrimaryProfile, useTabVisibility } from '@/data/session';
@@ -20,20 +18,20 @@ export default function TabsLayout() {
       <TabList asChild>
         <WebNav>
           <TabTrigger name="agenda" href="/" asChild>
-            <TabLink icon={Search}>Explorar</TabLink>
+            <TabLink glyph={TAB_GLYPHS.explore}>Explorar</TabLink>
           </TabTrigger>
           <TabTrigger name="explore" href="/explore" asChild>
-            <TabLink icon={Map}>Mapa</TabLink>
+            <TabLink glyph={TAB_GLYPHS.map}>Mapa</TabLink>
           </TabTrigger>
           <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
-            <TabLink icon={Ticket}>Guardados</TabLink>
+            <TabLink glyph={TAB_GLYPHS.saved}>Guardados</TabLink>
           </TabTrigger>
           <TabTrigger name="parche" href={'/parche' as Href} asChild>
-            <TabLink icon={UserRound}>Cuenta</TabLink>
+            <TabLink glyph={TAB_GLYPHS.account}>Cuenta</TabLink>
           </TabTrigger>
           {tabs.operate ? (
             <TabTrigger name="operate" href={'/operate' as Href} asChild>
-              <TabLink icon={Wrench} badge={tabs.operateBadge}>
+              <TabLink glyph={TAB_GLYPHS.operate} badge={tabs.operateBadge}>
                 Operar
               </TabLink>
             </TabTrigger>
@@ -46,15 +44,15 @@ export default function TabsLayout() {
 }
 
 function TabLink({
-  icon,
+  glyph,
   ...props
 }: TabTriggerSlotProps & {
-  icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number; fill?: string }>;
+  glyph: TabGlyph;
   badge?: number;
 }) {
   const compact = useCompactLayout();
   if (compact) {
-    return <TabBarItem icon={icon} {...props} />;
+    return <TabBarItem glyph={glyph} {...props} />;
   }
   return <NavChip {...props} />;
 }

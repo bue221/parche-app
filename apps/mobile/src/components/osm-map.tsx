@@ -15,6 +15,8 @@ type OsmMapProps = {
   onPressEvent?: (event: ParcheEvent) => void;
   onClear?: () => void;
   fill?: boolean;
+  padTop?: number;
+  padBottom?: number;
   className?: string;
 };
 
@@ -26,10 +28,12 @@ export function OsmMap({
   onPressEvent,
   onClear,
   fill = false,
+  padTop = 0,
+  padBottom = 0,
   className,
 }: OsmMapProps) {
   const dark = useResolvedColorScheme() === 'dark';
-  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill);
+  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill, padTop, padBottom);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
   const webRef = useRef<WebView>(null);
@@ -44,6 +48,10 @@ export function OsmMap({
     const id = JSON.stringify(selectedId ?? null);
     webRef.current?.injectJavaScript(`window.setSelected && window.setSelected(${id}); true;`);
   }, [selectedId, html]);
+
+  useEffect(() => {
+    webRef.current?.injectJavaScript(`window.setMapPad && window.setMapPad(${padTop}, ${padBottom}); true;`);
+  }, [padTop, padBottom, html]);
 
   const onRaw = useCallback((raw: string) => {
     const msg = parseMapMessage(raw);
@@ -72,7 +80,9 @@ export function OsmMap({
         onMessage={(e) => onRaw(e.nativeEvent.data)}
         onLoadEnd={() => {
           const id = JSON.stringify(selectedId ?? null);
-          webRef.current?.injectJavaScript(`window.setSelected && window.setSelected(${id}); true;`);
+          webRef.current?.injectJavaScript(
+            `window.setSelected && window.setSelected(${id}); window.setMapPad && window.setMapPad(${padTop}, ${padBottom}); true;`
+          );
         }}
         bounces={false}
         scrollEnabled={false}

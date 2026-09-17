@@ -14,6 +14,8 @@ type OsmMapProps = {
   onPressEvent?: (event: ParcheEvent) => void;
   onClear?: () => void;
   fill?: boolean;
+  padTop?: number;
+  padBottom?: number;
   className?: string;
 };
 
@@ -27,15 +29,19 @@ function OsmMapInner({
   onPressEvent,
   onClear,
   fill = false,
+  padTop = 0,
+  padBottom = 0,
   className,
 }: OsmMapProps) {
   const dark = useResolvedColorScheme() === 'dark';
-  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill);
+  const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill, padTop, padBottom);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
   const selectedIdRef = useRef(selectedId);
   selectedIdRef.current = selectedId;
+  const padRef = useRef({ top: padTop, bottom: padBottom });
+  padRef.current = { top: padTop, bottom: padBottom };
   const onPressEventRef = useRef(onPressEvent);
   onPressEventRef.current = onPressEvent;
   const onPressMapRef = useRef(onPressMap);
@@ -67,6 +73,12 @@ function OsmMapInner({
     frame.postMessage(JSON.stringify({ type: 'select', id: selectedId ?? null }), '*');
   }, [selectedId]);
 
+  useEffect(() => {
+    const frame = iframeRef.current?.contentWindow as MapWindow | null;
+    if (!frame) return;
+    frame.postMessage(JSON.stringify({ type: 'pad', top: padTop, bottom: padBottom }), '*');
+  }, [padTop, padBottom]);
+
   return (
     <View
       className={cn(
@@ -84,6 +96,10 @@ function OsmMapInner({
           if (!frame) return;
           frame.parcheMapEmit = (raw) => onRawRef.current(raw);
           frame.postMessage(JSON.stringify({ type: 'select', id: selectedIdRef.current ?? null }), '*');
+          frame.postMessage(
+            JSON.stringify({ type: 'pad', top: padRef.current.top, bottom: padRef.current.bottom }),
+            '*'
+          );
         }}
         style={{ width: '100%', height: '100%', minHeight: fill ? 0 : 320, border: 0 }}
       />

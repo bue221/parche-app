@@ -1,35 +1,75 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, usePathname, type Href } from 'expo-router';
+import { SlidersHorizontal } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventCard } from '@/components/event-card';
+import { ExploreChips } from '@/components/explore-chips';
 import { EmptyState, ErrorState } from '@/components/feedback';
-import { MapSheet } from '@/components/map-sheet';
+import { MapSheet, mapSheetMetrics } from '@/components/map-sheet';
+import { PressScale } from '@/components/motion';
 import { OsmMap } from '@/components/osm-map';
 import { Screen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { WebCompactTop, WebNavHeight } from '@/constants/theme';
 import { api } from '@/data/client';
 import { useFilters } from '@/data/filters';
 import type { ParcheEvent } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
+import { useTheme } from '@/hooks/use-theme';
 import { cardShadowStyle } from '@/lib/card-shadow';
 import { hasActiveFilters } from '@/lib/genres';
+
+function SearchCluster({
+  query,
+  filtered,
+  onFilters,
+}: {
+  query?: string;
+  filtered: boolean;
+  onFilters: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View className="gap-ds-8">
+      <View className="flex-row items-center gap-ds-8">
+        <View className="min-w-0 flex-1">
+          <SearchBar
+            value={query}
+            placeholder={filtered ? 'Filtros activos' : 'Buscar en el mapa'}
+            onPress={onFilters}
+          />
+        </View>
+        <PressScale onPress={onFilters} className="w-auto" accessibilityLabel="Filtros">
+          <View
+            className="size-11 items-center justify-center rounded-full border border-border bg-surface"
+            style={cardShadowStyle}>
+            <Icon as={SlidersHorizontal} size={18} color={theme.text} />
+          </View>
+        </PressScale>
+      </View>
+      <ExploreChips />
+    </View>
+  );
+}
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const path = usePathname();
   const filters = useFilters((s) => s.filters);
+  const { height: windowH } = useWindowDimensions();
   const { data: events = [], error, refetch, isLoading } = useQuery({
     queryKey: ['events', filters],
     queryFn: () => api.events.list(filters),
   });
   const [selected, setSelected] = useState<ParcheEvent | null>(null);
   const [wide, setWide] = useState(Platform.OS === 'web');
+  const [headerH, setHeaderH] = useState(120);
   const compact = useCompactLayout();
   const filtered = hasActiveFilters(filters);
   const onExplore = path === '/explore';
@@ -52,29 +92,59 @@ export default function ExploreScreen() {
     router.push(`/event/${event.id}` as Href);
   }
 
-  const searchTop = wide
-    ? 16
-    : Platform.OS === 'web'
-      ? (compact ? WebCompactTop : WebNavHeight) + 8
-      : insets.top + 8;
+  const headerPad = Platform.OS === 'web' ? (compact ? WebCompactTop : 0) : insets.top;
+  const overlayTop = wide
+    ? (Platform.OS === 'web' ? (compact ? WebCompactTop : WebNavHeight) : insets.top) + 124
+    : headerH;
+  const { peekH } = mapSheetMetrics(windowH, wide ? 0 : overlayTop);
+  const openFilters = () => router.push('/filters' as Href);
 
   return (
     <Screen scroll={false} padded={false} width="full" flush contentClassName="relative flex-1">
-      <View className="relative flex-1" style={wide ? { flexDirection: 'row' } : { flex: 1 }}>
+      <View className="flex-1 bg-background" style={wide ? { flexDirection: 'row' } : undefined}>
         <View className="relative min-h-0 flex-1">
-          <OsmMap
-            fill
-            events={events}
-            selectedId={selected?.id}
-            onPressEvent={selectEvent}
-            onClear={() => setSelected(null)}
-          />
-          <View className="absolute inset-x-0 z-20 px-ds-16" style={[{ top: searchTop }, cardShadowStyle]}>
-            <SearchBar
-              value={filters.q}
-              placeholder={filtered ? 'Filtros activos' : 'Buscar en el mapa'}
-              onPress={() => router.push('/filters' as Href)}
+          {wide ? null : (
+            <View
+              className="gap-ds-8 bg-background px-ds-16 pb-ds-8"
+              style={{ paddingTop: headerPad + 8 }}
+              onLayout={(event) => {
+                const next = event.nativeEvent.layout.height;
+                setHeaderH((current) => (Math.abs(current - next) < 1 ? current : next));
+              }}>
+              <SearchCluster query={filters.q} filtered={filtered} onFilters={openFilters} />
+            </View>
+          )}
+          <View className="relative min-h-0 flex-1 overflow-hidden">
+            <OsmMap
+              fill
+              events={events}
+              selectedId={selected?.id}
+              padTop={wide ? overlayTop : 24}
+              padBottom={wide ? 48 : peekH}
+              onPressEvent={selectEvent}
+              onClear={() => setSelected(null)}
             />
+            {wide ? (
+              <View
+                pointerEvents="box-none"
+                className="absolute inset-x-0 z-40 px-ds-16"
+                style={{ top: (compact ? WebCompactTop : WebNavHeight) + 8 }}>
+                <View pointerEvents="auto" style={cardShadowStyle}>
+                  <SearchCluster query={filters.q} filtered={filtered} onFilters={openFilters} />
+                </View>
+              </View>
+            ) : null}
+            {wide || !onExplore ? null : (
+              <MapSheet
+                events={events}
+                selectedId={selected?.id}
+                loading={isLoading}
+                error={Boolean(error)}
+                topInset={overlayTop}
+                onRetry={() => void refetch()}
+                onOpen={openEvent}
+              />
+            )}
           </View>
         </View>
         {wide ? (
@@ -84,7 +154,7 @@ export default function ExploreScreen() {
                 <Text variant="headingSm">Fechas</Text>
                 <Text variant="muted">{events.length} en el mapa</Text>
               </View>
-              <Button size="sm" variant="outline" onPress={() => router.push('/filters' as Href)}>
+              <Button size="sm" variant="outline" onPress={openFilters}>
                 <Text>{filtered ? 'Filtros · on' : 'Filtros'}</Text>
               </Button>
             </View>
@@ -111,15 +181,6 @@ export default function ExploreScreen() {
               </Pressable>
             ) : null}
           </View>
-        ) : onExplore ? (
-          <MapSheet
-            events={events}
-            selectedId={selected?.id}
-            loading={isLoading}
-            error={Boolean(error)}
-            onRetry={() => void refetch()}
-            onOpen={openEvent}
-          />
         ) : null}
       </View>
     </Screen>

@@ -83,7 +83,7 @@ Spacing base is 4px (`ds-4` … `ds-120`). Page max width is 1280px. Section pad
 | Nav | 28px | `rounded-navelements` |
 | Buttons | 40px | `rounded-buttons` |
 
-Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). The mobile tab bar uses **one** upward lift (`shadow-tab` / `tabBarShadowStyle`) on `bg-surface`. Content chrome: `bg-surface`. No gradients on chrome; flyer scrim is the exception.
+Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Interactive chrome uses a smaller lift: idle chips/fields/search (`shadow-control`), filled CTAs (`shadow-button`), brand highlight (`shadow-signal`), success (`shadow-confirm`). Focus and selected chips add an aurora ring (`shadow-focus`); invalid fields use `shadow-error`. The mobile tab bar uses **one** upward lift (`shadow-tab` / `tabBarShadowStyle`) on `bg-surface`. Content chrome: `bg-surface`. No gradients on chrome; flyer scrim is the exception.
 
 ## Where pigment goes
 
@@ -92,30 +92,31 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). The mobile 
 | Default filled button | `primary` → inverse ink/paper |
 | Brand / highlight pill | `signal` → `aurora`, black label |
 | Outlined / ghost | ink (`foreground` / `border`) |
-| Selected chip / filter | `aurora` fill, black label |
-| Idle chip | `muted` |
+| Selected chip / filter | `aurora` fill, black label, `shadow-focus` ring |
+| Idle chip | `surface` + `foreground` label, `shadow-control` |
 | Live / tonight / published badge | `aurora` |
 | Success / PASA / print stamp | `confirm` (`volt`) |
 | Pending / reserved | `amber` |
 | Error / invalid / logout emphasis | `danger` |
 | Focus ring / field focus | `aurora` |
 | Active tab (native + compact web) | filled `aurora` icon + bold aurora label; idle = `slate` / `muted-foreground` |
-| Map pin | neon / volt / amber by genre; selected = white fill + neon ring |
+| Map pin | Date pill on the map (`Hoy` / `18 sep`). Genre dot neon / volt / amber. Selected = aurora fill. Tiles are OSM Humanitarian, saturated — never grayscale |
 | Dark band (auth, manifesto) | always `pitch-black`; pigment is the accent, not the fill |
 | Event artwork | photos lead; do not tint the flyer |
+| Map tiles | OSM Humanitarian. Saturate for parks/roads; never grayscale or invert |
 
 ## Components
 
-- **Filled pill:** `bg-primary` + `text-primary-foreground`, all-caps 12/700, 22×12 padding, 40px radius. Inverse in both schemes. Default `Button` uses this.
-- **Signal pill:** `variant="signal"` / `bg-aurora` for brand highlight CTAs.
-- **Outlined pill:** 1px `border-border` on transparent; inverts with scheme.
-- **Confirm pill:** `variant="confirm"` / `bg-confirm` for the success beat only.
-- **Event card (listing):** 4:5 photo, 20px radius, date badge on the flyer, title / venue **below**. Default on Explorar. Optional save heart (glass on photo, 44px hit). Dense lists and map use `row` (`bg-surface`). Explorar rails reuse `listing` with peek; `poster` (scrim + meta on the photo) is not the Explorar rail. `selected` = aurora border.
-- **Search:** pill “¿Qué parche buscas?” is the Explorar hero on `bg-surface`. Horizontal chips with icon: Todo + day windows + genres. No Inter page title on the tab.
+- **Filled pill:** `bg-primary` + `text-primary-foreground`, all-caps 12/700, 22×12 padding, 40px radius, `shadow-button`. Inverse in both schemes. Default `Button` uses this. Press scale `0.98`.
+- **Signal pill:** `variant="signal"` / `bg-aurora` + `shadow-signal` for brand highlight CTAs.
+- **Outlined pill:** 1px `border-border` on `bg-surface` with `shadow-control`; inverts with scheme.
+- **Confirm pill:** `variant="confirm"` / `bg-confirm` + `shadow-confirm` for the success beat only.
+- **Event card (listing):** 4:5 photo, 20px radius, date badge on the flyer, title / venue **below**. Default on Explorar. Optional save heart (glass on photo, 44px hit). Dense lists use `row` (`bg-surface`). Map sheet listing uses the same card with `widePhoto` (16:10). Explorar rails reuse `listing` with peek; `poster` (scrim + meta on the photo) is not the Explorar rail. `selected` = aurora border.
+- **Search:** pill “¿Qué parche buscas?” is the Explorar hero on `bg-surface` with `shadow-control` and a muted icon well. Horizontal chips with icon: Todo + day windows + genres. No Inter page title on the tab.
 - **Hero (auth / onboarding):** Antonio display type is allowed. Event detail uses Inter title under a photo hero.
 - **Dark band:** full-bleed `pitch-black`. Use for auth/onboarding, not for every page header.
 - **Flyer scrim:** the only allowed gradient. It sits on event artwork when a poster overlay is needed, never on chrome.
-- **Tab bar (mobile):** custom JS chrome in `TabBar` / `TabBarItem` — not the iOS liquid-glass `NativeTabs`. `bg-surface`, upward `shadow-tab`, icon 24px over Inter 11 label, hit ≥44px. Active = filled aurora + bold aurora label. Idle = outline slate (`text-muted-foreground`, not stone). Operar badge = danger dot. Desktop web keeps aurora pills in the top nav.
+- **Tab bar (mobile):** custom JS chrome in `TabBar` / `TabBarItem`. Equal `flex: 1` cells. Icon well 32px, glyph 28px medium. Idle = outline; selected = fill + aurora (`bookmark`, `map.fill`, `person.crop.circle.fill`). Inter 12 on a 16px line. `bg-surface` + `shadow-tab`. Operar badge = danger dot. Desktop web keeps aurora pills in the top nav.
 
 ## Screen chrome
 
@@ -149,7 +150,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). The mobile 
 - Recolor the whole page. Aurora/neon are sparks, not a wash.
 - Use `confirm` / volt on idle chrome (tabs, default chips, genre tags at rest).
 - Use neon for primary CTA or selected chips (that's aurora / inverse primary now).
-- Drop shadows or gradients on buttons or top nav. Card lift (`shadow-card`) and the tab bar lift (`shadow-tab`) are the exceptions. No gradients on chrome.
+- Drop shadows on top nav, or gradients on chrome. Control lift (`shadow-control` / `shadow-button` / `shadow-focus`) is allowed on chips, buttons, and fields. Card lift (`shadow-card`) and the tab bar lift (`shadow-tab`) stay. Flyer scrim is the only gradient.
 - Antonio/Foggy on tab titles, cards, or forms.
 - Sharp or lightly rounded buttons.
 - White labels on aurora / neon / volt / amber / danger (contrast fails). Use `pitch-black`.
@@ -171,7 +172,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). The mobile 
 ## Checklist
 
 - [ ] New UI uses Parche tokens, not Expo blue
-- [ ] Buttons are pills (`rounded-buttons`); default = inverse `primary`; brand highlight = `signal` (aurora)
+- [ ] Buttons are pills (`rounded-buttons`); default = inverse `primary` + `shadow-button`; brand highlight = `signal` (aurora + `shadow-signal`)
 - [ ] Display type is onboarding / auth / success only
 - [ ] Volt/`confirm` is success, not the default chip
 - [ ] Aurora marks selected / live / focus / active tab

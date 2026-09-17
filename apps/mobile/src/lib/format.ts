@@ -19,6 +19,14 @@ export function formatDay(iso: string): string {
   });
 }
 
+/** Compact pin label: "Hoy" or "18 sep". */
+export function formatPinDay(iso: string, now = new Date()): string {
+  if (isSameLocalDay(iso, now)) return 'Hoy';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }).replace(/\./g, '');
+}
+
 export function formatTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

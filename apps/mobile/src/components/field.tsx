@@ -3,6 +3,7 @@ import { Platform, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
+import { controlShadowStyle, controlTone, fieldChromeClassName } from '@/lib/control-chrome';
 import { cn } from '@/lib/utils';
 
 type FieldProps = TextInputProps & {
@@ -11,25 +12,37 @@ type FieldProps = TextInputProps & {
   helper?: string;
 };
 
-export function Field({ label, error, helper, className, multiline, onFocus, onBlur, ...props }: FieldProps) {
+export function FieldLabel({
+  children,
+  focused = false,
+  error = false,
+}: {
+  children: string;
+  focused?: boolean;
+  error?: boolean;
+}) {
+  return (
+    <Text
+      variant="caption"
+      className={cn('uppercase', focused ? 'text-aurora' : error ? 'text-danger' : 'text-foreground')}>
+      {children}
+    </Text>
+  );
+}
+
+export function Field({ label, error, helper, className, multiline, onFocus, onBlur, style, ...props }: FieldProps) {
   const [focused, setFocused] = useState(false);
   const theme = useTheme();
+  const tone = controlTone({ focused, error: Boolean(error) });
 
   return (
     <View className="gap-ds-8">
-      <Text variant="caption" className="uppercase">
+      <FieldLabel focused={focused} error={Boolean(error)}>
         {label}
-      </Text>
+      </FieldLabel>
       <TextInput
-        className={cn(
-          'min-h-11 rounded-cards border bg-surface px-ds-16 py-ds-12 font-favorit text-body tracking-normal text-foreground',
-          focused ? 'border-aurora' : error ? 'border-danger' : 'border-border',
-          multiline && 'min-h-24 py-ds-16',
-          Platform.select({
-            web: 'outline-none transition-colors focus:border-aurora focus:bg-surface',
-          }),
-          className
-        )}
+        className={fieldChromeClassName(tone, cn(multiline && 'min-h-24 py-ds-16', className))}
+        style={[controlShadowStyle(tone), style]}
         placeholderTextColor={theme.textMuted}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}

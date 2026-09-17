@@ -1,35 +1,40 @@
 import { TextClassContext } from '@/components/ui/text';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Platform, Pressable } from 'react-native';
+import { Platform, Pressable, type ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 const buttonVariants = cva(
   cn(
-    'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3 shadow-none',
+    'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3',
     Platform.select({
-      web: 'whitespace-nowrap outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-aurora disabled:pointer-events-none',
+      web: 'whitespace-nowrap outline-none transition-[transform,box-shadow,opacity,background-color] duration-150 focus-visible:ring-2 focus-visible:ring-aurora focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none',
     })
   ),
   {
     variants: {
       variant: {
-        default: cn('bg-primary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
-        signal: cn('bg-aurora active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
-        confirm: cn('bg-confirm active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
+        default: cn('bg-primary shadow-button active:opacity-90', Platform.select({ web: 'hover:opacity-95' })),
+        signal: cn('bg-aurora shadow-signal active:opacity-90', Platform.select({ web: 'hover:opacity-95' })),
+        confirm: cn('bg-confirm shadow-confirm active:opacity-90', Platform.select({ web: 'hover:opacity-95' })),
         outline: cn(
-          'border border-border bg-transparent active:bg-muted',
+          'border border-border bg-surface shadow-control active:bg-muted',
+          Platform.select({ web: 'hover:border-aurora hover:bg-muted' })
+        ),
+        secondary: cn(
+          'bg-secondary shadow-control active:opacity-90',
           Platform.select({ web: 'hover:bg-muted' })
         ),
-        secondary: cn('bg-secondary active:opacity-80', Platform.select({ web: 'hover:opacity-90' })),
-        ghost: cn('bg-transparent active:bg-muted', Platform.select({ web: 'hover:bg-muted' })),
+        ghost: cn('bg-transparent shadow-none active:bg-muted', Platform.select({ web: 'hover:bg-muted' })),
         glass: cn(
-          'border border-border bg-glass active:opacity-80',
+          'border border-border bg-glass shadow-control active:opacity-90',
           Platform.select({ web: 'hover:bg-muted backdrop-blur-xl' })
         ),
-        link: 'min-h-0 bg-transparent px-0 py-0',
+        link: 'min-h-0 bg-transparent px-0 py-0 shadow-none',
         destructive: cn(
-          'border border-danger bg-danger-soft active:opacity-80',
-          Platform.select({ web: 'hover:opacity-90' })
+          'border border-danger bg-danger-soft shadow-error active:opacity-90',
+          Platform.select({ web: 'hover:opacity-95' })
         ),
       },
       size: {
@@ -78,18 +83,73 @@ const buttonTextVariants = cva(
   }
 );
 
+const BUTTON_SHADOW: Record<NonNullable<VariantProps<typeof buttonVariants>['variant']>, ViewStyle> = {
+  default: nativeButtonShadow('#0b0b12', 0.18, 12, 6),
+  signal: nativeButtonShadow('#b8a4ff', 0.5, 14, 6),
+  confirm: nativeButtonShadow('#7ffeb1', 0.4, 14, 6),
+  outline: nativeButtonShadow('#0b0b12', 0.1, 10, 4),
+  secondary: nativeButtonShadow('#0b0b12', 0.1, 10, 4),
+  ghost: {},
+  glass: nativeButtonShadow('#0b0b12', 0.1, 10, 4),
+  link: {},
+  destructive: nativeButtonShadow('#ff4d3d', 0.32, 12, 4),
+};
+
+function nativeButtonShadow(color: string, opacity: number, radius: number, height: number): ViewStyle {
+  if (Platform.OS === 'web') return {};
+  return {
+    shadowColor: color,
+    shadowOffset: { width: 0, height },
+    shadowOpacity: opacity,
+    shadowRadius: radius,
+    elevation: Math.max(2, Math.round(height / 2)),
+  };
+}
+
 type ButtonProps = React.ComponentProps<typeof Pressable> &
   React.RefAttributes<typeof Pressable> &
   VariantProps<typeof buttonVariants>;
 
-function Button({ className, variant, size, ...props }: ButtonProps) {
+function Button({
+  className,
+  variant,
+  size,
+  disabled,
+  style,
+  onPressIn,
+  onPressOut,
+  children,
+  ...props
+}: ButtonProps) {
+  const reduce = useReduceMotion();
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const tone = variant ?? 'default';
+
   return (
     <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
       <Pressable
-        className={cn(props.disabled && 'opacity-50', buttonVariants({ variant, size }), className)}
+        className={cn(disabled && 'opacity-50', buttonVariants({ variant, size }), className)}
         role="button"
-        {...props}
-      />
+        disabled={disabled}
+        style={
+          typeof style === 'function'
+            ? (state) => [BUTTON_SHADOW[tone], style(state)]
+            : [BUTTON_SHADOW[tone], style]
+        }
+        onPressIn={(event) => {
+          if (!reduce && !disabled) scale.value = withTiming(0.98, { duration: 90 });
+          onPressIn?.(event);
+        }}
+        onPressOut={(event) => {
+          if (!reduce) scale.value = withTiming(1, { duration: 120 });
+          onPressOut?.(event);
+        }}
+        {...props}>
+        <Animated.View className="flex-row items-center justify-center gap-2" style={animatedStyle}>
+          {children}
+        </Animated.View>
+      </Pressable>
     </TextClassContext.Provider>
   );
 }

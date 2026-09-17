@@ -34,6 +34,7 @@ export function EventCard({
   saveable = false,
   badge,
   caption,
+  widePhoto = false,
 }: {
   event: ParcheEvent;
   onPress?: () => void;
@@ -42,6 +43,7 @@ export function EventCard({
   saveable?: boolean;
   badge?: string;
   caption?: string;
+  widePhoto?: boolean;
 }) {
   const { isLoggedIn } = useAuthSnapshot();
   const saved = useInterestStore((s) => s.eventIds.includes(event.id));
@@ -111,7 +113,7 @@ export function EventCard({
               selected ? 'border border-aurora' : 'border border-transparent'
             )}
             style={cardShadowStyle}>
-            <PosterThumb event={event} listing />
+            <PosterThumb event={event} listing wide={widePhoto} />
             <View className="absolute left-ds-8 top-ds-8 rounded-tags bg-pitch-black/80 px-ds-8 py-ds-4">
               <Text variant="caption" className="uppercase text-paper-white">
                 {badge ?? formatDay(event.startsAt)}
@@ -161,25 +163,32 @@ const scrimStyle =
       } as object)
     : { backgroundColor: 'rgba(0,0,0,0.48)' };
 
+function listingAspect(wide: boolean) {
+  return wide ? 'aspect-[16/10] w-full' : 'aspect-[4/5] w-full';
+}
+
 function PosterThumb({
   event,
   className,
   listing = false,
+  wide = false,
 }: {
   event: ParcheEvent;
   className?: string;
   listing?: boolean;
+  wide?: boolean;
 }) {
   const framed = Boolean(className) || listing;
+  const fallback = listing ? listingAspect(wide) : 'aspect-[3/4] w-full';
   if (event.flyerUrl) {
     return (
-      <View className={cn('overflow-hidden bg-muted', className ?? (listing ? 'aspect-[4/5] w-full' : 'aspect-[3/4] w-full'))}>
+      <View className={cn('overflow-hidden bg-muted', className ?? fallback)}>
         <FlyerImage uri={event.flyerUrl} className="h-full w-full" aspectRatio={framed ? undefined : 3 / 4} />
       </View>
     );
   }
   return (
-    <View className={cn('items-center justify-center bg-muted', className ?? (listing ? 'aspect-[4/5] w-full' : 'aspect-[3/4] w-full'))}>
+    <View className={cn('items-center justify-center bg-muted', className ?? fallback)}>
       <Text variant="headingSm" className="uppercase text-muted-foreground">
         {event.name.slice(0, 2)}
       </Text>

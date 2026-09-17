@@ -1,6 +1,8 @@
+import { SymbolView } from 'expo-symbols';
 import type { TabListProps, TabTriggerSlotProps } from 'expo-router/ui';
-import type { ComponentType, ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Bookmark, CircleUser, MapPinned, Search, Wrench } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,12 +12,84 @@ import { useTheme } from '@/hooks/use-theme';
 import { tabBarShadowStyle } from '@/lib/card-shadow';
 import { cn } from '@/lib/utils';
 
-type TabIcon = ComponentType<{
-  size?: number;
-  color?: string;
-  strokeWidth?: number;
-  fill?: string;
-}>;
+export const TAB_GLYPHS = {
+  explore: {
+    ios: { default: 'magnifyingglass', selected: 'magnifyingglass' },
+    md: 'search',
+    Fallback: Search,
+  },
+  map: {
+    ios: { default: 'map', selected: 'map.fill' },
+    md: 'map',
+    Fallback: MapPinned,
+  },
+  saved: {
+    ios: { default: 'bookmark', selected: 'bookmark.fill' },
+    md: 'bookmark',
+    Fallback: Bookmark,
+  },
+  account: {
+    ios: { default: 'person.crop.circle', selected: 'person.crop.circle.fill' },
+    md: 'account_circle',
+    Fallback: CircleUser,
+  },
+  operate: {
+    ios: { default: 'wrench.and.screwdriver', selected: 'wrench.and.screwdriver.fill' },
+    md: 'build',
+    Fallback: Wrench,
+  },
+} as const;
+
+export type TabGlyph = (typeof TAB_GLYPHS)[keyof typeof TAB_GLYPHS];
+
+const ICON = 28;
+const WELL = 32;
+const LABEL = 12;
+const GAP = 4;
+const STROKE = 2.15;
+
+function TabGlyphIcon({
+  glyph,
+  focused,
+  color,
+}: {
+  glyph: TabGlyph;
+  focused: boolean;
+  color: string;
+}) {
+  const Fallback = glyph.Fallback;
+  const lucide = (
+    <Fallback
+      size={ICON}
+      color={color}
+      strokeWidth={STROKE}
+      absoluteStrokeWidth
+      fill={focused ? color : 'transparent'}
+      fillOpacity={focused ? 0.22 : 0}
+    />
+  );
+
+  if (Platform.OS === 'web') {
+    return lucide;
+  }
+
+  return (
+    <SymbolView
+      name={{
+        ios: focused ? glyph.ios.selected : glyph.ios.default,
+        android: glyph.md,
+        web: glyph.md,
+      }}
+      size={ICON}
+      scale="medium"
+      weight="medium"
+      tintColor={color}
+      resizeMode="scaleAspectFit"
+      style={styles.symbol}
+      fallback={lucide}
+    />
+  );
+}
 
 export function TabBar({ children, className, style, ...props }: TabListProps) {
   const insets = useSafeAreaInsets();
@@ -23,8 +97,13 @@ export function TabBar({ children, className, style, ...props }: TabListProps) {
   return (
     <View
       {...props}
-      className={cn('absolute bottom-0 z-50 w-full flex-row items-stretch overflow-visible border-t border-border bg-surface px-ds-4 pt-ds-8', className)}
-      style={[tabBarShadowStyle, { paddingBottom: Math.max(insets.bottom, 10) }, style]}>
+      className={cn('absolute bottom-0 z-50 w-full flex-row border-t border-border bg-surface', className)}
+      style={[
+        styles.bar,
+        tabBarShadowStyle,
+        { paddingBottom: Math.max(insets.bottom, 10) },
+        style,
+      ]}>
       {children}
     </View>
   );
@@ -32,13 +111,13 @@ export function TabBar({ children, className, style, ...props }: TabListProps) {
 
 export function TabBarItem({
   children,
-  icon: Icon,
+  glyph,
   isFocused,
   badge = 0,
   className,
   ...props
 }: TabTriggerSlotProps & {
-  icon: TabIcon;
+  glyph: TabGlyph;
   badge?: number;
 }) {
   const theme = useTheme();
@@ -54,38 +133,71 @@ export function TabBarItem({
       accessibilityState={{ selected: Boolean(isFocused) }}
       onPressIn={(event) => {
         props.onPressIn?.(event);
-        if (!reduce) scale.value = withTiming(0.96, { duration: 90 });
+        if (!reduce) scale.value = withTiming(0.97, { duration: 90 });
       }}
       onPressOut={(event) => {
         props.onPressOut?.(event);
         if (!reduce) scale.value = withTiming(1, { duration: 120 });
       }}
-      className={cn('min-h-11 flex-1 items-center justify-center px-ds-4 py-ds-4', className)}>
-      <Animated.View className="items-center gap-ds-4" style={pressStyle}>
-        <View className="relative items-center justify-center">
-          <Icon
-            size={24}
-            color={color}
-            strokeWidth={isFocused ? 2.5 : 1.85}
-            fill={isFocused ? color : 'transparent'}
-          />
+      className={className}
+      style={styles.item}>
+      <Animated.View style={[styles.stack, pressStyle]}>
+        <View style={styles.well}>
+          <TabGlyphIcon glyph={glyph} focused={Boolean(isFocused)} color={color} />
           {badge > 0 ? (
             <View
               accessibilityLabel={`${badge} pendientes`}
-              className="absolute -right-1 -top-1 size-2.5 rounded-full bg-danger"
+              className="absolute right-0 top-0 size-2.5 rounded-full bg-danger"
             />
           ) : null}
         </View>
         <Text
-          variant="caption"
+          variant="small"
           numberOfLines={1}
-          className={cn(
-            'text-center text-[11px] normal-case tracking-normal',
-            isFocused ? 'font-bold text-aurora' : 'font-normal text-muted-foreground'
-          )}>
+          allowFontScaling={false}
+          className={cn('text-center', isFocused ? 'font-bold text-aurora' : 'font-normal text-muted-foreground')}
+          style={styles.label}>
           {children as ReactNode}
         </Text>
       </Animated.View>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: {
+    overflow: 'visible',
+    paddingHorizontal: 4,
+    paddingTop: 10,
+  },
+  item: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 2,
+    minHeight: 56,
+  },
+  stack: {
+    width: '100%',
+    alignItems: 'center',
+    gap: GAP,
+  },
+  well: {
+    width: WELL,
+    height: WELL,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  symbol: {
+    width: ICON,
+    height: ICON,
+  },
+  label: {
+    width: '100%',
+    height: 16,
+    fontSize: LABEL,
+    lineHeight: 16,
+    letterSpacing: 0,
+  },
+});

@@ -85,8 +85,8 @@ export const Radii = {
   tags: 100,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 88, android: 88, web: 0 }) ?? 88;
+export const BottomTabInset = Platform.select({ ios: 96, android: 96, web: 0 }) ?? 96;
 export const WebNavHeight = 72;
 export const WebCompactTop = 56;
-export const WebCompactBottom = 72;
+export const WebCompactBottom = 88;
 export const MaxContentWidth = 1280;

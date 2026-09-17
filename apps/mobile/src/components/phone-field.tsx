@@ -1,12 +1,13 @@
 import { ChevronDown } from 'lucide-react-native';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
 import { BottomSheet } from '@/components/bottom-sheet';
-import { Field } from '@/components/field';
+import { Field, FieldLabel } from '@/components/field';
 import { PressScale } from '@/components/motion';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
+import { controlShadowStyle, controlTone, fieldChromeClassName } from '@/lib/control-chrome';
 import {
   DEFAULT_PHONE_COUNTRY,
   digitsOnly,
@@ -102,11 +103,14 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
     setTimeout(() => setPickerOpen(false), 80);
   }
 
+  const countryTone = controlTone({ focused: pickerOpen, error: Boolean(visibleError) });
+  const nationalTone = controlTone({ focused, error: Boolean(visibleError) });
+
   return (
     <View className="gap-ds-8">
-      <Text variant="caption" className="uppercase">
+      <FieldLabel focused={focused || pickerOpen} error={Boolean(visibleError)}>
         {label}
-      </Text>
+      </FieldLabel>
       <View className="flex-row gap-ds-8">
         <Pressable
           accessibilityRole="button"
@@ -116,13 +120,11 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
             setQuery('');
             setPickerOpen(true);
           }}
-          className={cn(
-            'min-h-11 min-w-[7.5rem] shrink-0 flex-row items-center justify-between gap-ds-8 rounded-cards border bg-surface px-ds-12',
-            pickerOpen ? 'border-aurora' : visibleError ? 'border-danger' : 'border-border',
-            Platform.select({
-              web: 'outline-none transition-colors hover:border-aurora',
-            })
-          )}>
+          className={fieldChromeClassName(
+            countryTone,
+            'min-w-[7.5rem] shrink-0 flex-row items-center justify-between gap-ds-8 px-ds-12'
+          )}
+          style={controlShadowStyle(countryTone)}>
           <Text>
             {flagEmoji(country.iso2)} +{country.dialCode}
           </Text>
@@ -144,13 +146,8 @@ export const PhoneField = forwardRef<PhoneFieldHandle, PhoneFieldProps>(function
           autoCorrect={false}
           maxLength={country.digitMax}
           placeholderTextColor={theme.textMuted}
-          className={cn(
-            'min-h-11 flex-1 rounded-cards border bg-surface px-ds-16 py-ds-12 font-favorit text-body tracking-normal text-foreground',
-            focused ? 'border-aurora' : visibleError ? 'border-danger' : 'border-border',
-            Platform.select({
-              web: 'outline-none transition-colors focus:border-aurora focus:bg-surface',
-            })
-          )}
+          className={fieldChromeClassName(nationalTone, 'flex-1')}
+          style={controlShadowStyle(nationalTone)}
         />
       </View>
       {visibleError ? (

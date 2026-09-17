@@ -1,6 +1,6 @@
 # FEAT-006: Mapa
 
-El mapa muestra pines de eventos publicados. Teselas OSM + MapLibre. El usuario descubre por geografía, no por Google. El tab se llama **Mapa**; la ruta sigue siendo `/explore`.
+El mapa muestra pines de eventos publicados. Teselas OSM Humanitarian (HOT) + Leaflet, saturadas. El usuario descubre por geografía, no por Google. El tab se llama **Mapa**; la ruta sigue siendo `/explore`.
 
 | Campo | Valor |
 |-------|-------|
@@ -11,16 +11,17 @@ El mapa muestra pines de eventos publicados. Teselas OSM + MapLibre. El usuario 
 
 ## Quick path
 
-1. Abrir Mapa: mapa con pines `lat`/`lng` de la API.
-2. Tap pin → bottom sheet con card listing.
-3. Tap sheet → [FEAT-007](feat-007-event-detail.md).
+1. Abrir Mapa: mapa colorido con pills de fecha sobre `lat`/`lng` de la API.
+2. La lista asoma en un sheet (~50%). Tap pin selecciona; tap card → [FEAT-007](feat-007-event-detail.md).
+3. Subir el sheet cubre el mapa; el botón **Mapa** lo vuelve a mostrar.
 
 ## Pantallas
 
 | Pieza | Regla |
 |-------|-------|
-| Mapa | Leaflet en WebView + OSM + `leaflet.markercluster` (CDN). Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
-| Lista/mapa | SearchBar flotante. Pin abre `BottomSheet`. Wide web: lista al lado |
+| Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
+| Pines | Pill blanca con fecha (`Hoy` / `18 sep`) y punto de género (neon / volt / amber). Seleccionado = fill aurora |
+| Lista/mapa | SearchBar + chips + botón filtros flotantes. Sheet peek con listado vertical (foto 16:10). Wide web: lista al lado |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo

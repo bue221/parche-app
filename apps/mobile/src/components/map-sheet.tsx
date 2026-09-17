@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { FlatList, Platform, Pressable, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Map } from 'lucide-react-native';
 
 import { EventCard } from '@/components/event-card';
 import { ErrorState, Skeleton } from '@/components/feedback';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { BottomTabInset, WebCompactBottom } from '@/constants/theme';
 import type { ParcheEvent } from '@/data/types';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
+import { cardShadowStyle } from '@/lib/card-shadow';
 
-const CARD_WIDTH = 148;
-const CARD_GAP = 12;
-const PEEK_BODY = 340;
 const SPRING = { damping: 22, stiffness: 220, mass: 0.85 };
 
 function tabClearance(compact: boolean, bottomInset: number) {
@@ -25,11 +26,19 @@ function tabClearance(compact: boolean, bottomInset: number) {
   return Math.max(BottomTabInset, bottomInset + 56);
 }
 
+export function mapSheetMetrics(windowH: number, topInset: number) {
+  const column = Math.max(280, windowH - Math.max(topInset, 0));
+  const expandedH = column;
+  const peekH = Math.min(Math.max(Math.round(column * 0.52), 280), expandedH - 24);
+  return { peekH, expandedH };
+}
+
 export function MapSheet({
   events,
   selectedId,
   loading = false,
   error = false,
+  topInset = 12,
   onRetry,
   onOpen,
 }: {
@@ -37,6 +46,7 @@ export function MapSheet({
   selectedId?: string | null;
   loading?: boolean;
   error?: boolean;
+  topInset?: number;
   onRetry?: () => void;
   onOpen: (event: ParcheEvent) => void;
 }) {
@@ -46,15 +56,14 @@ export function MapSheet({
   const reduce = useReduceMotion();
   const { height: windowH } = useWindowDimensions();
   const tabClear = tabClearance(compact, insets.bottom);
-  const peekH = PEEK_BODY + tabClear;
-  const expandedH = Math.max(peekH + 120, windowH - Math.max(insets.top, 12));
+  const { peekH, expandedH } = mapSheetMetrics(windowH, topInset);
   const height = useSharedValue(peekH);
   const dragStart = useSharedValue(peekH);
   const peekSv = useSharedValue(peekH);
   const expandedSv = useSharedValue(expandedH);
   const reduceSv = useSharedValue(reduce);
   const [expanded, setExpanded] = useState(false);
-  const carouselRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList<ParcheEvent>>(null);
 
   useEffect(() => {
     peekSv.value = peekH;
@@ -67,13 +76,18 @@ export function MapSheet({
     if (!selectedId) return;
     const index = events.findIndex((event) => event.id === selectedId);
     if (index < 0) return;
-    carouselRef.current?.scrollTo({ x: index * (CARD_WIDTH + CARD_GAP), animated: true });
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
+    });
   }, [selectedId, events]);
 
   function snap(open: boolean) {
     const next = open ? expandedH : peekH;
     height.value = reduce ? next : withSpring(next, SPRING);
     setExpanded(open);
+    if (!open) {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
   }
 
   const pan = Gesture.Pan()
@@ -102,111 +116,121 @@ export function MapSheet({
     height: height.value,
   }));
 
-  const countLabel = `${events.length} ${events.length === 1 ? 'fecha' : 'fechas'}`;
+  const countLabel =
+    events.length === 0 ? 'Sin fechas en el mapa' : `${events.length} ${events.length === 1 ? 'fecha' : 'fechas'}`;
 
   return (
-    <Animated.View
-      style={[
-        {
-          zIndex: 30,
-          elevation: 8,
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          overflow: 'hidden',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          backgroundColor: theme.background,
-          borderTopWidth: 1,
-          borderColor: theme.border,
-          paddingBottom: tabClear,
-        },
-        sheetStyle,
-      ]}>
-      <GestureDetector gesture={pan}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={expanded ? 'Ver mapa' : 'Ver lista de fechas'}
-          onPress={() => snap(!expanded)}
-          style={{ paddingTop: 10, paddingBottom: 8, paddingHorizontal: 16 }}>
-          <View
-            style={{
-              width: 48,
-              height: 4,
-              borderRadius: 99,
-              alignSelf: 'center',
-              backgroundColor: theme.backgroundElement,
-              marginBottom: 12,
-            }}
-          />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text variant="headingSm">{loading ? 'Cargando' : error ? 'Mapa' : countLabel}</Text>
-              <Text variant="muted">{expanded ? 'Desliza abajo para el mapa' : 'Desliza arriba para la lista'}</Text>
-            </View>
-            <Text variant="caption" className="font-bold uppercase">
-              {expanded ? 'Ver mapa' : 'Ver lista'}
+    <>
+      <Animated.View
+        style={[
+          {
+            zIndex: 30,
+            elevation: 8,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            overflow: 'hidden',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            backgroundColor: theme.background,
+            paddingBottom: tabClear,
+          },
+          cardShadowStyle,
+          sheetStyle,
+        ]}>
+        <GestureDetector gesture={pan}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={expanded ? 'Ver mapa' : 'Ver lista de fechas'}
+            onPress={() => snap(!expanded)}
+            style={{ paddingTop: 10, paddingBottom: 4, paddingHorizontal: 16 }}>
+            <View
+              style={{
+                width: 48,
+                height: 4,
+                borderRadius: 99,
+                alignSelf: 'center',
+                backgroundColor: theme.backgroundElement,
+                marginBottom: 12,
+              }}
+            />
+            <Text variant="headingSm" className="text-center">
+              {loading ? 'Cargando fechas' : error ? 'No se pudo cargar' : countLabel}
+            </Text>
+          </Pressable>
+        </GestureDetector>
+
+        {error ? (
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            <ErrorState message="No pudimos cargar el mapa" onRetry={onRetry} />
+          </View>
+        ) : loading ? (
+          <View style={{ paddingHorizontal: 16, gap: 24, paddingTop: 16 }}>
+            {[0, 1].map((key) => (
+              <View key={key}>
+                <Skeleton className="aspect-[16/10] w-full rounded-images" />
+                <Skeleton className="mt-ds-8 h-4 w-2/3" />
+                <Skeleton className="mt-ds-4 h-3 w-1/2" />
+              </View>
+            ))}
+          </View>
+        ) : events.length === 0 ? (
+          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+            <Text variant="muted" className="text-center">
+              No hay fechas en esta vista. Cambia filtros o vuelve a Explorar.
             </Text>
           </View>
-        </Pressable>
-      </GestureDetector>
-
-      {error ? (
-        <View style={{ paddingHorizontal: 16 }}>
-          <ErrorState message="No pudimos cargar el mapa" onRetry={onRetry} />
-        </View>
-      ) : loading ? (
-        <ScrollView
-          horizontal
-          scrollEnabled={!expanded}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: CARD_GAP }}>
-          {[0, 1, 2].map((key) => (
-            <View key={key} style={{ width: CARD_WIDTH }}>
-              <Skeleton className="aspect-[4/5] w-full" />
-              <Skeleton className="mt-ds-8 h-4 w-2/3" />
-            </View>
-          ))}
-        </ScrollView>
-      ) : events.length === 0 ? (
-        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-          <Text variant="muted">No hay fechas en esta vista. Cambia filtros o vuelve a Explorar.</Text>
-        </View>
-      ) : expanded ? (
-        <FlatList
-          data={events}
-          keyExtractor={(item) => item.id}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, gap: 12 }}
-          renderItem={({ item }) => (
-            <EventCard
-              layout="row"
-              event={item}
-              selected={item.id === selectedId}
-              onPress={() => onOpen(item)}
-            />
-          )}
-        />
-      ) : (
-        <ScrollView
-          ref={carouselRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 8 }}>
-          {events.map((event) => (
-            <View key={event.id} style={{ width: CARD_WIDTH }}>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={events}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            onScrollBeginDrag={() => {
+              if (!expanded) snap(true);
+            }}
+            onScrollToIndexFailed={({ index }) => {
+              setTimeout(() => {
+                listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
+              }, 120);
+            }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: expanded ? 72 : 16, gap: 24 }}
+            renderItem={({ item }) => (
               <EventCard
                 layout="listing"
-                event={event}
-                selected={event.id === selectedId}
-                onPress={() => onOpen(event)}
+                widePhoto
+                saveable
+                event={item}
+                selected={item.id === selectedId}
+                onPress={() => onOpen(item)}
               />
-            </View>
-          ))}
-        </ScrollView>
-      )}
-    </Animated.View>
+            )}
+          />
+        )}
+      </Animated.View>
+      {expanded ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: tabClear + 12,
+            zIndex: 45,
+            alignItems: 'center',
+          }}>
+          <Button
+            accessibilityLabel="Ver mapa"
+            onPress={() => snap(false)}
+            className="min-w-[108px] flex-row px-ds-20"
+            style={cardShadowStyle}>
+            <Icon as={Map} size={16} />
+            <Text>Mapa</Text>
+          </Button>
+        </View>
+      ) : null}
+    </>
   );
 }

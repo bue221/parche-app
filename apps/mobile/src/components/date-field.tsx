@@ -4,10 +4,11 @@ import { Platform, Pressable, View } from 'react-native';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Chip, ChipWrap } from '@/components/chip-row';
+import { FieldLabel } from '@/components/field';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { useResolvedColorScheme } from '@/hooks/use-theme';
-import { cn } from '@/lib/utils';
+import { controlShadowStyle, controlTone, fieldChromeClassName } from '@/lib/control-chrome';
 
 const AURORA = '#B8A4FF';
 
@@ -92,22 +93,18 @@ function FieldChrome({
   onPress: () => void;
   accessibilityLabel: string;
 }) {
+  const tone = controlTone({ focused: open, error: Boolean(error) });
   return (
     <View className="gap-ds-8">
-      <Text variant="caption" className="uppercase">
+      <FieldLabel focused={open} error={Boolean(error)}>
         {label}
-      </Text>
+      </FieldLabel>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}
-        className={cn(
-          'min-h-11 justify-center rounded-cards border bg-surface px-ds-16 py-ds-12',
-          open ? 'border-aurora' : error ? 'border-danger' : 'border-border',
-          Platform.select({
-            web: 'outline-none transition-colors hover:border-aurora',
-          })
-        )}>
+        className={fieldChromeClassName(tone, 'justify-center')}
+        style={controlShadowStyle(tone)}>
         <Text className={display ? 'text-foreground' : 'text-muted-foreground'}>
           {display ?? emptyLabel}
         </Text>
