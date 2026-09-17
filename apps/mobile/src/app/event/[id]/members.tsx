@@ -2,10 +2,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
 import { FormSection } from '@/components/form-section';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -44,16 +42,14 @@ export default function EventMembersScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.members.manage')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>No puedes gestionar el equipo.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Equipo" lead="Invita a quien cubre la puerta." />
+    <Screen back title="Equipo" lead="Invita a quien cubre la puerta.">
       {rows.length === 0 ? <Text variant="muted">Invita a quien cubre la puerta</Text> : null}
       {rows.map((row) => (
         <View key={row.id} className="mt-ds-12 gap-ds-8">

@@ -1,11 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
 import { FormSection } from '@/components/form-section';
 import { MediaPicker } from '@/components/media-picker';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -34,16 +32,14 @@ export default function EventTracksScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.write')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>No puedes editar tracks.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Tracks" />
+    <Screen back title="Tracks">
       {tracks.map((t) => (
         <Text key={t.id} className="mt-ds-8">
           {t.title}

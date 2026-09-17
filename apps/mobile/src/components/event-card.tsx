@@ -1,14 +1,20 @@
 import { Children, type ReactNode } from 'react';
-import { Platform, View } from 'react-native';
+import { Heart } from 'lucide-react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
 import { PressScale } from '@/components/motion';
 import { Text } from '@/components/ui/text';
+import { toggleSave } from '@/data/interest-sync';
+import { useInterestStore } from '@/data/interest-store';
+import { useAuthSnapshot } from '@/data/session';
 import type { ParcheEvent } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cardShadowStyle } from '@/lib/card-shadow';
 import { formatDay, formatWhen } from '@/lib/format';
 import { cn } from '@/lib/utils';
+
+const PAPER_WHITE = '#F5F5F8';
 
 export const LISTING_CARD_MIN_PX = 220;
 export const LISTING_CARD_MAX_PX = 260;
@@ -25,14 +31,21 @@ export function EventCard({
   onPress,
   layout = 'listing',
   selected = false,
+  saveable = false,
+  badge,
+  caption,
 }: {
   event: ParcheEvent;
   onPress?: () => void;
   layout?: 'listing' | 'poster' | 'row';
   selected?: boolean;
+  saveable?: boolean;
+  badge?: string;
+  caption?: string;
 }) {
-  const compact = useCompactLayout();
-  const listingFrame = Platform.OS === 'web' && !compact ? 'w-full max-w-[260px]' : 'w-full';
+  const { isLoggedIn } = useAuthSnapshot();
+  const saved = useInterestStore((s) => s.eventIds.includes(event.id));
+  const listingFrame = 'relative w-full';
 
   if (layout === 'row') {
     return (
@@ -89,36 +102,55 @@ export function EventCard({
   }
 
   return (
-    <PressScale onPress={onPress} className={listingFrame}>
-      <View className="w-full">
-        <View
-          className={cn(
-            'relative overflow-hidden rounded-images bg-muted shadow-card',
-            selected ? 'border border-aurora' : 'border border-transparent'
-          )}
-          style={cardShadowStyle}>
-          <PosterThumb event={event} listing />
-          <View className="absolute left-ds-8 top-ds-8 rounded-tags bg-pitch-black/80 px-ds-8 py-ds-4">
-            <Text variant="caption" className="uppercase text-paper-white">
-              {formatDay(event.startsAt)}
+    <View className={listingFrame}>
+      <PressScale onPress={onPress} className="w-full">
+        <View className="w-full">
+          <View
+            className={cn(
+              'relative overflow-hidden rounded-images bg-muted shadow-card',
+              selected ? 'border border-aurora' : 'border border-transparent'
+            )}
+            style={cardShadowStyle}>
+            <PosterThumb event={event} listing />
+            <View className="absolute left-ds-8 top-ds-8 rounded-tags bg-pitch-black/80 px-ds-8 py-ds-4">
+              <Text variant="caption" className="uppercase text-paper-white">
+                {badge ?? formatDay(event.startsAt)}
+              </Text>
+            </View>
+          </View>
+          <View className="mt-ds-8 gap-ds-4">
+            {event.genre ? (
+              <Text variant="caption" className="uppercase text-muted-foreground">
+                {event.genre}
+              </Text>
+            ) : null}
+            <Text variant="subheading" numberOfLines={2}>
+              {event.name}
             </Text>
+            <Text variant="muted" numberOfLines={1}>
+              {event.venueName}
+            </Text>
+            {caption ? (
+              <Text variant="caption" className="uppercase text-aurora">
+                {caption}
+              </Text>
+            ) : null}
           </View>
         </View>
-        <View className="mt-ds-8 gap-ds-4">
-          {event.genre ? (
-            <Text variant="caption" className="uppercase text-muted-foreground">
-              {event.genre}
-            </Text>
-          ) : null}
-          <Text variant="subheading" numberOfLines={2}>
-            {event.name}
-          </Text>
-          <Text variant="muted" numberOfLines={1}>
-            {event.venueName}
-          </Text>
-        </View>
-      </View>
-    </PressScale>
+      </PressScale>
+      {saveable ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar fecha'}
+          hitSlop={4}
+          onPress={() => void toggleSave(event.id, isLoggedIn)}
+          className="absolute right-ds-4 top-ds-4 z-10 size-11 items-center justify-center">
+          <View className="size-9 items-center justify-center rounded-full bg-pitch-black/55">
+            <Heart size={18} color={PAPER_WHITE} fill={saved ? PAPER_WHITE : 'transparent'} strokeWidth={2} />
+          </View>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 

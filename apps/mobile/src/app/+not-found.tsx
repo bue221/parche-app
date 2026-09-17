@@ -1,11 +1,11 @@
 import { Link } from 'expo-router';
-import { View } from 'react-native';
 
+import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
 
 export default function NotFoundScreen() {
   return (
-    <View className="flex-1 items-center justify-center gap-ds-16 bg-background px-ds-24">
+    <Screen center contentClassName="gap-ds-16">
       <Text variant="caption" className="uppercase text-muted-foreground">
         404
       </Text>
@@ -17,6 +17,6 @@ export default function NotFoundScreen() {
           Volver a Parche
         </Text>
       </Link>
-    </View>
+    </Screen>
   );
 }

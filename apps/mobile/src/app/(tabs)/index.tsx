@@ -1,40 +1,52 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import {
+  Calendar,
+  CalendarDays,
+  Cloud,
+  Disc,
+  Disc3,
+  Factory,
+  LayoutGrid,
+  Mic2,
+  Music2,
+  Sun,
+  Waves,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Chip, ChipRow } from '@/components/chip-row';
 import { EventCard, EventGrid, EventGridItem } from '@/components/event-card';
 import { EmptyState, ErrorState, ListingSkeleton } from '@/components/feedback';
 import { FadeSlideIn } from '@/components/motion';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { SearchBar } from '@/components/search-bar';
+import { SectionRail } from '@/components/section-rail';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { useFilters } from '@/data/filters';
-import { endOfDayISO, monthRange, startOfDayISO, toDateInput, weekendRange, countdownTo, isSameLocalDay } from '@/lib/format';
-import { GENRE_CHIPS, hasActiveFilters } from '@/lib/genres';
 import { useAuthSnapshot } from '@/data/session';
+import { activeDateChip, DATE_CHIPS, datePreset, genreRails, matchesExploreFilters } from '@/lib/explore-rails';
+import { countdownTo, isSameLocalDay } from '@/lib/format';
+import { GENRE_CHIPS, hasActiveFilters } from '@/lib/genres';
 
-const DATE_CHIPS = [
-  { id: 'hoy', label: 'Hoy' },
-  { id: 'finde', label: 'Fin de semana' },
-  { id: 'mes', label: 'Este mes' },
-] as const;
+const DATE_ICONS: Record<(typeof DATE_CHIPS)[number]['id'], LucideIcon> = {
+  hoy: Sun,
+  finde: Calendar,
+  mes: CalendarDays,
+};
 
-function datePreset(id: (typeof DATE_CHIPS)[number]['id']) {
-  if (id === 'hoy') return { from: startOfDayISO(), to: endOfDayISO() };
-  if (id === 'finde') return weekendRange();
-  return monthRange();
-}
-
-function activeDateChip(from?: string, to?: string) {
-  return DATE_CHIPS.find((chip) => {
-    const range = datePreset(chip.id);
-    return toDateInput(from) === toDateInput(range.from) && toDateInput(to) === toDateInput(range.to);
-  })?.id;
-}
+const GENRE_ICONS: Record<(typeof GENRE_CHIPS)[number], LucideIcon> = {
+  techno: Disc3,
+  industrial: Factory,
+  house: Music2,
+  trance: Waves,
+  ambient: Cloud,
+  club: Disc,
+  concierto: Mic2,
+};
 
 export default function ExplorarScreen() {
   const { isLoggedIn, isPromoter } = useAuthSnapshot();
@@ -51,36 +63,43 @@ export default function ExplorarScreen() {
   });
 
   const events = eventsQuery.data ?? [];
-  const recs = recsQuery.data ?? [];
+  const recs = (recsQuery.data ?? []).filter((event) => matchesExploreFilters(event, filters));
   const tonight = events.filter((event) => isSameLocalDay(event.startsAt));
-  const featured = recs.length > 0 ? recs : events.slice(0, 8);
-  const railTitle = recs.length > 0 ? 'Para ti' : null;
+  const railsByGenre = genreRails(events, filters.genre);
   const error = eventsQuery.error ? 'No pudimos cargar las fechas' : null;
   const filtered = hasActiveFilters(filters);
   const selectedDate = activeDateChip(filters.from, filters.to);
+  const todoSelected = !selectedDate && !filters.genre;
+
+  function openEvent(id: string) {
+    router.push(`/event/${id}` as Href);
+  }
 
   return (
     <Screen
       scroll
       refreshControl={<RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />}>
-      <PageHeader
-        title="Explorar"
-        lead="Fechas cerca."
-        actions={
-          isPromoter ? (
-            <Button onPress={() => router.push('/event/create' as Href)}>
-              <Text>Crear fecha</Text>
-            </Button>
-          ) : null
-        }
-      />
-      <View className="mt-ds-16 gap-ds-12">
+      <View className="gap-ds-12">
         <SearchBar value={filters.q} onPress={() => router.push('/filters' as Href)} />
+        {isPromoter ? (
+          <Button size="sm" onPress={() => router.push('/event/create' as Href)}>
+            <Text>Crear fecha</Text>
+          </Button>
+        ) : null}
         <ChipRow>
+          <FadeSlideIn index={0}>
+            <Chip
+              label="Todo"
+              icon={LayoutGrid}
+              selected={todoSelected}
+              onPress={() => setFilters({ ...filters, from: undefined, to: undefined, genre: undefined })}
+            />
+          </FadeSlideIn>
           {DATE_CHIPS.map((chip, index) => (
-            <FadeSlideIn key={chip.id} index={index}>
+            <FadeSlideIn key={chip.id} index={index + 1}>
               <Chip
                 label={chip.label}
+                icon={DATE_ICONS[chip.id]}
                 selected={selectedDate === chip.id}
                 onPress={() => {
                   if (selectedDate === chip.id) {
@@ -92,60 +111,66 @@ export default function ExplorarScreen() {
               />
             </FadeSlideIn>
           ))}
-          {GENRE_CHIPS.map((genre) => (
-            <Chip
-              key={genre}
-              label={genre}
-              selected={filters.genre === genre}
-              onPress={() => setFilters({ ...filters, genre: filters.genre === genre ? undefined : genre })}
-            />
+          {GENRE_CHIPS.map((genre, index) => (
+            <FadeSlideIn key={genre} index={index + DATE_CHIPS.length + 1}>
+              <Chip
+                label={genre}
+                icon={GENRE_ICONS[genre]}
+                selected={filters.genre === genre}
+                onPress={() => setFilters({ ...filters, genre: filters.genre === genre ? undefined : genre })}
+              />
+            </FadeSlideIn>
           ))}
         </ChipRow>
       </View>
       {tonight.length > 0 ? (
-        <View className="mt-ds-32 gap-ds-16">
-          <Text variant="headingSm">Esta noche en Bogotá</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+        <View className="mt-ds-32">
+          <SectionRail
+            title="Esta noche"
+            onSeeAll={
+              selectedDate === 'hoy'
+                ? undefined
+                : () => setFilters({ ...filters, ...datePreset('hoy') })
+            }>
             {tonight.map((event, index) => {
               const left = countdownTo(event.startsAt);
               return (
-                <View key={`tonight-${event.id}`} style={{ width: 168 }}>
-                  <FadeSlideIn index={index}>
-                    <EventCard
-                      event={event}
-                      layout="poster"
-                      onPress={() => router.push(`/event/${event.id}` as Href)}
-                    />
-                    {left ? (
-                      <Text variant="caption" className="mt-ds-8 uppercase text-aurora">
-                        Puerta en {left}
-                      </Text>
-                    ) : null}
-                  </FadeSlideIn>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ) : null}
-      {featured.length > 0 && railTitle ? (
-        <View className="mt-ds-32 gap-ds-16">
-          <Text variant="headingSm">{railTitle}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {featured.map((event, index) => (
-              <View key={`feat-${event.id}`} style={{ width: 168 }}>
-                <FadeSlideIn index={index}>
+                <FadeSlideIn key={`tonight-${event.id}`} index={index}>
                   <EventCard
                     event={event}
-                    layout="poster"
-                    onPress={() => router.push(`/event/${event.id}` as Href)}
+                    saveable
+                    badge="Esta noche"
+                    caption={left ? `Puerta en ${left}` : undefined}
+                    onPress={() => openEvent(event.id)}
                   />
                 </FadeSlideIn>
-              </View>
-            ))}
-          </ScrollView>
+              );
+            })}
+          </SectionRail>
         </View>
       ) : null}
+      {recs.length > 0 ? (
+        <View className="mt-ds-32">
+          <SectionRail title="Para ti">
+            {recs.map((event, index) => (
+              <FadeSlideIn key={`feat-${event.id}`} index={index}>
+                <EventCard event={event} saveable onPress={() => openEvent(event.id)} />
+              </FadeSlideIn>
+            ))}
+          </SectionRail>
+        </View>
+      ) : null}
+      {railsByGenre.map((rail) => (
+        <View key={`genre-${rail.genre}`} className="mt-ds-32">
+          <SectionRail title={rail.genre} onSeeAll={() => setFilters({ ...filters, genre: rail.genre })}>
+            {rail.events.map((event, index) => (
+              <FadeSlideIn key={`genre-${rail.genre}-${event.id}`} index={index}>
+                <EventCard event={event} saveable onPress={() => openEvent(event.id)} />
+              </FadeSlideIn>
+            ))}
+          </SectionRail>
+        </View>
+      ))}
       <View className="mt-ds-32 gap-ds-24">
         {error ? <ErrorState message={error} onRetry={() => void eventsQuery.refetch()} /> : null}
         {events.length === 0 && !error && !eventsQuery.isLoading ? (
@@ -165,15 +190,20 @@ export default function ExplorarScreen() {
             ))}
           </EventGrid>
         ) : null}
-        <EventGrid>
-          {events.map((event, index) => (
-            <EventGridItem key={event.id}>
-              <FadeSlideIn index={index}>
-                <EventCard event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
-              </FadeSlideIn>
-            </EventGridItem>
-          ))}
-        </EventGrid>
+        {events.length > 0 ? (
+          <View className="gap-ds-16">
+            <Text variant="headingSm">Todas las fechas</Text>
+            <EventGrid>
+              {events.map((event, index) => (
+                <EventGridItem key={event.id}>
+                  <FadeSlideIn index={index}>
+                    <EventCard event={event} saveable onPress={() => openEvent(event.id)} />
+                  </FadeSlideIn>
+                </EventGridItem>
+              ))}
+            </EventGrid>
+          </View>
+        ) : null}
       </View>
     </Screen>
   );

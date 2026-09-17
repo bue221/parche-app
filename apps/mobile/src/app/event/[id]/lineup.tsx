@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { ArtistRow } from '@/components/artist-row';
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -36,7 +34,7 @@ export default function EventLineupEditScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.write')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>El rol door no edita lineup.</Text>
       </Screen>
     );
@@ -45,9 +43,7 @@ export default function EventLineupEditScreen() {
   const filtered = artists.filter((a) => a.stageName.toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Lineup" />
+    <Screen back title="Lineup">
       {event?.lineup.length === 0 ? <Text variant="muted">Aún no hay lineup</Text> : null}
       <View className="mt-ds-16 gap-ds-8">
         {event?.lineup.map((artist, index) => (

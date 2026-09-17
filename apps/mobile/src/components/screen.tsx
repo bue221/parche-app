@@ -5,6 +5,7 @@ import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackBar } from '@/components/back-bar';
+import { PageHeader } from '@/components/page-header';
 import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop, WebNavHeight } from '@/constants/theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,11 @@ type ScreenProps = PropsWithChildren<{
   center?: boolean;
   flush?: boolean;
   back?: boolean;
+  title?: string;
+  lead?: string;
+  eyebrow?: string;
+  mark?: ReactNode;
+  actions?: ReactNode;
   footer?: ReactNode;
   refreshControl?: ScrollViewProps['refreshControl'];
 }>;
@@ -35,6 +41,11 @@ export function Screen({
   center = false,
   flush = false,
   back = false,
+  title,
+  lead,
+  eyebrow,
+  mark,
+  actions,
   footer,
   refreshControl,
 }: ScreenProps) {
@@ -44,16 +55,19 @@ export function Screen({
   const path = usePathname();
   const inWebTabs = web && WEB_TAB_PATHS.has(path);
   const [footerHeight, setFooterHeight] = useState(0);
-  const padding = flush
+  const topSafe = flush
+    ? 0
+    : web
+      ? inWebTabs
+        ? compact
+          ? WebCompactTop
+          : WebNavHeight
+        : 0
+      : insets.top;
+  const contentPadding = flush
     ? { flexGrow: 1 }
     : {
-        paddingTop: web
-          ? inWebTabs
-            ? (compact ? WebCompactTop : WebNavHeight) + 16
-            : compact
-              ? 24
-              : 32
-          : insets.top + 16,
+        paddingTop: web ? (inWebTabs ? 16 : compact ? 24 : 32) : 16,
         paddingBottom: web
           ? inWebTabs
             ? compact
@@ -77,6 +91,9 @@ export function Screen({
           : { width: '100%', alignSelf: 'stretch', flex: scrollEnabled ? undefined : 1 }
       }>
       {back ? <BackBar /> : null}
+      {title ? (
+        <PageHeader eyebrow={eyebrow} mark={mark} title={title} lead={lead} actions={actions} />
+      ) : null}
       {children}
     </View>
   );
@@ -92,39 +109,35 @@ export function Screen({
     </KeyboardStickyView>
   ) : null;
 
+  const frameStyle = topSafe ? { paddingTop: topSafe } : undefined;
+
   if (!scrollEnabled) {
-    const body = (
-      <View className={cn('flex-1 bg-background', className)} style={padding}>
-        {inner}
-      </View>
-    );
-    if (!footer) return body;
     return (
-      <View className="flex-1 bg-background">
-        {body}
+      <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
+        <View className="flex-1" style={contentPadding}>
+          {inner}
+        </View>
         {stickyFooter}
       </View>
     );
   }
 
   const scroller = native ? (
-    <View className={cn('flex-1 bg-background', className)}>
-      <KeyboardAwareScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={padding}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        contentInsetAdjustmentBehavior="never"
-        bottomOffset={footer ? footerHeight + 16 : 24}
-        extraKeyboardSpace={footer ? footerHeight : 0}
-        refreshControl={refreshControl}>
-        {inner}
-      </KeyboardAwareScrollView>
-    </View>
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={contentPadding}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      contentInsetAdjustmentBehavior="never"
+      bottomOffset={footer ? footerHeight + 16 : 24}
+      extraKeyboardSpace={footer ? footerHeight : 0}
+      refreshControl={refreshControl}>
+      {inner}
+    </KeyboardAwareScrollView>
   ) : (
     <ScrollView
-      className={cn('flex-1 bg-background', className)}
-      contentContainerStyle={padding}
+      style={{ flex: 1 }}
+      contentContainerStyle={contentPadding}
       keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="never"
       refreshControl={refreshControl}>
@@ -132,9 +145,8 @@ export function Screen({
     </ScrollView>
   );
 
-  if (!footer) return scroller;
   return (
-    <View className="flex-1 bg-background">
+    <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
       {scroller}
       {stickyFooter}
     </View>

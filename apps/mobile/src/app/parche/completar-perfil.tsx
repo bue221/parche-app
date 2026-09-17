@@ -2,10 +2,8 @@ import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
 import { MediaPicker } from '@/components/media-picker';
-import { PageHeader } from '@/components/page-header';
 import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
@@ -51,9 +49,7 @@ export default function CompleteProfileScreen() {
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Completar perfil" lead="Opcional. Tu QR ya está listo." />
+    <Screen back title="Completar perfil" lead="Opcional. Tu QR ya está listo.">
       <View className="mt-ds-24 max-w-xl gap-ds-16">
         <MediaPicker kind="avatar" onUploaded={() => void api.auth.me()} />
         <Field label="Nombre" value={name} onChangeText={setName} />

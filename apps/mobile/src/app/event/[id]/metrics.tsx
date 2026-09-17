@@ -2,9 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { ErrorState, PendingAuth } from '@/components/feedback';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
@@ -40,23 +38,21 @@ export default function EventMetricsScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.metrics.read')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>Door no entra a ingresos.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader
-        title="Métricas"
-        actions={
-          <Button variant="outline" onPress={() => void load()}>
-            <Text>Actualizar</Text>
-          </Button>
-        }
-      />
+    <Screen
+      back
+      title="Métricas"
+      actions={
+        <Button variant="outline" onPress={() => void load()}>
+          <Text>Actualizar</Text>
+        </Button>
+      }>
       {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
       <View className="mt-ds-24 flex-row gap-ds-12">
         <Surface elevated className="flex-1 gap-ds-4">

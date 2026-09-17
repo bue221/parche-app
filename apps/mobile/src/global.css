@@ -87,6 +87,7 @@
     --radius-navelements: 28px;
     --shadow-card: 0 18px 50px rgba(11, 11, 18, 0.08);
     --shadow-glass: 0 10px 40px rgba(11, 11, 18, 0.08);
+    --shadow-tab: 0 -10px 28px rgba(11, 11, 18, 0.14);
 
     --surface-paper-white: #f5f5f8;
     --surface-ash-gray: #ececf1;
@@ -144,6 +145,7 @@
     --color-glow: rgba(184, 164, 255, 0.2);
     --shadow-card: 0 22px 50px rgba(0, 0, 0, 0.45);
     --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.35);
+    --shadow-tab: 0 -12px 32px rgba(0, 0, 0, 0.55);
     --color-aurora-soft: #2a2248;
     --color-heat-soft: var(--color-aurora-soft);
     --color-neon-soft: #0a2830;
@@ -179,6 +181,7 @@
       --color-glow: rgba(184, 164, 255, 0.2);
       --shadow-card: 0 22px 50px rgba(0, 0, 0, 0.45);
       --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.35);
+      --shadow-tab: 0 -12px 32px rgba(0, 0, 0, 0.55);
       --color-aurora-soft: #2a2248;
       --color-heat-soft: var(--color-aurora-soft);
       --color-neon-soft: #0a2830;

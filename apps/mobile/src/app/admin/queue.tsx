@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { EventCard } from '@/components/event-card';
 import { EmptyState, ErrorState, PendingAuth } from '@/components/feedback';
-import { PageHeader } from '@/components/page-header';
 import { OsmMap } from '@/components/osm-map';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
@@ -39,17 +37,14 @@ export default function AdminQueueScreen() {
   }
   if (!isAdmin) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <Text>Solo admin de plataforma.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Aprobación" lead="Revisa foto y pin antes de publicar." />
+    <Screen back title="Aprobación" lead="Revisa foto y pin antes de publicar.">
       {queue.length === 0 && !error ? <EmptyState title="Nada por revisar" lead="La cola está limpia." /> : null}
       {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
       {queue.map((event) => (

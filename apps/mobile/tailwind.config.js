@@ -147,6 +147,7 @@ module.exports = {
         none: 'none',
         card: 'var(--shadow-card)',
         glass: 'var(--shadow-glass)',
+        tab: 'var(--shadow-tab)',
       },
     },
   },

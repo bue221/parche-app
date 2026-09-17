@@ -3,12 +3,10 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { ArtistPreview } from '@/components/artist-preview';
-import { BackBar } from '@/components/back-bar';
 import { EmptyState, PendingAuth } from '@/components/feedback';
 import { Field } from '@/components/field';
 import { FormSection } from '@/components/form-section';
 import { MediaPicker } from '@/components/media-picker';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -48,8 +46,7 @@ export default function ArtistEditScreen() {
 
   if (!isArtist && !isPromoter) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <EmptyState
           title="Activa tu ficha desde Parche"
           lead="El perfil de artista no abre caja ni puerta."
@@ -81,9 +78,7 @@ export default function ArtistEditScreen() {
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Perfil de artista" lead="Así te ven en lineup y en el perfil público." />
+    <Screen back title="Perfil de artista" lead="Así te ven en lineup y en el perfil público.">
       <View className="mt-ds-24 gap-ds-32">
         <FormSection title="Vista previa">
           <ArtistPreview stageName={stageName} bio={bio} avatarUrl={avatarUrl} />

@@ -7,7 +7,6 @@ import { ArtistRow } from '@/components/artist-row';
 import { Chip, ChipRow } from '@/components/chip-row';
 import { EventCard, EventFeed } from '@/components/event-card';
 import { EmptyState, ErrorState, Skeleton } from '@/components/feedback';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Surface } from '@/components/surface';
 import { TicketCard, TicketFeed } from '@/components/ticket-card';
@@ -90,8 +89,7 @@ export default function WalletScreen() {
 
   if (!hydrated) {
     return (
-      <Screen>
-        <PageHeader title="Guardados" lead="Tus fechas y boletas." />
+      <Screen title="Guardados" lead="Tus fechas y boletas.">
         <View className="mt-ds-24">
           <Skeleton className="aspect-[16/10] w-full max-w-[400px]" />
         </View>
@@ -102,8 +100,7 @@ export default function WalletScreen() {
   const needsProfile = Boolean(isLoggedIn && user && !user.phone && visible.some((t) => t.status === 'valid'));
 
   return (
-    <Screen>
-      <PageHeader title="Guardados" lead={segment === 'saved' ? 'Lo que te interesa.' : 'Muéstralos en puerta.'} />
+    <Screen title="Guardados" lead={segment === 'saved' ? 'Lo que te interesa.' : 'Muéstralos en puerta.'}>
       <View className="mt-ds-16">
         <ChipRow>
           <Chip label="Guardados" selected={segment === 'saved'} onPress={() => setSegment('saved')} />

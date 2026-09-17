@@ -5,11 +5,11 @@ import type { ComponentType } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BrandLockup } from '@/components/brand-lockup';
+import { TabBar, TabBarItem } from '@/components/tab-bar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Text } from '@/components/ui/text';
 import { useAuthSnapshot, usePrimaryProfile, useTabVisibility } from '@/data/session';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
-import { useTheme } from '@/hooks/use-theme';
 import { cn } from '@/lib/utils';
 
 export default function TabsLayout() {
@@ -20,22 +20,22 @@ export default function TabsLayout() {
       <TabList asChild>
         <WebNav>
           <TabTrigger name="agenda" href="/" asChild>
-            <NavLink icon={Search}>Explorar</NavLink>
+            <TabLink icon={Search}>Explorar</TabLink>
           </TabTrigger>
           <TabTrigger name="explore" href="/explore" asChild>
-            <NavLink icon={Map}>Mapa</NavLink>
+            <TabLink icon={Map}>Mapa</TabLink>
           </TabTrigger>
           <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
-            <NavLink icon={Ticket}>Guardados</NavLink>
+            <TabLink icon={Ticket}>Guardados</TabLink>
           </TabTrigger>
           <TabTrigger name="parche" href={'/parche' as Href} asChild>
-            <NavLink icon={UserRound}>Cuenta</NavLink>
+            <TabLink icon={UserRound}>Cuenta</TabLink>
           </TabTrigger>
           {tabs.operate ? (
             <TabTrigger name="operate" href={'/operate' as Href} asChild>
-              <NavLink icon={Wrench} badge={tabs.operateBadge}>
+              <TabLink icon={Wrench} badge={tabs.operateBadge}>
                 Operar
-              </NavLink>
+              </TabLink>
             </TabTrigger>
           ) : null}
         </WebNav>
@@ -45,49 +45,41 @@ export default function TabsLayout() {
   );
 }
 
-function NavLink({
-  children,
-  icon: Icon,
-  isFocused,
-  badge = 0,
+function TabLink({
+  icon,
   ...props
 }: TabTriggerSlotProps & {
-  icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number; fill?: string }>;
   badge?: number;
 }) {
   const compact = useCompactLayout();
-  const theme = useTheme();
-  const color = isFocused ? theme.aurora : theme.textMuted;
+  if (compact) {
+    return <TabBarItem icon={icon} {...props} />;
+  }
+  return <NavChip {...props} />;
+}
 
+function NavChip({
+  children,
+  isFocused,
+  badge = 0,
+  ...props
+}: TabTriggerSlotProps & { badge?: number }) {
   return (
     <Pressable
       {...props}
       accessibilityRole="tab"
       accessibilityState={{ selected: Boolean(isFocused) }}
-      className={cn('outline-none', compact && 'min-h-11 flex-1 items-center justify-center px-ds-4 py-ds-8')}>
-      {compact ? (
-        <View className="items-center gap-ds-4">
-          <View className="relative">
-            <Icon size={22} color={color} strokeWidth={isFocused ? 2.4 : 1.8} />
-            {badge > 0 ? <View className="absolute -right-1 -top-1 size-2 rounded-full bg-danger" /> : null}
-          </View>
-          <Text
-            variant="caption"
-            numberOfLines={2}
-            className={cn('text-center font-normal normal-case tracking-normal', isFocused ? 'text-aurora' : 'text-muted-foreground')}>
-            {children}
-          </Text>
-        </View>
-      ) : (
-        <Text
-          variant="caption"
-          className={cn(
-            'rounded-tags px-ds-16 py-ds-8 font-normal normal-case tracking-normal',
-            isFocused ? 'bg-aurora text-pitch-black' : 'text-muted-foreground'
-          )}>
-          {children}
-        </Text>
-      )}
+      className="relative outline-none">
+      <Text
+        variant="caption"
+        className={cn(
+          'rounded-tags px-ds-16 py-ds-8 font-normal normal-case tracking-normal',
+          isFocused ? 'bg-aurora text-pitch-black' : 'text-muted-foreground'
+        )}>
+        {children}
+      </Text>
+      {badge > 0 ? <View className="absolute right-1 top-1 size-2 rounded-full bg-danger" /> : null}
     </Pressable>
   );
 }
@@ -107,11 +99,7 @@ function WebNav({ children, ...props }: TabListProps) {
             <ThemeToggle />
           </View>
         </View>
-        <View
-          {...props}
-          className="absolute bottom-0 w-full flex-row items-stretch border-t border-border bg-background px-ds-4 pb-ds-8 pt-ds-8">
-          {children}
-        </View>
+        <TabBar {...props}>{children}</TabBar>
       </View>
     );
   }

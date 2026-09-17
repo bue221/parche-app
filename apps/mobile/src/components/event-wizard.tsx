@@ -3,14 +3,12 @@ import { router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { DateTimeField } from '@/components/date-field';
 import { EventCard } from '@/components/event-card';
 import { Field } from '@/components/field';
 import { FlyerDraftPicker, type FlyerDraft } from '@/components/flyer-draft-picker';
 import { FormSection } from '@/components/form-section';
 import { OsmMap } from '@/components/osm-map';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { StickyCta } from '@/components/sticky-cta';
 import { Button } from '@/components/ui/button';
@@ -304,6 +302,10 @@ export function EventWizard({
 
   return (
     <Screen
+      back
+      eyebrow={`${step + 1} de 4`}
+      title={mode === 'edit' && step === 0 ? 'Editar fecha' : current.title}
+      lead={current.lead}
       footer={
         <StickyCta>
           <View className="gap-ds-12">
@@ -339,12 +341,6 @@ export function EventWizard({
           </View>
         </StickyCta>
       }>
-      <BackBar />
-      <PageHeader
-        eyebrow={`${step + 1} de 4`}
-        title={mode === 'edit' && step === 0 ? 'Editar fecha' : current.title}
-        lead={current.lead}
-      />
       <View className="mt-ds-24">{body}</View>
     </Screen>
   );

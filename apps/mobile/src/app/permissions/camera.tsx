@@ -1,8 +1,6 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { StickyCta } from '@/components/sticky-cta';
 import { Button } from '@/components/ui/button';
@@ -12,6 +10,9 @@ import { api } from '@/data/client';
 export default function CameraPermissionScreen() {
   return (
     <Screen
+      back
+      title="Cámara"
+      lead="La puerta lee el código de tu tiquete. Si niegas, no hay scan."
       footer={
         <StickyCta>
           <View className="gap-ds-8">
@@ -26,8 +27,6 @@ export default function CameraPermissionScreen() {
           </View>
         </StickyCta>
       }>
-      <BackBar />
-      <PageHeader title="Cámara" lead="La puerta lee el código de tu tiquete. Si niegas, no hay scan." />
     </Screen>
   );
 }

@@ -3,10 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { AuthSheet } from '@/components/auth-sheet';
-import { BackBar } from '@/components/back-bar';
 import { LoadError, Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { StickyCta } from '@/components/sticky-cta';
 import { Surface } from '@/components/surface';
@@ -66,8 +64,7 @@ export default function CheckoutScreen() {
   }
   if (!event) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <Skeleton className="aspect-[16/10] w-full" />
         <Skeleton className="mt-ds-16 h-8 w-40" />
         <Skeleton className="mt-ds-16 h-24 w-full" />
@@ -80,6 +77,9 @@ export default function CheckoutScreen() {
   return (
     <View className="flex-1">
       <Screen
+        back
+        title="Boleta"
+        lead={event.name}
         footer={
           <StickyCta>
             <View className="gap-ds-8">
@@ -103,8 +103,6 @@ export default function CheckoutScreen() {
             </View>
           </StickyCta>
         }>
-        <BackBar />
-        <PageHeader title="Boleta" lead={event.name} />
         {event.flyerUrl ? (
           <View className="mt-ds-16 overflow-hidden rounded-images">
             <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />

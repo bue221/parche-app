@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 
 import { ArtistRow } from '@/components/artist-row';
-import { BackBar } from '@/components/back-bar';
 import { EventCard } from '@/components/event-card';
 import { EventStaffSheet, buildEventStaffActions } from '@/components/event-staff-actions';
 import { EventTrackPlayer } from '@/components/event-track-player';
@@ -84,16 +83,14 @@ export default function EventDetailScreen() {
 
   if (error && !event) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <ErrorState message={userMessage(error) || 'Esta fecha ya no está'} onRetry={() => void refetch()} />
       </Screen>
     );
   }
   if (!event || isLoading) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <View className={wide ? 'flex-row items-start gap-ds-40' : 'gap-ds-16'}>
           <Skeleton className={wide ? 'aspect-[4/5] w-[42%] max-w-[480px]' : 'aspect-[4/5] w-full'} />
           <View className={wide ? 'flex-1 gap-ds-12' : undefined}>
@@ -199,6 +196,7 @@ export default function EventDetailScreen() {
 
   return (
     <Screen
+      back
       footer={
         compact ? (
           <StickyCta>
@@ -206,7 +204,6 @@ export default function EventDetailScreen() {
           </StickyCta>
         ) : undefined
       }>
-      <BackBar />
       <View className={wide ? 'flex-row items-start gap-ds-40' : 'gap-ds-24'}>
         <View className={wide ? 'w-[42%] max-w-[480px] shrink-0 gap-ds-12' : 'gap-ds-12'}>
           {flyer}

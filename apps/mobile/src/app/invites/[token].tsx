@@ -1,8 +1,6 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -30,9 +28,7 @@ export default function InviteAcceptScreen() {
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Invitación" />
+    <Screen back title="Invitación">
       {error ? <Text className="mt-ds-16">{error}</Text> : null}
       {payload ? (
         <>

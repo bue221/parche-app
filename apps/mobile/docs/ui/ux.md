@@ -14,7 +14,7 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 |-------|----------|
 | Motion | Reanimated only. Press scale `0.98`. Enter: opacity + translateY, ~360ms. List stagger 40ms. No Moti. |
 | Reduce motion | `useReduceMotion()` — if true, render children with no animation. |
-| Event card | `listing`: 4:5 photo + date badge + Inter meta below. `row`: 64px thumb + Inter on `bg-surface`. Featured rails use existing `poster`. `selected` = aurora border. |
+| Event card | `listing`: 4:5 photo + date badge + Inter meta below. Explorar listing may show a 44px save heart on the flyer (tap does not open detail). `row`: 64px thumb + Inter on `bg-surface`. Featured rails on Explorar use `listing` with peek (~72% width), not `poster`. `poster` stays for other surfaces. `selected` = aurora border. |
 | Ticket card | Pass: 16:10 photo + estado + Mostrar. Phone full-width. Desktop web `TicketFeed` 280–400px. Do not stretch to page max. |
 | Event wizard | Four steps, eyebrow `N de 4`, sticky Continuar / Atrás. Flyer preview is local until Pin creates the draft (API requires pin or venue). Review is an `EventCard` listing. |
 | Role homes | Same tabs and soft canvas. Labels **Guardados** and **Cuenta** never change with session. Aurora marks the active tab; inverse `primary` is the conversion CTA. Cuenta and Operar change voice, section order, and primary CTA. Identity mark next to **Cuenta**: Tucán / Cóndor / Jaguar. No color skin. Primary profile: promoter > artist > attendee. Operar density follows the event membership role. Badge on Operar for tonight / pending invite. |
@@ -22,12 +22,12 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 | Staff actions | One primary + overflow `BottomSheet`. Shared helper for Operar and event detail. |
 | Confirm / volt | Success only: print, door approved, brief save confirmation, valid ticket. Not idle genre tags, not wizard steps at rest. |
 | Buttons | Default filled pill = `bg-primary` (inverse). `variant="signal"` = aurora. `variant="confirm"` only for the success beat. Logout = `destructive` (danger). |
-| Search | `SearchBar` pill opens filters. `ChipRow` applies genre/date without leaving the list when possible. |
+| Search | `SearchBar` pill is the Explorar hero (no tab page title). `ChipRow` chips may include a Lucide icon; Todo + day/genre apply without leaving the list. Selected = `aurora`. |
 | Sheets | Map preview, staff overflow, and AuthSheet (OTP/Google) use `BottomSheet`. Filters may be a compact stack screen. Auth de compra no es una ruta full-screen. |
 | Detail | Photo hero + Inter title + blocks. Buy lives in `StickyCta`. Staff is a secondary sheet (primary + Más). |
 | Forms | Caption uppercase label, optional helper, error = danger border + helper text. Focus = aurora border. Multiline `minHeight` 96. Hit targets ≥44px. Wizard validates per step. `Screen` scrolls the focused field above the keyboard; `StickyCta` stays visible. |
 | Feedback | Skeleton matches card shape. Empty = `EmptyState` (title + optional lead + action) with role voice. Errors = `ErrorState` with retry on reads. Saving = disable CTA + “Guardando…”. |
-| Shell | Stack screens get `BackBar` (44px hit) + compact `PageHeader` (Inter). Guest Cuenta: value card + AuthSheet CTA + theme. Password login remains a dismissible modal for existing accounts. |
+| Shell | `Screen` owns the safe band + `BackBar` / `PageHeader` (see [design.md](design.md) Screen chrome). Mobile tabs: `TabBar` on `bg-surface` with `shadow-tab`; aurora filled icon + bold label when active, slate outline when idle. Guest Cuenta: value card + AuthSheet CTA + theme. Password login remains a dismissible modal for existing accounts. |
 | Theme | `ThemeToggle` forces light/dark; default follows system. Always resolve via `useResolvedColorScheme()` — never raw `Appearance` alone for chrome colors. |
 
 ## Checklist

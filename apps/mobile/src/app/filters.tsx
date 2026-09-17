@@ -2,11 +2,9 @@ import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { Chip, ChipWrap } from '@/components/chip-row';
 import { DateField } from '@/components/date-field';
 import { Field } from '@/components/field';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { StickyCta } from '@/components/sticky-cta';
 import { Button } from '@/components/ui/button';
@@ -42,6 +40,9 @@ export default function FiltersScreen() {
 
   return (
     <Screen
+      back
+      title="Filtros"
+      lead="Nombre, barrio, género o día."
       footer={
         <StickyCta>
           <View className="gap-ds-8">
@@ -59,8 +60,6 @@ export default function FiltersScreen() {
           </View>
         </StickyCta>
       }>
-      <BackBar />
-      <PageHeader title="Filtros" lead="Nombre, barrio, género o día." />
       <View className="mt-ds-24 gap-ds-24">
         <Field label="Buscar" value={q} onChangeText={setQ} placeholder="Nombre, venue, barrio…" />
 

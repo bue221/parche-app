@@ -23,7 +23,7 @@ La app usa un chrome de producto: el asistente vive en Explorar (listado) y Mapa
 | Tab Mapa | [FEAT-006](feat-006-explore-map.md) |
 | Tab Guardados | [FEAT-040](feat-040-saved-tab.md); interés local + [FEAT-024](feat-024-ticket-wallet.md) |
 | Tab Cuenta | [FEAT-012](feat-012-profile-me.md); label fijo |
-| Tab Operar | [FEAT-027](feat-027-operate-hub.md); solo promoter o membresías; badge |
+| Tab bar | `TabBar` + `TabBarItem`: `bg-surface`, `shadow-tab`, aurora filled en activo, slate outline en idle |
 | Stacks | Auth (modal), detalle evento/artista, checkout, impresión, scanner, invite |
 
 ## Flujo
@@ -52,7 +52,7 @@ Drawer hamburguesa. Navegación de la web Next. Personalización de tabs por el 
 
 - [ ] Invitado ve Guardados (local) y Cuenta; no ve Operar.
 - [ ] Staff de un solo evento ve Operar; no ve métricas de otros tenants.
-- [ ] Chrome semántico (canvas + surface); tab bar con tokens (`aurora` en activo, `primary` inverso en CTAs).
+- [ ] Chrome semántico (canvas + surface); tab bar `bg-surface` + `shadow-tab`; `aurora` filled en activo, slate en idle; `primary` inverso en CTAs.
 - [ ] Parche logueado no se aplana a settings: sigue el home de perfil primario.
 
 ## Relacionadas

@@ -3,7 +3,6 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
 import { Screen } from '@/components/screen';
 import { TicketPass } from '@/components/ticket-pass';
@@ -55,13 +54,8 @@ export default function TicketScreen() {
   const type = eventQuery.data?.ticketTypes.find((item) => item.id === ticket.ticketTypeId);
 
   return (
-    <Screen>
-      <BackBar />
-      <View className="items-center gap-ds-16">
-        <Text variant="heading">Tu entrada</Text>
-        <Text variant="muted" className="text-center">
-          Sube el brillo y muestra el QR en puerta.
-        </Text>
+    <Screen back title="Tu entrada" lead="Sube el brillo y muestra el QR en puerta.">
+      <View className="mt-ds-16 items-center gap-ds-16">
         <View className="w-full max-w-[400px] rounded-cards bg-charcoal p-ds-8">
           <TicketPass ticket={ticket} event={eventQuery.data ?? undefined} type={type} />
         </View>

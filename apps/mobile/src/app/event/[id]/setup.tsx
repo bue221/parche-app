@@ -3,10 +3,8 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { EventSetupChecklist } from '@/components/event-setup-checklist';
 import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -54,12 +52,7 @@ export default function EventSetupScreen() {
   const remaining = listingGaps(query.data).length;
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader
-        title="Termina el listing"
-        lead={remaining ? `Faltan ${remaining} para publicarlo con calma.` : 'Flyer, pin, boleta y lineup listos.'}
-      />
+    <Screen back title="Termina el listing" lead={remaining ? `Faltan ${remaining} para publicarlo con calma.` : 'Flyer, pin, boleta y lineup listos.'}>
       <View className="mt-ds-16">
         <EventSetupChecklist event={query.data} />
       </View>

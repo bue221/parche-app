@@ -1,9 +1,7 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -26,9 +24,7 @@ export default function TicketTransferScreen() {
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Ceder" lead="Solo a otra cuenta. El código viejo deja de valer." />
+    <Screen back title="Ceder" lead="Solo a otra cuenta. El código viejo deja de valer.">
       <Field label="Email o id" autoCapitalize="none" value={q} onChangeText={setQ} />
       <Button
         className="mt-ds-16"

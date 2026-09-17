@@ -11,12 +11,14 @@ export function PressScale({
   className,
   disabled,
   accessibilityRole = 'button',
+  accessibilityLabel,
 }: {
   children: ReactNode;
   onPress?: PressableProps['onPress'];
   className?: string;
   disabled?: boolean;
   accessibilityRole?: PressableProps['accessibilityRole'];
+  accessibilityLabel?: string;
 }) {
   const reduce = useReduceMotion();
   const scale = useSharedValue(1);
@@ -25,6 +27,7 @@ export function PressScale({
   return (
     <Pressable
       accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => {

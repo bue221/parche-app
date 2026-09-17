@@ -45,7 +45,7 @@ Labels sobre pigmento: siempre negro. Aurora es chispa, no un lavado de toda la 
 | Cards / imágenes | 20px | `rounded-cards` |
 | Botones | 40px | `rounded-buttons` |
 
-Pills: all-caps 12/700. Cards pueden tener un lift suave (`shadow-card`). Sin degradados en chrome. Cada perfil se diferencia con un animal colombiano en B/N al lado de Parche (Tucán, Cóndor, Jaguar), no con un color de chrome.
+Pills: all-caps 12/700. Cards pueden tener un lift suave (`shadow-card`). El tab bar mobile usa lift hacia arriba (`shadow-tab`) sobre `bg-surface`. Sin degradados en chrome. Cada perfil se diferencia con un animal colombiano en B/N al lado de Parche (Tucán, Cóndor, Jaguar), no con un color de chrome.
 
 ## Assets
 

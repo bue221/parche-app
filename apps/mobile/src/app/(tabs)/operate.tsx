@@ -6,7 +6,6 @@ import { EventCard, EventFeed } from '@/components/event-card';
 import { EventStaffPrimary, buildEventStaffActions } from '@/components/event-staff-actions';
 import { EmptyState, ListingSkeleton } from '@/components/feedback';
 import { FadeSlideIn } from '@/components/motion';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
@@ -30,9 +29,7 @@ export default function OperateHubScreen() {
 
   if (!user) {
     return (
-      <Screen>
-        <PageHeader title="Operar" lead="Entra para ver tus fechas." />
-      </Screen>
+      <Screen title="Operar" lead="Entra para ver tus fechas." />
     );
   }
 
@@ -54,25 +51,23 @@ export default function OperateHubScreen() {
         : 'Tus fechas. Flyer primero, luego boleta.';
 
   return (
-    <Screen>
-      <PageHeader
-        title="Operar"
-        lead={lead}
-        actions={
-          <>
-            {isPromoter ? (
-              <Button onPress={() => router.push('/event/create' as Href)}>
-                <Text>Crear fecha</Text>
-              </Button>
-            ) : null}
-            {isAdmin ? (
-              <Button variant="outline" onPress={() => router.push('/admin/queue' as Href)}>
-                <Text>Cola admin</Text>
-              </Button>
-            ) : null}
-          </>
-        }
-      />
+    <Screen
+      title="Operar"
+      lead={lead}
+      actions={
+        <>
+          {isPromoter ? (
+            <Button onPress={() => router.push('/event/create' as Href)}>
+              <Text>Crear fecha</Text>
+            </Button>
+          ) : null}
+          {isAdmin ? (
+            <Button variant="outline" onPress={() => router.push('/admin/queue' as Href)}>
+              <Text>Cola admin</Text>
+            </Button>
+          ) : null}
+        </>
+      }>
       <View className="mt-ds-24 gap-ds-24">
         {memberships.length === 0 && isPromoter ? (
           <EmptyState

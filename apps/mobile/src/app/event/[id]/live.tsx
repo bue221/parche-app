@@ -1,8 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
@@ -35,16 +33,14 @@ export default function DoorLiveScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.door.live') && !api.helpers.can(user.id, id, 'event.metrics.read')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>Sin permiso de aforo.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Aforo" />
+    <Screen back title="Aforo">
       <Text variant="heading" className="mt-ds-24">
         {live?.checkIns ?? 0}
       </Text>

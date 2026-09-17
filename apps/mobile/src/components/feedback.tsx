@@ -1,6 +1,5 @@
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -59,8 +58,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 
 export function PendingAuth() {
   return (
-    <Screen>
-      <BackBar />
+    <Screen back>
       <Skeleton className="h-8 w-40" />
       <ListingSkeleton />
     </Screen>
@@ -69,8 +67,7 @@ export function PendingAuth() {
 
 export function LoadError({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <Screen>
-      <BackBar />
+    <Screen back>
       <ErrorState message={message} onRetry={onRetry} />
     </Screen>
   );

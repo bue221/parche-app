@@ -1,8 +1,6 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -36,9 +34,7 @@ export default function MockPayScreen() {
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Pagar" lead="Demo: confirma o falla el cobro." />
+    <Screen back title="Pagar" lead="Demo: confirma o falla el cobro.">
       {error ? <Text className="mt-ds-16">{error}</Text> : null}
       <Button className="mt-ds-24" disabled={busy} onPress={() => void settle('paid')}>
         <Text>{busy ? 'Procesando…' : 'Pagar'}</Text>

@@ -3,7 +3,6 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { View } from 'react-native';
 
-import { BackBar } from '@/components/back-bar';
 import { EventCard, EventGrid, EventGridItem } from '@/components/event-card';
 import { EmptyState, ErrorState, ListingSkeleton, Skeleton } from '@/components/feedback';
 import { FadeSlideIn } from '@/components/motion';
@@ -29,16 +28,14 @@ export default function ArtistPublicScreen() {
 
   if (error) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <ErrorState message={userMessage(error)} onRetry={() => void refetch()} />
       </Screen>
     );
   }
   if (!artist || isLoading) {
     return (
-      <Screen>
-        <BackBar />
+      <Screen back>
         <Skeleton className="size-24 rounded-full" />
         <Skeleton className="mt-ds-16 h-8 w-40" />
         <View className="mt-ds-24 flex-row justify-between">
@@ -56,8 +53,7 @@ export default function ArtistPublicScreen() {
   const isOwner = artist.userId === user?.id;
 
   return (
-    <Screen>
-      <BackBar />
+    <Screen back>
       <View className="items-center gap-ds-12">
         {artist.avatarUrl ? (
           <Image source={{ uri: artist.avatarUrl }} className="size-28 rounded-full bg-muted" style={{ width: 112, height: 112 }} />

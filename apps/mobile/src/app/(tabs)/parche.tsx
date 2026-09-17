@@ -11,7 +11,6 @@ import { EmptyState, ErrorState } from '@/components/feedback';
 import { Field } from '@/components/field';
 import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { MediaPicker } from '@/components/media-picker';
-import { PageHeader } from '@/components/page-header';
 import { ProfileMascot } from '@/components/profile-mascot';
 import { Screen } from '@/components/screen';
 import { SettingsRow } from '@/components/settings-row';
@@ -69,8 +68,7 @@ export default function ParcheScreen() {
 
   if (!isLoggedIn || !user) {
     return (
-      <Screen>
-        <PageHeader title="Cuenta" lead="Guarda boletas y sigue artistas." />
+      <Screen title="Cuenta" lead="Guarda boletas y sigue artistas.">
         <View className="mt-ds-24 max-w-xl gap-ds-16">
           <Surface elevated>
             <Text variant="subheading">Tu parche, cuando quieras</Text>
@@ -116,13 +114,11 @@ export default function ParcheScreen() {
   }
 
   return (
-    <Screen>
-      <PageHeader
-        eyebrow={profileMascot(primary).name}
-        mark={<ProfileMascot profile={primary} size={32} />}
-        title="Parche"
-        lead={lead}
-      />
+    <Screen
+      eyebrow={profileMascot(primary).name}
+      mark={<ProfileMascot profile={primary} size={32} />}
+      title="Parche"
+      lead={lead}>
       <IdentityHeader user={user} />
       <View className="mt-ds-16 flex-row items-center gap-ds-8">
         <ThemeToggle />

@@ -83,7 +83,7 @@ Spacing base is 4px (`ds-4` … `ds-120`). Page max width is 1280px. Section pad
 | Nav | 28px | `rounded-navelements` |
 | Buttons | 40px | `rounded-buttons` |
 
-Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Content chrome: `bg-surface border-border`. No gradients on chrome; flyer scrim is the exception.
+Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). The mobile tab bar uses **one** upward lift (`shadow-tab` / `tabBarShadowStyle`) on `bg-surface`. Content chrome: `bg-surface`. No gradients on chrome; flyer scrim is the exception.
 
 ## Where pigment goes
 
@@ -99,7 +99,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Content chr
 | Pending / reserved | `amber` |
 | Error / invalid / logout emphasis | `danger` |
 | Focus ring / field focus | `aurora` |
-| Active tab (native + web) | `aurora` |
+| Active tab (native + compact web) | filled `aurora` icon + bold aurora label; idle = `slate` / `muted-foreground` |
 | Map pin | neon / volt / amber by genre; selected = white fill + neon ring |
 | Dark band (auth, manifesto) | always `pitch-black`; pigment is the accent, not the fill |
 | Event artwork | photos lead; do not tint the flyer |
@@ -110,11 +110,30 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Content chr
 - **Signal pill:** `variant="signal"` / `bg-aurora` for brand highlight CTAs.
 - **Outlined pill:** 1px `border-border` on transparent; inverts with scheme.
 - **Confirm pill:** `variant="confirm"` / `bg-confirm` for the success beat only.
-- **Event card (listing):** 4:5 photo, 20px radius, date badge on the flyer, title / venue **below**. Default on Explorar. Dense lists and map use `row` (`bg-surface`). Featured rails use `poster` (scrim + meta on the photo). `selected` = aurora border.
-- **Search:** pill “¿Qué parche buscas?” on `bg-surface` plus horizontal genre/date chips.
+- **Event card (listing):** 4:5 photo, 20px radius, date badge on the flyer, title / venue **below**. Default on Explorar. Optional save heart (glass on photo, 44px hit). Dense lists and map use `row` (`bg-surface`). Explorar rails reuse `listing` with peek; `poster` (scrim + meta on the photo) is not the Explorar rail. `selected` = aurora border.
+- **Search:** pill “¿Qué parche buscas?” is the Explorar hero on `bg-surface`. Horizontal chips with icon: Todo + day windows + genres. No Inter page title on the tab.
 - **Hero (auth / onboarding):** Antonio display type is allowed. Event detail uses Inter title under a photo hero.
 - **Dark band:** full-bleed `pitch-black`. Use for auth/onboarding, not for every page header.
 - **Flyer scrim:** the only allowed gradient. It sits on event artwork when a poster overlay is needed, never on chrome.
+- **Tab bar (mobile):** custom JS chrome in `TabBar` / `TabBarItem` — not the iOS liquid-glass `NativeTabs`. `bg-surface`, upward `shadow-tab`, icon 24px over Inter 11 label, hit ≥44px. Active = filled aurora + bold aurora label. Idle = outline slate (`text-muted-foreground`, not stone). Operar badge = danger dot. Desktop web keeps aurora pills in the top nav.
+
+## Screen chrome
+
+`Screen` owns the top safe band and the standard header. Native stack headers stay off (`headerShown: false`).
+
+**Safe band.** A non-scrolling `bg-background` strip equal to `insets.top` on native, or the web tab nav height (`WebNavHeight` / `WebCompactTop`) on tab routes. Scroll content starts **16px** below that band. Title and Volver scroll with the page; they must not travel into the status bar. Do not put `paddingTop: insets.top` on `contentContainerStyle`.
+
+**Volver.** `Screen back` renders `BackBar`: caption 12 uppercase, `← Volver`, hit ≥44px, 16px below the control. Fallback is `router.replace('/')` if there is no history. Do not draw a custom back on stack screens.
+
+**Title.** `Screen title` / `lead` / `eyebrow` / `mark` / `actions` render `PageHeader`. Inter `heading` (28), never Antonio. Lead is `muted`. Use the props — do not compose `BackBar` + `PageHeader` by hand.
+
+```tsx
+<Screen back title="Filtros" lead="Nombre, barrio, género o día.">
+  {children}
+</Screen>
+```
+
+**Exceptions (flush / no page title).** Edge-to-edge surfaces skip the band (`flush`) and pad their own overlay with `insets.top`: mapa, puerta, print, onboarding. Event and artist **detail** keep the resource name in the body under the photo; they still use `back`. Explorar has no Inter page title — the search pill is the tab hero.
 
 ## Do
 
@@ -130,7 +149,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Content chr
 - Recolor the whole page. Aurora/neon are sparks, not a wash.
 - Use `confirm` / volt on idle chrome (tabs, default chips, genre tags at rest).
 - Use neon for primary CTA or selected chips (that's aurora / inverse primary now).
-- Drop shadows or gradients on nav, buttons, or tab chrome (card lift is the exception).
+- Drop shadows or gradients on buttons or top nav. Card lift (`shadow-card`) and the tab bar lift (`shadow-tab`) are the exceptions. No gradients on chrome.
 - Antonio/Foggy on tab titles, cards, or forms.
 - Sharp or lightly rounded buttons.
 - White labels on aurora / neon / volt / amber / danger (contrast fails). Use `pitch-black`.
@@ -157,6 +176,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Content chr
 - [ ] Volt/`confirm` is success, not the default chip
 - [ ] Aurora marks selected / live / focus / active tab
 - [ ] Light and dark both remain readable (toggle + system)
+- [ ] New screens use `Screen` props for Volver / title; content does not scroll into the status bar
 
 ## Next step
 

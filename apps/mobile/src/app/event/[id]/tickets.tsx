@@ -1,10 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
 import { FormSection } from '@/components/form-section';
-import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
@@ -36,16 +34,14 @@ export default function TicketTypesScreen() {
   }
   if (user && !api.helpers.can(user.id, id, 'event.tickets.manage')) {
     return (
-      <Screen>
+      <Screen back>
         <Text>No puedes editar tipos.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <BackBar />
-      <PageHeader title="Tipos de tiquete" />
+    <Screen back title="Tipos de tiquete">
       {types.map((type) => (
         <Surface key={type.id} muted className="mt-ds-12">
           <Text>
