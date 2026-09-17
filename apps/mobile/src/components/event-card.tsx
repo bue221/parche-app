@@ -1,4 +1,4 @@
-import { Children, type ReactNode } from 'react';
+import { Children, useState, type ReactNode } from 'react';
 import { Calendar, Heart, MapPin } from 'lucide-react-native';
 import { Platform, Pressable, View, type ViewStyle } from 'react-native';
 
@@ -24,8 +24,8 @@ import { cn } from '@/lib/utils';
 const PAPER_WHITE = '#F5F5F8';
 const PAPER_MUTED = 'rgba(245, 245, 248, 0.72)';
 
-export const LISTING_CARD_MIN_PX = 280;
-export const LISTING_CARD_MAX_PX = 360;
+export const LISTING_CARD_MIN_PX = 168;
+export const LISTING_CARD_MAX_PX = 220;
 
 const desktopListingGridStyle = {
   display: 'grid',
@@ -83,6 +83,7 @@ export function EventCard({
 }) {
   const { isLoggedIn } = useAuthSnapshot();
   const saved = useInterestStore((s) => s.eventIds.includes(event.id));
+  const [frameW, setFrameW] = useState(0);
 
   if (layout === 'row') {
     return (
@@ -112,13 +113,23 @@ export function EventCard({
   }
 
   const overlayWide = layout === 'listing' && widePhoto;
-  const tagline = eventTagline(event.description, event.genres);
+  const dense = overlayWide || frameW < 240;
+  const tagline = dense ? null : eventTagline(event.description, event.genres);
   const { venue, city } = eventVenueParts(event.venueName, event.addressText);
   const timeLabel = eventTimeLabel(event.startsAt, event.endsAt, caption);
-  const dateLabel = badge ?? formatCardDate(event.startsAt);
+  const dateLabel = badge ?? (dense ? formatCardDayShort(event.startsAt) : formatCardDate(event.startsAt));
+  const titleSize = dense ? 16 : 28;
+  const pad = dense ? 6 : 12;
+  const icon = dense ? 12 : 14;
+  const glassRadius = dense ? 12 : 16;
 
   return (
-    <View className="relative w-full">
+    <View
+      className="relative w-full"
+      onLayout={(event) => {
+        const next = Math.round(event.nativeEvent.layout.width);
+        if (next > 0 && next !== frameW) setFrameW(next);
+      }}>
       <PressScale onPress={onPress} className="w-full">
         <View
           className={cn(
@@ -129,18 +140,26 @@ export function EventCard({
           <PosterThumb event={event} listing wide={overlayWide} />
           <View
             pointerEvents="none"
-            className={cn('absolute inset-x-0 top-0', overlayWide ? 'h-[46%]' : 'h-[38%]')}
+            className={cn('absolute inset-x-0 top-0', dense ? 'h-[42%]' : 'h-[38%]')}
             style={topVignette}
           />
-          <View pointerEvents="none" className="absolute inset-0 p-ds-12">
+          <View pointerEvents="none" className="absolute inset-0" style={{ padding: pad }}>
             <View className={cn('shrink-0 flex-row items-start', saveable ? 'pr-11' : undefined)}>
               <Text variant="caption" style={{ color: PAPER_WHITE, ...overlayTextShadow }} numberOfLines={1}>
                 {dateLabel}
               </Text>
             </View>
             <View
-              className={cn('shrink-0 overflow-hidden rounded-[16px] px-ds-16', overlayWide ? 'mt-ds-8 py-ds-8' : 'mt-ds-12 py-ds-12')}
-              style={flyerGlass}>
+              className="shrink-0 overflow-hidden"
+              style={[
+                flyerGlass,
+                {
+                  marginTop: dense ? 6 : 12,
+                  paddingHorizontal: dense ? 8 : 16,
+                  paddingVertical: dense ? 6 : 12,
+                  borderRadius: glassRadius,
+                },
+              ]}>
               {event.genre ? (
                 <Text
                   variant="caption"
@@ -150,55 +169,81 @@ export function EventCard({
                 </Text>
               ) : null}
               <Text
-                variant={overlayWide ? 'headingSm' : 'heading'}
+                variant="headingSm"
                 className="mt-ds-4"
                 style={{
                   color: PAPER_WHITE,
-                  fontSize: overlayWide ? 22 : 28,
-                  lineHeight: overlayWide ? 26 : 32,
+                  fontSize: titleSize,
+                  lineHeight: dense ? 19 : 32,
                   fontWeight: '700',
                 }}
-                numberOfLines={2}>
+                numberOfLines={dense ? 1 : 2}>
                 {event.name}
               </Text>
               {tagline ? (
-                <Text
-                  variant="caption"
-                  className="mt-ds-8"
-                  style={{ color: PAPER_MUTED }}
-                  numberOfLines={overlayWide ? 1 : 2}>
+                <Text variant="caption" className="mt-ds-8" style={{ color: PAPER_MUTED }} numberOfLines={2}>
                   {tagline}
                 </Text>
               ) : null}
             </View>
             <View className="min-h-0 flex-1" />
-            <View className="shrink-0 flex-row items-stretch overflow-hidden rounded-[16px]" style={flyerGlass}>
-              <View className="min-w-0 flex-1 flex-row items-center gap-ds-8 px-ds-12 py-ds-12">
-                <MapPin size={14} color={PAPER_WHITE} strokeWidth={2} />
+            {dense ? (
+              <View
+                className="shrink-0 flex-row items-center overflow-hidden"
+                style={[
+                  flyerGlass,
+                  {
+                    borderRadius: glassRadius,
+                    gap: 6,
+                    paddingHorizontal: 8,
+                    paddingVertical: 6,
+                  },
+                ]}>
+                <MapPin size={icon} color={PAPER_WHITE} strokeWidth={2} />
                 <View className="min-w-0 flex-1">
                   <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
                     {venue}
-                  </Text>
-                  {venue !== city ? (
-                    <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
-                      {city}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-              <View className="my-ds-8 w-px bg-paper-white/20" />
-              <View className="min-w-0 flex-1 flex-row items-center gap-ds-8 px-ds-12 py-ds-12">
-                <Calendar size={14} color={PAPER_WHITE} strokeWidth={2} />
-                <View className="min-w-0 flex-1">
-                  <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
-                    {formatCardDayShort(event.startsAt)}
                   </Text>
                   <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
                     {timeLabel}
                   </Text>
                 </View>
               </View>
-            </View>
+            ) : (
+              <View
+                className="shrink-0 flex-row items-stretch overflow-hidden"
+                style={[flyerGlass, { borderRadius: glassRadius }]}>
+                <View
+                  className="min-w-0 flex-1 flex-row items-center"
+                  style={{ gap: 8, paddingHorizontal: 12, paddingVertical: 12 }}>
+                  <MapPin size={icon} color={PAPER_WHITE} strokeWidth={2} />
+                  <View className="min-w-0 flex-1">
+                    <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
+                      {venue}
+                    </Text>
+                    {venue !== city ? (
+                      <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
+                        {city}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <View className="my-ds-8 w-px bg-paper-white/20" />
+                <View
+                  className="min-w-0 flex-1 flex-row items-center"
+                  style={{ gap: 8, paddingHorizontal: 12, paddingVertical: 12 }}>
+                  <Calendar size={icon} color={PAPER_WHITE} strokeWidth={2} />
+                  <View className="min-w-0 flex-1">
+                    <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
+                      {formatCardDayShort(event.startsAt)}
+                    </Text>
+                    <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
+                      {timeLabel}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </PressScale>
@@ -209,7 +254,7 @@ export function EventCard({
           hitSlop={4}
           onPress={() => void toggleSave(event.id, isLoggedIn)}
           className="absolute right-ds-4 top-ds-4 z-10 size-11 items-center justify-center">
-          <Heart size={20} color={PAPER_WHITE} fill={saved ? PAPER_WHITE : 'transparent'} strokeWidth={2} />
+          <Heart size={dense ? 16 : 20} color={PAPER_WHITE} fill={saved ? PAPER_WHITE : 'transparent'} strokeWidth={2} />
         </Pressable>
       ) : null}
     </View>
@@ -262,7 +307,7 @@ function PosterThumb({
 export function EventGrid({ children }: { children: ReactNode }) {
   const compact = useCompactLayout();
   if (Platform.OS !== 'web' || compact) {
-    return <View className="w-full gap-ds-24">{children}</View>;
+    return <View className="w-full flex-row flex-wrap justify-between gap-y-ds-16">{children}</View>;
   }
   return (
     <View className="w-full" style={desktopListingGridStyle}>
@@ -274,9 +319,9 @@ export function EventGrid({ children }: { children: ReactNode }) {
 export function EventGridItem({ children }: { children: ReactNode }) {
   const compact = useCompactLayout();
   if (Platform.OS !== 'web' || compact) {
-    return <View className="w-full">{children}</View>;
+    return <View style={{ width: '48.2%' }}>{children}</View>;
   }
-  return <View className="min-w-0 w-full max-w-[360px]">{children}</View>;
+  return <View className="min-w-0 w-full max-w-[220px]">{children}</View>;
 }
 
 /** Stacked feed on phone; same listing grid as Explorar on desktop web. */
@@ -289,7 +334,7 @@ export function EventFeed({ children }: { children: ReactNode }) {
     <View className="w-full" style={desktopListingGridStyle}>
       {Children.map(children, (child) => {
         if (child == null || typeof child === 'boolean') return child;
-        return <View className="min-w-0 w-full max-w-[360px]">{child}</View>;
+        return <View className="min-w-0 w-full max-w-[220px]">{child}</View>;
       })}
     </View>
   );

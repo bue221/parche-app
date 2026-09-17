@@ -4,7 +4,16 @@ import { ChevronRight } from 'lucide-react-native';
 
 import { PressScale } from '@/components/motion';
 import { Text } from '@/components/ui/text';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+const RAIL_GAP = 12;
+const RAIL_PEEK = 40;
+
+function railCardWidth(contentWidth: number) {
+  const viewport = contentWidth + Spacing.three * 2;
+  return Math.min(200, Math.max(144, Math.round((viewport - RAIL_GAP - RAIL_PEEK) / 2)));
+}
 
 export function SectionRail({
   title,
@@ -17,11 +26,11 @@ export function SectionRail({
 }) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? Math.min(340, Math.max(280, width * 0.82)) : 300;
+  const cardWidth = width > 0 ? railCardWidth(width) : 168;
 
   return (
     <View
-      className="gap-ds-16"
+      className="gap-ds-16 overflow-visible"
       onLayout={(event) => {
         const next = Math.round(event.nativeEvent.layout.width);
         if (next > 0 && next !== width) setWidth(next);
@@ -40,15 +49,22 @@ export function SectionRail({
           </View>
         ) : null}
       </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 12, paddingRight: 16 }}>
-        {Children.map(children, (child) => {
-          if (child == null || typeof child === 'boolean') return child;
-          return <View style={{ width: cardWidth }}>{child}</View>;
-        })}
-      </ScrollView>
+      <View style={{ marginHorizontal: -Spacing.three, overflow: 'visible' }}>
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{
+            gap: RAIL_GAP,
+            paddingHorizontal: Spacing.three,
+          }}>
+          {Children.map(children, (child) => {
+            if (child == null || typeof child === 'boolean') return child;
+            return <View style={{ width: cardWidth }}>{child}</View>;
+          })}
+        </ScrollView>
+      </View>
     </View>
   );
 }

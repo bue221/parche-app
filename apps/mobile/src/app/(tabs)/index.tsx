@@ -57,7 +57,7 @@ export default function ExplorarScreen() {
         <ExploreChips scope="agenda" />
       </View>
       {tonight.length > 0 ? (
-        <View className="mt-ds-32">
+        <View className="mt-ds-32 overflow-visible">
           <SectionRail
             title="Esta noche"
             onSeeAll={
@@ -83,7 +83,7 @@ export default function ExplorarScreen() {
         </View>
       ) : null}
       {recs.length > 0 ? (
-        <View className="mt-ds-32">
+        <View className="mt-ds-32 overflow-visible">
           <SectionRail title="Para ti">
             {recs.map((event, index) => (
               <FadeSlideIn key={`feat-${event.id}`} index={index}>
@@ -94,7 +94,7 @@ export default function ExplorarScreen() {
         </View>
       ) : null}
       {railsByGenre.map((rail) => (
-        <View key={`genre-${rail.genre}`} className="mt-ds-32">
+        <View key={`genre-${rail.genre}`} className="mt-ds-32 overflow-visible">
           <SectionRail title={rail.genre} onSeeAll={() => setFilters({ ...filters, genre: rail.genre })}>
             {rail.events.map((event, index) => (
               <FadeSlideIn key={`genre-${rail.genre}-${event.id}`} index={index}>

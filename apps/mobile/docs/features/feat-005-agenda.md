@@ -20,8 +20,8 @@ El asistente ve las próximas fechas foto-first: SearchBar, chips con icono, rie
 | Zona | Regla |
 |------|-------|
 | Hero | SearchBar pill (abre filtros). Chips con icono: Todo + Hoy / Finde / Este mes + géneros. El riel es full-bleed: el primer chip alinea con el SearchBar y el resto se asoma hasta el borde de la pantalla. Todo limpia fecha y género (no el `q`). Sin `PageHeader`. |
-| Rieles | `SectionRail` + `EventCard` listing overlay (~78% de ancho, la siguiente se asoma). Orden: **Esta noche**, **Para ti**, un riel por género si no hay filtro de género. Chevron aplica el filtro del riel; Para ti no lleva flecha. |
-| Lista | Título “Todas las fechas” + grid listing 4:5 overlay (fecha, género, nombre, venue/ciudad en el flyer). Los rieles recortan; el grid es la agenda completa. |
+| Rieles | `SectionRail` + `EventCard` overlay compacto: **2 cards + peek** (~168px), full-bleed como los chips. Orden: **Esta noche**, **Para ti**, un riel por género si no hay filtro de género. Chevron aplica el filtro del riel; Para ti no lleva flecha. |
+| Lista | Título “Todas las fechas” + grid listing 4:5 overlay en **2 columnas** en teléfono. Los rieles recortan; el grid es la agenda completa. |
 | Guardar | Corazón 44px en el flyer (listing); no abre el detalle. Funciona sin sesión ([FEAT-037](feat-037-local-interest.md)). |
 | Pull-to-refresh | Invalida lista local |
 | Promoter | CTA **Crear fecha** compacto bajo el SearchBar; no es el home de Operar |

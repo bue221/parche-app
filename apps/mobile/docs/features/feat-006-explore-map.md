@@ -21,7 +21,7 @@ El mapa muestra pines de eventos publicados. Teselas OSM Humanitarian (HOT) + Le
 |-------|-------|
 | Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Full-bleed, `rounded-[24px]` alineado al sheet. Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
 | Pines | Pill blanca con fecha (`Hoy` / `18 sep`) y punto de género (neon / volt / amber). Seleccionado = fill aurora |
-| Lista/mapa | SearchBar + chips + botón filtros. Chips full-bleed hasta el borde (igual que Explorar). Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con cards overlay 16:10), expandido + botón **Mapa**. Wide web: lista al lado con el mismo overlay |
+| Lista/mapa | SearchBar + chips + botón filtros. Chips full-bleed hasta el borde (igual que Explorar). Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con cards overlay 4:5), expandido + botón **Mapa**. Wide web: lista al lado con el mismo overlay |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo
