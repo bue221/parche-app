@@ -119,7 +119,7 @@ UsEventCard` en `featured-events.tsx` y tiles en `city-explore.tsx`:
 
 - Contenedor: `aspect-4/5`, `rounded-cards`, `bg-surface`, `shadow-card`, overflow hidden.
 - Foto full-bleed; hover scale `1.05` con `motion-safe` + `ease-parche`.
-- Scrim: clase `.card-photo-scrim` (gradiente vertical a `pitch-black` @ 82%).
+- Scrim: clase `.card-photo-scrim` (gradiente vertical a `pitch-black` @ ~55–78%, transparente hasta ~42% para que el flyer se lea en card).
 - Meta **sobre** la foto (abajo): título `subheading` bold `paper-white`, venue caption @ 75%, tags `tone="glass"`.
 - Date badge: top-left, `bg-pitch-black/70` + blur; heart ghost top-right.
 - Focus: `ring-2 ring-aurora`.

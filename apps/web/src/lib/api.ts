@@ -20,9 +20,16 @@ export async function apiGet<T>(path: string): Promise<T> {
   let response: Response;
 
   try {
+    // Dev: always hit the API so demo flyer refreshes show up immediately.
+    // Prod: ISR keeps the landing snappy.
+    const cacheOpts =
+      process.env.NODE_ENV === "development"
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: EVENT_REVALIDATE_SECONDS } };
+
     response = await fetch(url, {
       headers: { Accept: "application/json" },
-      next: { revalidate: EVENT_REVALIDATE_SECONDS },
+      ...cacheOpts,
     });
   } catch (error) {
     console.error("[api] network error", { path, error });
