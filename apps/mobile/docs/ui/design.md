@@ -20,14 +20,34 @@ Black alone reads as a printer, not a club. Aurora on the stage is what people r
 
 ## Light vs dark
 
+The system uses multiple surface levels and text weights to create visual hierarchy without relying on pure black/white.
+
+### Surface hierarchy
+
+| Role | Light | Dark | Use |
+|------|-------|------|-----|
+| Canvas (`background`) | `#F7F7FA` | `#07070C` | Page background |
+| Surface (`surface`) | `#FFFFFF` | `#0E0E14` | Cards, containers |
+| Sunken (`surface-sunken`) | `#F0F0F5` | `#07070C` | Wells, inset areas |
+| Elevated (`surface-elevated`) | `#FFFFFF` | `#16161F` | Modals, popovers |
+| Raised (`surface-raised`) | — | `#1E1E28` | Prominent elements (dark only) |
+
+### Text hierarchy
+
+| Role | Light | Dark | Use |
+|------|-------|------|-----|
+| Primary (`foreground`) | `#0B0B12` | `#F5F5F8` | Titles, headings, body |
+| Muted (`foreground-muted`) | `#5C5C6E` | `#9A9AAB` | Secondary text, descriptions |
+| Subtle (`foreground-subtle`) | `#8A8A9B` | `#6A6A7B` | Captions, timestamps, hints |
+
+### Interactive elements
+
 | Role | Light | Dark |
 |------|-------|------|
-| Canvas (`background`) | `#F4F4F7` | `#07070C` |
-| Surface / card | `#FFFFFF` | `#12121A` |
-| Text (`foreground`) | `#0B0B12` | `#F5F5F8` |
 | Filled pill (`primary`) | `#0B0B12` / label `#F5F5F8` | `#F5F5F8` / label `#0B0B12` |
-| Soft fill (`muted`) | `#ECECF1` / text `#5C5C6E` | `#1C1C26` / text `#9A9AAB` |
-| Hairline (`border`) | ink @ 10% | paper @ 10% |
+| Soft fill (`muted`) | `#E8E8EE` / text `#5C5C6E` | `#1A1A24` / text `#9A9AAB` |
+| Hairline (`border`) | ink @ 8% | paper @ 10% |
+| Strong border (`border-strong`) | ink @ 16% | paper @ 20% |
 | Highlight (`aurora` / `ring`) | `#B8A4FF` | same |
 | Neon / volt / amber / danger | same hex in both schemes | same |
 
@@ -35,17 +55,18 @@ Icons: `icon-light.png` on light surfaces, `icon.png` on dark. Native splash fol
 
 ## Tokens
 
-### Stage (fixed)
+### Stage (fixed primitives)
 
-| Role | Value | Tailwind |
-|------|-------|----------|
-| Ink / dark bands | `#07070C` | `pitch-black` |
-| Paper / inverse text | `#F5F5F8` | `paper-white` |
-| Soft fills | `#ECECF1` | `ash-gray` |
-| Selected / pressed light | `#E2E2EA` | `concrete` |
-| Nested / muted dark | `#1C1C26` | `charcoal` |
-| Muted copy light | `#5C5C6E` | `slate` |
-| Helper / disabled | `#8A8A9B` | `stone` |
+| Role | Value | Tailwind | Use |
+|------|-------|----------|-----|
+| Ink / dark bands | `#07070C` | `pitch-black` | Dark backgrounds, ink text |
+| Paper / inverse text | `#F5F5F8` | `paper-white` | Light surfaces, inverse text |
+| Soft fills | `#E8E8EE` | `ash-gray` | Muted backgrounds, wells |
+| Selected / pressed light | `#DCDCE4` | `concrete` | Pressed states, selections |
+| Nested / muted dark | `#1C1C26` | `charcoal` | Dark mode secondary surfaces |
+| Muted copy light | `#5C5C6E` | `slate` | Secondary text on light |
+| Tertiary copy | `#6A6A7B` | `graphite` | Captions, hints |
+| Helper / disabled | `#8A8A9B` | `stone` | Placeholders, disabled |
 
 ### Pigment (fixed, both schemes)
 
@@ -83,7 +104,7 @@ Spacing base is 4px (`ds-4` … `ds-120`). Page max width is 1280px. Section pad
 | Nav | 28px | `rounded-navelements` |
 | Buttons | 40px | `rounded-buttons` |
 
-Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Interactive chrome uses a smaller lift: idle chips/fields/search (`shadow-control`), filled CTAs (`shadow-button`), brand highlight (`shadow-signal`), success (`shadow-confirm`). Focus and selected chips add an aurora ring (`shadow-focus`); invalid fields use `shadow-error`. The mobile tab bar uses **one** upward lift (`shadow-tab` / `tabBarShadowStyle`) on `bg-surface`. Content chrome: `bg-surface`. No gradients on chrome; flyer scrim is the exception.
+Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and search use a smaller lift (`shadow-control`); filled CTAs use `shadow-button`; brand highlight uses `shadow-signal`. Focus on fields is an aurora border (plus `shadow-focus` glow); invalid fields use `shadow-error`. Chips stay compact pills — no drop shadow, no scale. The mobile tab bar uses **one** upward lift (`shadow-tab` / `tabBarShadowStyle`) on `bg-surface`. Content chrome: `bg-surface`. No gradients on chrome; flyer scrim is the exception.
 
 ## Where pigment goes
 
@@ -92,8 +113,8 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Interactive
 | Default filled button | `primary` → inverse ink/paper |
 | Brand / highlight pill | `signal` → `aurora`, black label |
 | Outlined / ghost | ink (`foreground` / `border`) |
-| Selected chip / filter | `aurora` fill, black label, `shadow-focus` ring |
-| Idle chip | `surface` + `foreground` label, `shadow-control` |
+| Selected chip / filter | `aurora` fill, black label |
+| Idle chip | `muted` + foreground label |
 | Live / tonight / published badge | `aurora` |
 | Success / PASA / print stamp | `confirm` (`volt`) |
 | Pending / reserved | `amber` |
@@ -150,7 +171,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Interactive
 - Recolor the whole page. Aurora/neon are sparks, not a wash.
 - Use `confirm` / volt on idle chrome (tabs, default chips, genre tags at rest).
 - Use neon for primary CTA or selected chips (that's aurora / inverse primary now).
-- Drop shadows on top nav, or gradients on chrome. Control lift (`shadow-control` / `shadow-button` / `shadow-focus`) is allowed on chips, buttons, and fields. Card lift (`shadow-card`) and the tab bar lift (`shadow-tab`) stay. Flyer scrim is the only gradient.
+- Drop shadows on top nav or on chips, or gradients on chrome. Control lift (`shadow-control` / `shadow-button` / `shadow-focus`) is for fields and buttons. Card lift (`shadow-card`) and the tab bar lift (`shadow-tab`) stay. Flyer scrim is the only gradient.
 - Antonio/Foggy on tab titles, cards, or forms.
 - Sharp or lightly rounded buttons.
 - White labels on aurora / neon / volt / amber / danger (contrast fails). Use `pitch-black`.

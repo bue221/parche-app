@@ -31,12 +31,12 @@ const LABEL: Record<TagTone, string> = {
   ink: 'text-muted-foreground',
   muted: 'text-muted-foreground',
   glass: 'text-paper-white',
-  neon: 'text-pitch-black',
-  aurora: 'text-pitch-black',
-  heat: 'text-pitch-black',
-  confirm: 'text-pitch-black',
-  amber: 'text-pitch-black',
-  danger: 'text-pitch-black',
+  neon: '!text-pitch-black',
+  aurora: '!text-pitch-black',
+  heat: '!text-pitch-black',
+  confirm: '!text-pitch-black',
+  amber: '!text-pitch-black',
+  danger: '!text-pitch-black',
 };
 
 const FILLED: ReadonlySet<TagTone> = new Set([

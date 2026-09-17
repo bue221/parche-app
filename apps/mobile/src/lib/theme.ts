@@ -3,37 +3,58 @@ import { vars } from 'nativewind';
 
 export const THEME = {
   light: {
-    background: '#f4f4f7',
+    // Semantic tokens
+    background: '#f7f7fa',
     foreground: '#0b0b12',
+    foregroundMuted: '#5c5c6e',
+    foregroundSubtle: '#8a8a9b',
+
+    // Surface hierarchy
     surface: '#ffffff',
+    surfaceSunken: '#f0f0f5',
+    surfaceElevated: '#ffffff',
+    surfaceRaised: '#ffffff',
     card: '#ffffff',
     cardForeground: '#0b0b12',
     popover: '#ffffff',
     popoverForeground: '#0b0b12',
+
+    // Actions and states
     primary: '#0b0b12',
     primaryForeground: '#f5f5f8',
-    secondary: '#ececf1',
+    secondary: '#e8e8ee',
     secondaryForeground: '#0b0b12',
-    muted: '#ececf1',
+    muted: '#e8e8ee',
     mutedForeground: '#5c5c6e',
     accent: '#ece6ff',
     accentForeground: '#0b0b12',
     destructive: '#ff4d3d',
     destructiveForeground: '#0b0b12',
-    border: 'rgba(11, 11, 18, 0.1)',
-    input: 'rgba(11, 11, 18, 0.12)',
+
+    // Borders and inputs
+    border: 'rgba(11, 11, 18, 0.08)',
+    borderStrong: 'rgba(11, 11, 18, 0.16)',
+    input: 'rgba(11, 11, 18, 0.1)',
     ring: '#b8a4ff',
+
+    // Pigment
     aurora: '#b8a4ff',
     neon: '#3ddcff',
     confirm: '#7ffeb1',
+
+    // Glass and glow
     glass: 'rgba(255, 255, 255, 0.72)',
     glassStrong: 'rgba(255, 255, 255, 0.92)',
     glow: 'rgba(184, 164, 255, 0.22)',
+
+    // Soft fills
     auroraSoft: '#ece6ff',
     neonSoft: '#d6f6ff',
     voltSoft: '#d6ffec',
     amberSoft: '#fff3d0',
     dangerSoft: '#ffe6e3',
+
+    // Shadows
     shadowCard: '0 18px 50px rgba(11, 11, 18, 0.08)',
     shadowGlass: '0 10px 40px rgba(11, 11, 18, 0.08)',
     shadowTab: '0 -10px 28px rgba(11, 11, 18, 0.14)',
@@ -45,37 +66,58 @@ export const THEME = {
     shadowError: '0 0 0 3px rgba(255, 77, 61, 0.22), 0 6px 16px rgba(255, 77, 61, 0.14)',
   },
   dark: {
+    // Semantic tokens
     background: '#07070c',
     foreground: '#f5f5f8',
-    surface: '#12121a',
-    card: '#12121a',
+    foregroundMuted: '#9a9aab',
+    foregroundSubtle: '#6a6a7b',
+
+    // Surface hierarchy (3 levels for depth)
+    surface: '#0e0e14',
+    surfaceSunken: '#07070c',
+    surfaceElevated: '#16161f',
+    surfaceRaised: '#1e1e28',
+    card: '#0e0e14',
     cardForeground: '#f5f5f8',
     popover: '#16161f',
     popoverForeground: '#f5f5f8',
+
+    // Actions and states
     primary: '#f5f5f8',
     primaryForeground: '#0b0b12',
     secondary: '#1c1c26',
     secondaryForeground: '#f5f5f8',
-    muted: '#1c1c26',
+    muted: '#1a1a24',
     mutedForeground: '#9a9aab',
     accent: '#2a2248',
     accentForeground: '#f5f5f8',
     destructive: '#ff4d3d',
     destructiveForeground: '#0b0b12',
+
+    // Borders and inputs
     border: 'rgba(245, 245, 248, 0.1)',
-    input: 'rgba(245, 245, 248, 0.14)',
+    borderStrong: 'rgba(245, 245, 248, 0.2)',
+    input: 'rgba(245, 245, 248, 0.12)',
     ring: '#b8a4ff',
+
+    // Pigment
     aurora: '#b8a4ff',
     neon: '#3ddcff',
     confirm: '#7ffeb1',
+
+    // Glass and glow
     glass: 'rgba(12, 12, 20, 0.62)',
     glassStrong: 'rgba(18, 18, 26, 0.88)',
     glow: 'rgba(184, 164, 255, 0.2)',
+
+    // Soft fills
     auroraSoft: '#2a2248',
     neonSoft: '#0a2830',
     voltSoft: '#0e2a1c',
     amberSoft: '#2e2408',
     dangerSoft: '#3a1410',
+
+    // Shadows
     shadowCard: '0 22px 50px rgba(0, 0, 0, 0.45)',
     shadowGlass: '0 12px 40px rgba(0, 0, 0, 0.35)',
     shadowTab: '0 -12px 32px rgba(0, 0, 0, 0.55)',
@@ -117,13 +159,23 @@ export const NAV_THEME = {
 
 function cssVars(t: (typeof THEME)[keyof typeof THEME]) {
   return vars({
+    // Semantic tokens
     '--color-background': t.background,
     '--color-foreground': t.foreground,
+    '--color-foreground-muted': t.foregroundMuted,
+    '--color-foreground-subtle': t.foregroundSubtle,
+
+    // Surface hierarchy
     '--color-surface': t.surface,
+    '--color-surface-sunken': t.surfaceSunken,
+    '--color-surface-elevated': t.surfaceElevated,
+    '--color-surface-raised': t.surfaceRaised,
     '--color-card': t.card,
     '--color-card-foreground': t.cardForeground,
     '--color-popover': t.popover,
     '--color-popover-foreground': t.popoverForeground,
+
+    // Actions and states
     '--color-primary': t.primary,
     '--color-primary-foreground': t.primaryForeground,
     '--color-secondary': t.secondary,
@@ -134,22 +186,33 @@ function cssVars(t: (typeof THEME)[keyof typeof THEME]) {
     '--color-accent-foreground': t.accentForeground,
     '--color-destructive': t.destructive,
     '--color-destructive-foreground': t.destructiveForeground,
+
+    // Borders and inputs
     '--color-border': t.border,
+    '--color-border-strong': t.borderStrong,
     '--color-input': t.input,
     '--color-ring': t.ring,
+
+    // Pigment
     '--color-aurora': t.aurora,
     '--color-heat': t.aurora,
     '--color-neon': t.neon,
     '--color-confirm': t.confirm,
+
+    // Glass and glow
     '--color-glass': t.glass,
     '--color-glass-strong': t.glassStrong,
     '--color-glow': t.glow,
+
+    // Soft fills
     '--color-aurora-soft': t.auroraSoft,
     '--color-heat-soft': t.auroraSoft,
     '--color-neon-soft': t.neonSoft,
     '--color-volt-soft': t.voltSoft,
     '--color-amber-soft': t.amberSoft,
     '--color-danger-soft': t.dangerSoft,
+
+    // Shadows
     '--shadow-card': t.shadowCard,
     '--shadow-glass': t.shadowGlass,
     '--shadow-tab': t.shadowTab,

@@ -4,13 +4,17 @@
 
 @layer base {
   :root {
+    /* Stage primitives (fixed, both schemes) */
     --color-pitch-black: #07070c;
     --color-paper-white: #f5f5f8;
-    --color-ash-gray: #ececf1;
-    --color-concrete: #e2e2ea;
+    --color-ash-gray: #e8e8ee;
+    --color-concrete: #dcdce4;
     --color-charcoal: #1c1c26;
     --color-slate: #5c5c6e;
     --color-stone: #8a8a9b;
+    --color-graphite: #6a6a7b;
+
+    /* Pigment (fixed, both schemes) */
     --color-aurora: #b8a4ff;
     --color-heat: var(--color-aurora);
     --color-neon: #3ddcff;
@@ -18,6 +22,8 @@
     --color-amber: #ffc44d;
     --color-danger: #ff4d3d;
     --color-confirm: var(--color-volt);
+
+    /* Soft fills (light mode) */
     --color-aurora-soft: #ece6ff;
     --color-heat-soft: var(--color-aurora-soft);
     --color-neon-soft: #d6f6ff;
@@ -100,55 +106,87 @@
     --surface-charcoal: #1c1c26;
     --surface-pitch-black: #07070c;
 
-    --color-background: #f4f4f7;
+    /* Semantic tokens (light mode) */
+    --color-background: #f7f7fa;
     --color-foreground: #0b0b12;
+    --color-foreground-muted: #5c5c6e;
+    --color-foreground-subtle: #8a8a9b;
+
+    /* Surface hierarchy (light mode) */
     --color-surface: #ffffff;
+    --color-surface-sunken: #f0f0f5;
+    --color-surface-elevated: #ffffff;
+    --color-surface-raised: #ffffff;
     --color-card: var(--color-surface);
     --color-card-foreground: var(--color-foreground);
     --color-popover: var(--color-surface);
     --color-popover-foreground: var(--color-foreground);
+
+    /* Actions and states (light mode) */
     --color-primary: #0b0b12;
     --color-primary-foreground: #f5f5f8;
-    --color-secondary: #ececf1;
+    --color-secondary: #e8e8ee;
     --color-secondary-foreground: #0b0b12;
-    --color-muted: #ececf1;
+    --color-muted: #e8e8ee;
     --color-muted-foreground: #5c5c6e;
     --color-accent: var(--color-aurora-soft);
     --color-accent-foreground: #0b0b12;
     --color-destructive: var(--color-danger);
     --color-destructive-foreground: #0b0b12;
-    --color-border: rgba(11, 11, 18, 0.1);
-    --color-input: rgba(11, 11, 18, 0.12);
+
+    /* Borders and inputs (light mode) */
+    --color-border: rgba(11, 11, 18, 0.08);
+    --color-border-strong: rgba(11, 11, 18, 0.16);
+    --color-input: rgba(11, 11, 18, 0.1);
     --color-ring: var(--color-aurora);
+
+    /* Glass and glow (light mode) */
     --color-glass: rgba(255, 255, 255, 0.72);
     --color-glass-strong: rgba(255, 255, 255, 0.92);
     --color-glow: rgba(184, 164, 255, 0.22);
   }
 
   .dark {
+    /* Semantic tokens (dark mode) */
     --color-background: #07070c;
     --color-foreground: #f5f5f8;
-    --color-surface: #12121a;
+    --color-foreground-muted: #9a9aab;
+    --color-foreground-subtle: #6a6a7b;
+
+    /* Surface hierarchy (dark mode) - 3 levels for depth */
+    --color-surface: #0e0e14;
+    --color-surface-sunken: #07070c;
+    --color-surface-elevated: #16161f;
+    --color-surface-raised: #1e1e28;
     --color-card: var(--color-surface);
     --color-card-foreground: var(--color-foreground);
-    --color-popover: #16161f;
+    --color-popover: var(--color-surface-elevated);
     --color-popover-foreground: var(--color-foreground);
+
+    /* Actions and states (dark mode) */
     --color-primary: #f5f5f8;
     --color-primary-foreground: #0b0b12;
     --color-secondary: #1c1c26;
     --color-secondary-foreground: #f5f5f8;
-    --color-muted: #1c1c26;
+    --color-muted: #1a1a24;
     --color-muted-foreground: #9a9aab;
     --color-accent: var(--color-aurora-soft);
     --color-accent-foreground: #f5f5f8;
     --color-destructive: var(--color-danger);
     --color-destructive-foreground: #0b0b12;
+
+    /* Borders and inputs (dark mode) */
     --color-border: rgba(245, 245, 248, 0.1);
-    --color-input: rgba(245, 245, 248, 0.14);
+    --color-border-strong: rgba(245, 245, 248, 0.2);
+    --color-input: rgba(245, 245, 248, 0.12);
     --color-ring: var(--color-aurora);
+
+    /* Glass and glow (dark mode) */
     --color-glass: rgba(12, 12, 20, 0.62);
     --color-glass-strong: rgba(18, 18, 26, 0.88);
     --color-glow: rgba(184, 164, 255, 0.2);
+
+    /* Shadows (dark mode) */
     --shadow-card: 0 22px 50px rgba(0, 0, 0, 0.45);
     --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.35);
     --shadow-tab: 0 -12px 32px rgba(0, 0, 0, 0.55);
@@ -158,6 +196,8 @@
     --shadow-confirm: 0 2px 8px rgba(127, 254, 177, 0.22), 0 12px 26px rgba(127, 254, 177, 0.18);
     --shadow-focus: 0 0 0 3px rgba(184, 164, 255, 0.32), 0 10px 24px rgba(184, 164, 255, 0.24);
     --shadow-error: 0 0 0 3px rgba(255, 77, 61, 0.28), 0 8px 18px rgba(255, 77, 61, 0.2);
+
+    /* Soft fills (dark mode) */
     --color-aurora-soft: #2a2248;
     --color-heat-soft: var(--color-aurora-soft);
     --color-neon-soft: #0a2830;
@@ -168,29 +208,46 @@
 
   @media (prefers-color-scheme: dark) {
     :root:not(.light) {
+      /* Semantic tokens (dark mode via system preference) */
       --color-background: #07070c;
       --color-foreground: #f5f5f8;
-      --color-surface: #12121a;
+      --color-foreground-muted: #9a9aab;
+      --color-foreground-subtle: #6a6a7b;
+
+      /* Surface hierarchy (dark mode) */
+      --color-surface: #0e0e14;
+      --color-surface-sunken: #07070c;
+      --color-surface-elevated: #16161f;
+      --color-surface-raised: #1e1e28;
       --color-card: var(--color-surface);
       --color-card-foreground: var(--color-foreground);
-      --color-popover: #16161f;
+      --color-popover: var(--color-surface-elevated);
       --color-popover-foreground: var(--color-foreground);
+
+      /* Actions and states (dark mode) */
       --color-primary: #f5f5f8;
       --color-primary-foreground: #0b0b12;
       --color-secondary: #1c1c26;
       --color-secondary-foreground: #f5f5f8;
-      --color-muted: #1c1c26;
+      --color-muted: #1a1a24;
       --color-muted-foreground: #9a9aab;
       --color-accent: var(--color-aurora-soft);
       --color-accent-foreground: #f5f5f8;
       --color-destructive: var(--color-danger);
       --color-destructive-foreground: #0b0b12;
+
+      /* Borders and inputs (dark mode) */
       --color-border: rgba(245, 245, 248, 0.1);
-      --color-input: rgba(245, 245, 248, 0.14);
+      --color-border-strong: rgba(245, 245, 248, 0.2);
+      --color-input: rgba(245, 245, 248, 0.12);
       --color-ring: var(--color-aurora);
+
+      /* Glass and glow (dark mode) */
       --color-glass: rgba(12, 12, 20, 0.62);
       --color-glass-strong: rgba(18, 18, 26, 0.88);
       --color-glow: rgba(184, 164, 255, 0.2);
+
+      /* Shadows (dark mode) */
       --shadow-card: 0 22px 50px rgba(0, 0, 0, 0.45);
       --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.35);
       --shadow-tab: 0 -12px 32px rgba(0, 0, 0, 0.55);
@@ -200,6 +257,8 @@
       --shadow-confirm: 0 2px 8px rgba(127, 254, 177, 0.22), 0 12px 26px rgba(127, 254, 177, 0.18);
       --shadow-focus: 0 0 0 3px rgba(184, 164, 255, 0.32), 0 10px 24px rgba(184, 164, 255, 0.24);
       --shadow-error: 0 0 0 3px rgba(255, 77, 61, 0.28), 0 8px 18px rgba(255, 77, 61, 0.2);
+
+      /* Soft fills (dark mode) */
       --color-aurora-soft: #2a2248;
       --color-heat-soft: var(--color-aurora-soft);
       --color-neon-soft: #0a2830;

@@ -4,12 +4,6 @@ import { cn } from '@/lib/utils';
 
 export type ControlTone = 'idle' | 'focus' | 'error';
 
-const SHADOW: Record<ControlTone, string> = {
-  idle: 'var(--shadow-control)',
-  focus: 'var(--shadow-focus)',
-  error: 'var(--shadow-error)',
-};
-
 const NATIVE_SHADOW: Record<ControlTone, ViewStyle> = {
   idle: {
     shadowColor: '#0b0b12',
@@ -42,7 +36,7 @@ export function controlTone(opts: { focused?: boolean; error?: boolean }): Contr
 
 export function controlShadowStyle(tone: ControlTone): ViewStyle {
   if (Platform.OS === 'web') {
-    return { boxShadow: SHADOW[tone] };
+    return {};
   }
   return NATIVE_SHADOW[tone];
 }

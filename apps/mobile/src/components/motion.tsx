@@ -10,6 +10,8 @@ export function PressScale({
   onPress,
   className,
   disabled,
+  fit = false,
+  hitSlop,
   accessibilityRole = 'button',
   accessibilityLabel,
 }: {
@@ -17,6 +19,9 @@ export function PressScale({
   onPress?: PressableProps['onPress'];
   className?: string;
   disabled?: boolean;
+  /** Size to the child instead of stretching to the row. Use on chips. */
+  fit?: boolean;
+  hitSlop?: PressableProps['hitSlop'];
   accessibilityRole?: PressableProps['accessibilityRole'];
   accessibilityLabel?: string;
 }) {
@@ -29,6 +34,7 @@ export function PressScale({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
+      hitSlop={hitSlop}
       onPress={onPress}
       onPressIn={() => {
         if (!reduce) scale.value = withTiming(0.98, { duration: 90 });
@@ -36,8 +42,8 @@ export function PressScale({
       onPressOut={() => {
         if (!reduce) scale.value = withTiming(1, { duration: 120 });
       }}
-      className={cn('w-full', className)}>
-      <Animated.View className="w-full" style={style}>
+      className={cn(fit ? 'shrink-0 self-start' : 'w-full', className)}>
+      <Animated.View className={fit ? undefined : 'w-full'} style={style}>
         {children}
       </Animated.View>
     </Pressable>

@@ -8,6 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Stage primitives (fixed, both schemes)
         'pitch-black': 'var(--color-pitch-black)',
         'paper-white': 'var(--color-paper-white)',
         'ash-gray': 'var(--color-ash-gray)',
@@ -15,6 +16,9 @@ module.exports = {
         charcoal: 'var(--color-charcoal)',
         slate: 'var(--color-slate)',
         stone: 'var(--color-stone)',
+        graphite: 'var(--color-graphite)',
+
+        // Pigment (fixed, both schemes)
         aurora: 'var(--color-aurora)',
         heat: 'var(--color-heat)',
         neon: 'var(--color-neon)',
@@ -22,21 +26,43 @@ module.exports = {
         amber: 'var(--color-amber)',
         danger: 'var(--color-danger)',
         confirm: 'var(--color-confirm)',
+
+        // Soft fills (invert with scheme)
         'aurora-soft': 'var(--color-aurora-soft)',
         'heat-soft': 'var(--color-heat-soft)',
         'neon-soft': 'var(--color-neon-soft)',
         'volt-soft': 'var(--color-volt-soft)',
         'amber-soft': 'var(--color-amber-soft)',
         'danger-soft': 'var(--color-danger-soft)',
-        surface: 'var(--color-surface)',
+
+        // Surface hierarchy (invert with scheme)
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          sunken: 'var(--color-surface-sunken)',
+          elevated: 'var(--color-surface-elevated)',
+          raised: 'var(--color-surface-raised)',
+        },
+
+        // Glass and effects
         glass: 'var(--color-glass)',
         'glass-strong': 'var(--color-glass-strong)',
         glow: 'var(--color-glow)',
-        border: 'var(--color-border)',
+
+        // Borders
+        border: {
+          DEFAULT: 'var(--color-border)',
+          strong: 'var(--color-border-strong)',
+        },
         input: 'var(--color-input)',
         ring: 'var(--color-ring)',
+
+        // Semantic colors
         background: 'var(--color-background)',
-        foreground: 'var(--color-foreground)',
+        foreground: {
+          DEFAULT: 'var(--color-foreground)',
+          muted: 'var(--color-foreground-muted)',
+          subtle: 'var(--color-foreground-subtle)',
+        },
         primary: {
           DEFAULT: 'var(--color-primary)',
           foreground: 'var(--color-primary-foreground)',

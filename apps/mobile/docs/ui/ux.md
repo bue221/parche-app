@@ -22,8 +22,8 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 | Staff actions | One primary + overflow `BottomSheet`. Shared helper for Operar and event detail. |
 | Confirm / volt | Success only: print, door approved, brief save confirmation, valid ticket. Not idle genre tags, not wizard steps at rest. |
 | Buttons | Default filled pill = `bg-primary` (inverse) + `shadow-button`. Press scale `0.98` is built into `Button`. `variant="signal"` = aurora + `shadow-signal`. `variant="confirm"` only for the success beat. Logout = `destructive` (danger). |
-| Search | `SearchBar` pill is the Explorar hero (no tab page title). Icon sits in a muted well; the pill uses `shadow-control`. `ChipRow` chips may include a Lucide icon; Todo + day/genre apply without leaving the list. Idle = `surface` + foreground. Selected = `aurora` + `shadow-focus`. |
-| Sheets | Map: peek list over a colorful map, expand to cover, **Mapa** pill to return. Staff overflow and AuthSheet (OTP/Google) use `BottomSheet`. Filters may be a compact stack screen. Auth de compra no es una ruta full-screen. |
+| Search | `SearchBar` pill is the Explorar hero (no tab page title). Icon sits in a muted well; the pill uses `shadow-control`. `ChipRow` chips may include a Lucide icon; Todo + day/genre apply without leaving the list. Idle = `muted`. Selected = `aurora`. Chips must `fit` (no `w-full`) so they do not stretch on web. |
+| Sheets | Map sheet: collapsed handle + count, peek list, expand to cover, **Mapa** pill returns to collapsed. Staff overflow and AuthSheet (OTP/Google) use `BottomSheet`. Filters may be a compact stack screen. Auth de compra no es una ruta full-screen. |
 | Detail | Photo hero + Inter title + blocks. Buy lives in `StickyCta`. Staff is a secondary sheet (primary + Más). |
 | Forms | Caption uppercase label (aurora when focused, danger when invalid), optional helper, error = danger border + `shadow-error` + helper text. Focus = aurora border + `shadow-focus`. Multiline `minHeight` 96. Hit targets ≥44px. Wizard validates per step. `Screen` scrolls the focused field above the keyboard; `StickyCta` stays visible. |
 | Feedback | Skeleton matches card shape. Empty = `EmptyState` (title + optional lead + action) with role voice. Errors = `ErrorState` with retry on reads. Saving = disable CTA + “Guardando…”. |
@@ -33,7 +33,7 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 ## Checklist
 
 - [ ] New list uses `FadeSlideIn` with stagger or an explicit skip
-- [ ] Genre chips at rest are surface + foreground; selected chips use `aurora` + `shadow-focus`
+- [ ] Genre chips at rest are muted; selected chips use `aurora`; chips do not stretch on web
 - [ ] Save / follow / buy / wizard continue primary is `bg-primary` (inverse) until the action succeeds
 - [ ] Light and dark remain readable after toggle and system changes
 - [ ] Keyboard and errors do not hide the form CTA (wizard uses `StickyCta`)

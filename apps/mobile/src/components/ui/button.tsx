@@ -60,14 +60,14 @@ const buttonTextVariants = cva(
     variants: {
       variant: {
         default: 'text-primary-foreground',
-        signal: 'text-pitch-black',
-        confirm: 'text-pitch-black',
+        signal: '!text-pitch-black',
+        confirm: '!text-pitch-black',
         outline: 'text-foreground',
         secondary: 'text-secondary-foreground',
         ghost: 'text-foreground',
         glass: 'text-foreground',
         link: 'text-aurora normal-case tracking-normal',
-        destructive: 'text-pitch-black',
+        destructive: '!text-pitch-black',
       },
       size: {
         default: '',

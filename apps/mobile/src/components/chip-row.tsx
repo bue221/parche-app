@@ -6,7 +6,6 @@ import { PressScale } from '@/components/motion';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
-import { controlShadowStyle } from '@/lib/control-chrome';
 import { cn } from '@/lib/utils';
 
 const PITCH_BLACK = '#0B0B12';
@@ -16,7 +15,7 @@ export function ChipRow({ children }: { children: ReactNode }) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 8, paddingVertical: 8, paddingRight: 8 }}>
+      contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
       {children}
     </ScrollView>
   );
@@ -36,19 +35,17 @@ export function Chip({
   const theme = useTheme();
 
   return (
-    <PressScale onPress={onPress} className="w-auto" accessibilityRole="button" accessibilityLabel={label}>
+    <PressScale fit onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
       <View
         className={cn(
-          'min-h-11 flex-row items-center gap-ds-8 rounded-tags border px-ds-16 py-ds-8',
-          selected ? 'border-aurora bg-aurora shadow-focus' : 'border-border bg-surface shadow-control',
-          selected && 'scale-[1.03]',
+          'flex-row items-center gap-ds-8 rounded-tags border px-ds-12 py-ds-8',
+          selected ? 'border-aurora bg-aurora' : 'border-border bg-muted',
           Platform.select({
-            web: 'transition-[background-color,border-color,box-shadow,transform] duration-150',
+            web: 'transition-colors duration-150',
           })
-        )}
-        style={controlShadowStyle(selected ? 'focus' : 'idle')}>
+        )}>
         {icon ? (
-          <Icon as={icon} size={16} color={selected ? PITCH_BLACK : theme.textSecondary} strokeWidth={2.25} />
+          <Icon as={icon} size={14} color={selected ? PITCH_BLACK : theme.textSecondary} strokeWidth={2.25} />
         ) : null}
         <Text
           variant="caption"
@@ -62,5 +59,5 @@ export function Chip({
 }
 
 export function ChipWrap({ children }: { children: ReactNode }) {
-  return <View className="flex-row flex-wrap gap-ds-8 py-ds-4">{children}</View>;
+  return <View className="flex-row flex-wrap gap-ds-8">{children}</View>;
 }
