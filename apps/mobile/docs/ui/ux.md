@@ -25,7 +25,7 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 | Search | `SearchBar` pill opens filters. `ChipRow` applies genre/date without leaving the list when possible. |
 | Sheets | Map preview, staff overflow, and AuthSheet (OTP/Google) use `BottomSheet`. Filters may be a compact stack screen. Auth de compra no es una ruta full-screen. |
 | Detail | Photo hero + Inter title + blocks. Buy lives in `StickyCta`. Staff is a secondary sheet (primary + Más). |
-| Forms | Caption uppercase label, optional helper, error = danger border + helper text. Focus = aurora border. Multiline `minHeight` 96. Hit targets ≥44px. Wizard validates per step. |
+| Forms | Caption uppercase label, optional helper, error = danger border + helper text. Focus = aurora border. Multiline `minHeight` 96. Hit targets ≥44px. Wizard validates per step. `Screen` scrolls the focused field above the keyboard; `StickyCta` stays visible. |
 | Feedback | Skeleton matches card shape. Empty = `EmptyState` (title + optional lead + action) with role voice. Errors = `ErrorState` with retry on reads. Saving = disable CTA + “Guardando…”. |
 | Shell | Stack screens get `BackBar` (44px hit) + compact `PageHeader` (Inter). Guest Cuenta: value card + AuthSheet CTA + theme. Password login remains a dismissible modal for existing accounts. |
 | Theme | `ThemeToggle` forces light/dark; default follows system. Always resolve via `useResolvedColorScheme()` — never raw `Appearance` alone for chrome colors. |

@@ -6,6 +6,7 @@ import { useFonts } from 'expo-font';
 import { ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthSheetHost } from '@/components/auth-sheet-host';
@@ -35,26 +36,28 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppQueryProvider>
-        <ThemeProvider value={NAV_THEME[scheme]}>
-          <ThemeRoot>
-            <AnimatedSplashOverlay />
-            <OnboardingOverlay />
-            <SessionLifecycle />
-            <DeepLinkListener />
-            <AuthSheetHost />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: 'fade',
-                contentStyle: { backgroundColor: NAV_THEME[scheme].colors.background },
-              }}>
-              <Stack.Screen name="auth" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-            </Stack>
-            <ToastHost />
-          </ThemeRoot>
-        </ThemeProvider>
-      </AppQueryProvider>
+      <KeyboardProvider preload={false} statusBarTranslucent preserveEdgeToEdge>
+        <AppQueryProvider>
+          <ThemeProvider value={NAV_THEME[scheme]}>
+            <ThemeRoot>
+              <AnimatedSplashOverlay />
+              <OnboardingOverlay />
+              <SessionLifecycle />
+              <DeepLinkListener />
+              <AuthSheetHost />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: 'fade',
+                  contentStyle: { backgroundColor: NAV_THEME[scheme].colors.background },
+                }}>
+                <Stack.Screen name="auth" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+              </Stack>
+              <ToastHost />
+            </ThemeRoot>
+          </ThemeProvider>
+        </AppQueryProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

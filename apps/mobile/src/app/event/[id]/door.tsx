@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Field } from '@/components/field';
@@ -245,35 +246,40 @@ export default function DoorScannerScreen() {
         ) : null}
 
         {!result ? (
-        <View className="px-ds-16" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
-          {manual ? (
-            <View className="mb-ds-12 rounded-cards bg-paper-white p-ds-16">
-              <Field label="Código" value={token} onChangeText={setToken} autoCapitalize="none" />
-              {error ? (
-                <Text variant="helper" className="mt-ds-8 text-pitch-black">
-                  {error}
-                </Text>
+          <KeyboardStickyView enabled={Platform.OS !== 'web'}>
+            <View className="px-ds-16" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
+              {manual ? (
+                <View className="mb-ds-12 rounded-cards bg-paper-white p-ds-16">
+                  <Field label="Código" value={token} onChangeText={setToken} autoCapitalize="none" />
+                  {error ? (
+                    <Text variant="helper" className="mt-ds-8 text-pitch-black">
+                      {error}
+                    </Text>
+                  ) : null}
+                  <Button className="mt-ds-12" onPress={() => void scan(token)}>
+                    <Text>Escanear</Text>
+                  </Button>
+                </View>
+              ) : error ? (
+                <Text className="mb-ds-8 text-center text-paper-white">{error}</Text>
               ) : null}
-              <Button className="mt-ds-12" onPress={() => void scan(token)}>
-                <Text>Escanear</Text>
+              <Button
+                variant="outline"
+                className="border-paper-white"
+                onPress={() => {
+                  setManual((open) => !open);
+                  setError(null);
+                }}>
+                <Text className="text-paper-white">{manual ? 'Usar cámara' : 'Pegar código'}</Text>
+              </Button>
+              <Button
+                variant="ghost"
+                className="mt-ds-8 active:bg-white/10"
+                onPress={() => router.push(`/event/${id}/live` as Href)}>
+                <Text className="text-paper-white">Aforo en vivo</Text>
               </Button>
             </View>
-          ) : error ? (
-            <Text className="mb-ds-8 text-center text-paper-white">{error}</Text>
-          ) : null}
-          <Button
-            variant="outline"
-            className="border-paper-white"
-            onPress={() => {
-              setManual((open) => !open);
-              setError(null);
-            }}>
-            <Text className="text-paper-white">{manual ? 'Usar cámara' : 'Pegar código'}</Text>
-          </Button>
-          <Button variant="ghost" className="mt-ds-8 active:bg-white/10" onPress={() => router.push(`/event/${id}/live` as Href)}>
-            <Text className="text-paper-white">Aforo en vivo</Text>
-          </Button>
-        </View>
+          </KeyboardStickyView>
         ) : null}
       </View>
     </View>

@@ -1,7 +1,8 @@
 import { usePathname } from 'expo-router';
+import { useState, type PropsWithChildren, type ReactNode } from 'react';
+import { Platform, ScrollView, View, type LayoutChangeEvent, type ScrollViewProps } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Platform, ScrollView, View, type ScrollViewProps } from 'react-native';
-import type { PropsWithChildren, ReactNode } from 'react';
 
 import { BackBar } from '@/components/back-bar';
 import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop, WebNavHeight } from '@/constants/theme';
@@ -9,6 +10,7 @@ import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
 const WEB_TAB_PATHS = new Set(['/', '/explore', '/tickets', '/parche', '/operate']);
+const native = Platform.OS !== 'web';
 
 type ScreenProps = PropsWithChildren<{
   scroll?: boolean;
@@ -41,6 +43,7 @@ export function Screen({
   const compact = useCompactLayout();
   const path = usePathname();
   const inWebTabs = web && WEB_TAB_PATHS.has(path);
+  const [footerHeight, setFooterHeight] = useState(0);
   const padding = flush
     ? { flexGrow: 1 }
     : {
@@ -78,6 +81,17 @@ export function Screen({
     </View>
   );
 
+  function onFooterLayout(event: LayoutChangeEvent) {
+    const next = event.nativeEvent.layout.height;
+    setFooterHeight((current) => (current === next ? current : next));
+  }
+
+  const stickyFooter = footer ? (
+    <KeyboardStickyView enabled={native}>
+      <View onLayout={onFooterLayout}>{footer}</View>
+    </KeyboardStickyView>
+  ) : null;
+
   if (!scrollEnabled) {
     const body = (
       <View className={cn('flex-1 bg-background', className)} style={padding}>
@@ -88,12 +102,26 @@ export function Screen({
     return (
       <View className="flex-1 bg-background">
         {body}
-        {footer}
+        {stickyFooter}
       </View>
     );
   }
 
-  const scroller = (
+  const scroller = native ? (
+    <View className={cn('flex-1 bg-background', className)}>
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={padding}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentInsetAdjustmentBehavior="never"
+        bottomOffset={footer ? footerHeight + 16 : 24}
+        extraKeyboardSpace={footer ? footerHeight : 0}
+        refreshControl={refreshControl}>
+        {inner}
+      </KeyboardAwareScrollView>
+    </View>
+  ) : (
     <ScrollView
       className={cn('flex-1 bg-background', className)}
       contentContainerStyle={padding}
@@ -108,7 +136,7 @@ export function Screen({
   return (
     <View className="flex-1 bg-background">
       {scroller}
-      {footer}
+      {stickyFooter}
     </View>
   );
 }
