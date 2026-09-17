@@ -11,17 +11,17 @@ El mapa muestra pines de eventos publicados. Teselas OSM Humanitarian (HOT) + Le
 
 ## Quick path
 
-1. Abrir Mapa: mapa colorido con pills de fecha sobre `lat`/`lng` de la API.
-2. La lista asoma en un sheet (~50%). Tap pin selecciona; tap card → [FEAT-007](feat-007-event-detail.md).
-3. Subir el sheet cubre el mapa; el botón **Mapa** lo vuelve a mostrar.
+1. Abrir Mapa: mapa colorido con pills de fecha; la lista queda en una franja colapsada (asa + recuento).
+2. Subir el sheet al peek (~50%) o a lista completa. Tap pin abre peek; tap card → [FEAT-007](feat-007-event-detail.md).
+3. El botón **Mapa** (lista expandida) o bajar el sheet vuelve al mapa.
 
 ## Pantallas
 
 | Pieza | Regla |
 |-------|-------|
-| Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
+| Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Contenedor `rounded-[24px]` alineado al sheet. Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
 | Pines | Pill blanca con fecha (`Hoy` / `18 sep`) y punto de género (neon / volt / amber). Seleccionado = fill aurora |
-| Lista/mapa | SearchBar + chips + botón filtros flotantes. Sheet peek con listado vertical (foto 16:10). Wide web: lista al lado |
+| Lista/mapa | SearchBar + chips + botón filtros. Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con cards 16:10), expandido + botón **Mapa**. Wide web: lista al lado |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo

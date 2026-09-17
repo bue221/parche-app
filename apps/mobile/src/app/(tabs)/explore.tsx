@@ -70,6 +70,7 @@ export default function ExploreScreen() {
   const [selected, setSelected] = useState<ParcheEvent | null>(null);
   const [wide, setWide] = useState(Platform.OS === 'web');
   const [headerH, setHeaderH] = useState(120);
+  const [sheetPad, setSheetPad] = useState(140);
   const compact = useCompactLayout();
   const filtered = hasActiveFilters(filters);
   const onExplore = path === '/explore';
@@ -96,7 +97,9 @@ export default function ExploreScreen() {
   const overlayTop = wide
     ? (Platform.OS === 'web' ? (compact ? WebCompactTop : WebNavHeight) : insets.top) + 124
     : headerH;
-  const { peekH } = mapSheetMetrics(windowH, wide ? 0 : overlayTop);
+  const { collapsedH } = mapSheetMetrics(windowH, wide ? 0 : overlayTop);
+  const sheetOverlap = 16;
+  const mapBottom = Math.max((sheetPad || collapsedH) - sheetOverlap, 24);
   const openFilters = () => router.push('/filters' as Href);
 
   return (
@@ -114,16 +117,24 @@ export default function ExploreScreen() {
               <SearchCluster query={filters.q} filtered={filtered} onFilters={openFilters} />
             </View>
           )}
-          <View className="relative min-h-0 flex-1 overflow-hidden">
-            <OsmMap
-              fill
-              events={events}
-              selectedId={selected?.id}
-              padTop={wide ? overlayTop : 24}
-              padBottom={wide ? 48 : peekH}
-              onPressEvent={selectEvent}
-              onClear={() => setSelected(null)}
-            />
+          <View className="relative min-h-0 flex-1 overflow-hidden bg-background">
+            <View
+              className="overflow-hidden rounded-[24px]"
+              style={
+                wide
+                  ? { flex: 1, marginHorizontal: 16, marginVertical: 16 }
+                  : { position: 'absolute', left: 16, right: 16, top: 8, bottom: mapBottom, borderRadius: 24 }
+              }>
+              <OsmMap
+                fill
+                events={events}
+                selectedId={selected?.id}
+                padTop={wide ? overlayTop : 20}
+                padBottom={wide ? 48 : 20}
+                onPressEvent={selectEvent}
+                onClear={() => setSelected(null)}
+              />
+            </View>
             {wide ? (
               <View
                 pointerEvents="box-none"
@@ -141,6 +152,7 @@ export default function ExploreScreen() {
                 loading={isLoading}
                 error={Boolean(error)}
                 topInset={overlayTop}
+                onHeightChange={setSheetPad}
                 onRetry={() => void refetch()}
                 onOpen={openEvent}
               />

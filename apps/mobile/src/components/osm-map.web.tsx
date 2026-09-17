@@ -83,10 +83,10 @@ function OsmMapInner({
     <View
       className={cn(
         'overflow-hidden',
-        fill ? 'min-h-0 flex-1' : 'h-80 rounded-cards border border-border',
+        fill ? 'min-h-0 flex-1 rounded-[24px]' : 'h-80 rounded-cards border border-border',
         className
       )}
-      style={fill ? { flex: 1, height: '100%' } : undefined}>
+      style={fill ? { flex: 1, height: '100%', borderRadius: 24, overflow: 'hidden' } : undefined}>
       <iframe
         ref={iframeRef}
         title="Mapa OSM"
@@ -101,7 +101,7 @@ function OsmMapInner({
             '*'
           );
         }}
-        style={{ width: '100%', height: '100%', minHeight: fill ? 0 : 320, border: 0 }}
+        style={{ width: '100%', height: '100%', minHeight: fill ? 0 : 320, border: 0, borderRadius: fill ? 24 : 20 }}
       />
     </View>
   );

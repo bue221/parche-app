@@ -71,8 +71,8 @@ export function OsmMap({
 
   return (
     <View
-      className={cn('overflow-hidden', fill ? 'min-h-0 flex-1' : 'h-80 rounded-cards border border-border', className)}
-      style={fill ? { flex: 1 } : undefined}>
+      className={cn('overflow-hidden', fill ? 'min-h-0 flex-1 rounded-[24px]' : 'h-80 rounded-cards border border-border', className)}
+      style={fill ? { flex: 1, borderRadius: 24, overflow: 'hidden' } : undefined}>
       <WebView
         ref={webRef}
         originWhitelist={['*']}

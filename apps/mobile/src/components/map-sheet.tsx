@@ -18,6 +18,9 @@ import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cardShadowStyle } from '@/lib/card-shadow';
 
 const SPRING = { damping: 22, stiffness: 220, mass: 0.85 };
+const HANDLE_BODY = 58;
+
+export type MapSheetSnap = 'collapsed' | 'peek' | 'expanded';
 
 function tabClearance(compact: boolean, bottomInset: number) {
   if (Platform.OS === 'web') {
@@ -26,11 +29,18 @@ function tabClearance(compact: boolean, bottomInset: number) {
   return Math.max(BottomTabInset, bottomInset + 56);
 }
 
-export function mapSheetMetrics(windowH: number, topInset: number) {
+export function mapSheetMetrics(windowH: number, topInset: number, tabClear = BottomTabInset) {
   const column = Math.max(280, windowH - Math.max(topInset, 0));
+  const collapsedH = HANDLE_BODY + tabClear;
+  const peekH = Math.min(Math.max(Math.round(column * 0.5), 280), column - 24);
   const expandedH = column;
-  const peekH = Math.min(Math.max(Math.round(column * 0.52), 280), expandedH - 24);
-  return { peekH, expandedH };
+  return { collapsedH, peekH, expandedH };
+}
+
+function heightForSnap(snap: MapSheetSnap, collapsedH: number, peekH: number, expandedH: number) {
+  if (snap === 'expanded') return expandedH;
+  if (snap === 'peek') return peekH;
+  return collapsedH;
 }
 
 export function MapSheet({
@@ -41,6 +51,7 @@ export function MapSheet({
   topInset = 12,
   onRetry,
   onOpen,
+  onHeightChange,
 }: {
   events: ParcheEvent[];
   selectedId?: string | null;
@@ -49,6 +60,7 @@ export function MapSheet({
   topInset?: number;
   onRetry?: () => void;
   onOpen: (event: ParcheEvent) => void;
+  onHeightChange?: (height: number) => void;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -56,36 +68,70 @@ export function MapSheet({
   const reduce = useReduceMotion();
   const { height: windowH } = useWindowDimensions();
   const tabClear = tabClearance(compact, insets.bottom);
-  const { peekH, expandedH } = mapSheetMetrics(windowH, topInset);
-  const height = useSharedValue(peekH);
-  const dragStart = useSharedValue(peekH);
+  const { collapsedH, peekH, expandedH } = mapSheetMetrics(windowH, topInset, tabClear);
+  const height = useSharedValue(collapsedH);
+  const dragStart = useSharedValue(collapsedH);
+  const collapsedSv = useSharedValue(collapsedH);
   const peekSv = useSharedValue(peekH);
   const expandedSv = useSharedValue(expandedH);
   const reduceSv = useSharedValue(reduce);
-  const [expanded, setExpanded] = useState(false);
+  const [snap, setSnap] = useState<MapSheetSnap>('collapsed');
+  const snapRef = useRef(snap);
+  snapRef.current = snap;
   const listRef = useRef<FlatList<ParcheEvent>>(null);
+  const onHeightChangeRef = useRef(onHeightChange);
+  onHeightChangeRef.current = onHeightChange;
+
+  function reportHeight(next: number) {
+    onHeightChangeRef.current?.(next);
+  }
+
+  function applySnap(next: MapSheetSnap) {
+    const value = heightForSnap(next, collapsedH, peekH, expandedH);
+    height.value = reduce ? value : withSpring(value, SPRING);
+    setSnap(next);
+    reportHeight(value);
+    if (next === 'collapsed') {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
+  }
 
   useEffect(() => {
+    collapsedSv.value = collapsedH;
     peekSv.value = peekH;
     expandedSv.value = expandedH;
     reduceSv.value = reduce;
-    height.value = expanded ? expandedH : peekH;
-  }, [expandedH, peekH, expanded, height, peekSv, expandedSv, reduceSv, reduce]);
+    const value = heightForSnap(snapRef.current, collapsedH, peekH, expandedH);
+    height.value = value;
+    reportHeight(value);
+  }, [collapsedH, peekH, expandedH, height, collapsedSv, peekSv, expandedSv, reduceSv, reduce]);
 
   useEffect(() => {
     if (!selectedId) return;
+    if (snapRef.current === 'collapsed') applySnap('peek');
     const index = events.findIndex((event) => event.id === selectedId);
     if (index < 0) return;
     requestAnimationFrame(() => {
       listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, events]);
 
-  function snap(open: boolean) {
-    const next = open ? expandedH : peekH;
-    height.value = reduce ? next : withSpring(next, SPRING);
-    setExpanded(open);
-    if (!open) {
+  function cycleSnap() {
+    if (snap === 'collapsed') applySnap('peek');
+    else if (snap === 'peek') applySnap('expanded');
+    else applySnap('collapsed');
+  }
+
+  function commitSnap(nextH: number) {
+    const collapsed = collapsedH;
+    const peek = peekH;
+    const expanded = expandedH;
+    const next: MapSheetSnap =
+      nextH >= expanded - 8 ? 'expanded' : nextH <= collapsed + 8 ? 'collapsed' : 'peek';
+    setSnap(next);
+    reportHeight(nextH);
+    if (next === 'collapsed') {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
   }
@@ -97,19 +143,30 @@ export function MapSheet({
       dragStart.value = height.value;
     })
     .onUpdate((event) => {
-      const min = peekSv.value;
+      const min = collapsedSv.value;
       const max = expandedSv.value;
       const next = dragStart.value - event.translationY;
       height.value = Math.min(max, Math.max(min, next));
     })
     .onEnd((event) => {
-      const min = peekSv.value;
-      const max = expandedSv.value;
-      const midpoint = (min + max) / 2;
-      const open = event.velocityY < -420 || (event.velocityY <= 420 && height.value > midpoint);
-      const next = open ? max : min;
+      const collapsed = collapsedSv.value;
+      const peek = peekSv.value;
+      const expanded = expandedSv.value;
+      const h = height.value;
+      const v = event.velocityY;
+      let next = peek;
+      if (v < -420) {
+        next = h < peek - 24 ? peek : expanded;
+      } else if (v > 420) {
+        next = h > peek + 24 ? peek : collapsed;
+      } else {
+        const dC = Math.abs(h - collapsed);
+        const dP = Math.abs(h - peek);
+        const dE = Math.abs(h - expanded);
+        next = dC <= dP && dC <= dE ? collapsed : dP <= dE ? peek : expanded;
+      }
       height.value = reduceSv.value ? next : withSpring(next, SPRING);
-      runOnJS(setExpanded)(open);
+      runOnJS(commitSnap)(next);
     });
 
   const sheetStyle = useAnimatedStyle(() => ({
@@ -118,6 +175,8 @@ export function MapSheet({
 
   const countLabel =
     events.length === 0 ? 'Sin fechas en el mapa' : `${events.length} ${events.length === 1 ? 'fecha' : 'fechas'}`;
+  const handleLabel =
+    snap === 'expanded' ? 'Ver mapa' : snap === 'peek' ? 'Ver lista completa' : 'Ver lista de fechas';
 
   return (
     <>
@@ -142,9 +201,9 @@ export function MapSheet({
         <GestureDetector gesture={pan}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={expanded ? 'Ver mapa' : 'Ver lista de fechas'}
-            onPress={() => snap(!expanded)}
-            style={{ paddingTop: 10, paddingBottom: 4, paddingHorizontal: 16 }}>
+            accessibilityLabel={handleLabel}
+            onPress={cycleSnap}
+            style={{ paddingTop: 10, paddingBottom: 8, paddingHorizontal: 16 }}>
             <View
               style={{
                 width: 48,
@@ -155,7 +214,7 @@ export function MapSheet({
                 marginBottom: 12,
               }}
             />
-            <Text variant="headingSm" className="text-center">
+            <Text className="text-center font-bold">
               {loading ? 'Cargando fechas' : error ? 'No se pudo cargar' : countLabel}
             </Text>
           </Pressable>
@@ -188,15 +247,21 @@ export function MapSheet({
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            scrollEnabled={snap !== 'collapsed'}
             onScrollBeginDrag={() => {
-              if (!expanded) snap(true);
+              if (snap !== 'expanded') applySnap('expanded');
             }}
             onScrollToIndexFailed={({ index }) => {
               setTimeout(() => {
                 listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
               }, 120);
             }}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: expanded ? 72 : 16, gap: 24 }}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingTop: 16,
+              paddingBottom: snap === 'expanded' ? 72 : 16,
+              gap: 24,
+            }}
             renderItem={({ item }) => (
               <EventCard
                 layout="listing"
@@ -210,7 +275,7 @@ export function MapSheet({
           />
         )}
       </Animated.View>
-      {expanded ? (
+      {snap === 'expanded' ? (
         <View
           pointerEvents="box-none"
           style={{
@@ -223,7 +288,7 @@ export function MapSheet({
           }}>
           <Button
             accessibilityLabel="Ver mapa"
-            onPress={() => snap(false)}
+            onPress={() => applySnap('collapsed')}
             className="min-w-[108px] flex-row px-ds-20"
             style={cardShadowStyle}>
             <Icon as={Map} size={16} />

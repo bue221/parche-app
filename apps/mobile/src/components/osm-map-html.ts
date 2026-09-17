@@ -158,7 +158,9 @@ window.setSelected = setSelected;
 window.setMapPad = function (top, bottom) {
   padTop = Number(top) || 0;
   padBottom = Number(bottom) || 0;
+  map.invalidateSize();
 };
+window.addEventListener('resize', function () { map.invalidateSize(); });
 window.addEventListener('message', (e) => {
   try {
     const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
