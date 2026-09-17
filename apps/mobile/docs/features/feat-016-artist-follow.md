@@ -13,13 +13,13 @@ El asistente sigue DJs para enterarse de fechas. No es un feed social de posts.
 
 1. En perfil público, Seguir.
 2. `POST /v1/artists/{id}/follow`.
-3. Parche → following → mismos artistas.
+3. Parche → Siguiendo (`/parche/siguiendo`) → mismos artistas.
 
 Dejar de seguir: `DELETE` mismo recurso.
 
 ## Pantallas
 
-Botón outlined / filled según estado. Lista `GET /v1/me/following`.
+Botón outlined / filled según estado. Lista propia en `/parche/siguiendo` (`GET /v1/me/following`), no el tab Guardados.
 
 ## Flujo
 

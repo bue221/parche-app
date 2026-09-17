@@ -11,13 +11,10 @@ import {
   Users,
   Wrench,
 } from 'lucide-react-native';
-import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { Field } from '@/components/field';
-import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { FlyerImage } from '@/components/flyer-image';
-import { MediaPicker } from '@/components/media-picker';
 import { FadeSlideIn } from '@/components/motion';
 import { ProfileMascot } from '@/components/profile-mascot';
 import { Screen } from '@/components/screen';
@@ -42,13 +39,6 @@ export default function ParcheScreen() {
   const { isLoggedIn, user, memberships, isAdmin, isPromoter } = useAuthSnapshot();
   const { primary, density } = usePrimaryProfile();
   const openAuth = useAuthSheet((s) => s.open);
-  const [name, setName] = useState(user?.displayName ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
-  const phoneFieldRef = useRef<PhoneFieldHandle>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [activating, setActivating] = useState(false);
   const followingQuery = useQuery({
     queryKey: ['following'],
@@ -82,11 +72,6 @@ export default function ParcheScreen() {
       enabled: isLoggedIn,
     })),
   });
-
-  useEffect(() => {
-    setName(user?.displayName ?? '');
-    setPhone(user?.phone ?? '');
-  }, [user?.displayName, user?.phone]);
 
   if (!isLoggedIn || !user) {
     return (
@@ -177,31 +162,36 @@ export default function ParcheScreen() {
             tickets={tickets.length}
             following={following.length}
             dates={owned.length}
+            onPress={() => router.push('/parche/editar' as Href)}
           />
         </FadeSlideIn>
 
         <View className="flex-row gap-ds-12">
-          <FadeSlideIn index={1} className="min-w-0 flex-1">
-            <ShortcutCard
-              label={shortcutLabel(primary)}
-              thumbs={primary === 'promoter' ? ownedFlyers : primary === 'artist' ? compactUris(artist?.avatarUrl) : ticketFlyers}
-              fallback={primary === 'artist' ? artist?.stageName || user.displayName : user.displayName}
-              onPress={() => router.push(shortcutHref(primary) as Href)}
-            />
-          </FadeSlideIn>
-          <FadeSlideIn index={2} className="min-w-0 flex-1">
-            <ShortcutCard
-              label="Siguiendo"
-              thumbs={following.map((row) => row.avatarUrl).filter((uri): uri is string => Boolean(uri))}
-              fallback={following[0]?.stageName || user.displayName}
-              onPress={() => router.push('/tickets' as Href)}
-            />
-          </FadeSlideIn>
+          <View className="min-w-0 flex-1">
+            <FadeSlideIn index={1} className="w-full">
+              <ShortcutCard
+                label={shortcutLabel(primary)}
+                thumbs={primary === 'promoter' ? ownedFlyers : primary === 'artist' ? compactUris(artist?.avatarUrl) : ticketFlyers}
+                fallback={primary === 'artist' ? artist?.stageName || user.displayName : user.displayName}
+                onPress={() => router.push(shortcutHref(primary) as Href)}
+              />
+            </FadeSlideIn>
+          </View>
+          <View className="min-w-0 flex-1">
+            <FadeSlideIn index={2} className="w-full">
+              <ShortcutCard
+                label="Siguiendo"
+                thumbs={following.map((row) => row.avatarUrl).filter((uri): uri is string => Boolean(uri))}
+                fallback={following[0]?.stageName || user.displayName}
+                onPress={() => router.push('/parche/siguiendo' as Href)}
+              />
+            </FadeSlideIn>
+          </View>
         </View>
 
         {cta ? (
           <FadeSlideIn index={3}>
-            <Surface elevated className="flex-row items-center gap-ds-16" onPress={cta.onPress}>
+            <Surface elevated className="flex-row items-center gap-ds-16" onPress={cta.onPress} accessibilityLabel={cta.title}>
               <View className="size-16 items-center justify-center rounded-full bg-muted">
                 {cta.mascot}
               </View>
@@ -213,43 +203,11 @@ export default function ParcheScreen() {
           </FadeSlideIn>
         ) : null}
 
-        {editing ? (
-          <AccountEditor
-            name={name}
-            phone={phone}
-            error={error}
-            saved={saved}
-            saving={saving}
-            phoneRef={phoneFieldRef}
-            onName={setName}
-            onPhone={setPhone}
-            onSave={() => {
-              if (!phoneFieldRef.current?.validate()) return;
-              setSaving(true);
-              setSaved(false);
-              void api.auth
-                .updateMe({ displayName: name, phone })
-                .then(() => {
-                  setError(null);
-                  setSaved(true);
-                  setEditing(false);
-                  toast('Perfil guardado', 'success');
-                })
-                .catch((err) => {
-                  const message = userMessage(err);
-                  setError(message);
-                  toast(message);
-                })
-                .finally(() => setSaving(false));
-            }}
-          />
-        ) : null}
-
         <View className="mt-ds-8">
           <SettingsRow
             icon={<MenuIcon icon={CircleUser} />}
             label="Editar perfil"
-            onPress={() => setEditing((value) => !value)}
+            onPress={() => router.push('/parche/editar' as Href)}
             divided={false}
           />
           <SettingsRow icon={<MenuIcon icon={UserRound} />} label="Apariencia" trailing={<ThemeToggle />} divided={false} />
@@ -313,16 +271,18 @@ function IdentityCard({
   tickets,
   following,
   dates,
+  onPress,
 }: {
   user: Omit<User, 'password'>;
   role: string;
   tickets: number;
   following: number;
   dates: number;
+  onPress: () => void;
 }) {
   const initials = user.displayName.slice(0, 2).toUpperCase();
   return (
-    <Surface elevated className="flex-row items-center gap-ds-16 p-ds-24">
+    <Surface elevated className="flex-row items-center gap-ds-16 p-ds-24" onPress={onPress} accessibilityLabel="Editar perfil">
       <View className="min-w-0 flex-1 items-center gap-ds-12">
         <View className="relative">
           {user.avatarUrl ? (
@@ -363,7 +323,7 @@ function IdentityCard({
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <View className="gap-ds-4">
-      <Text variant="headingSm">{value}</Text>
+      <Text variant="heading">{value}</Text>
       <Text variant="muted">{label}</Text>
     </View>
   );
@@ -381,7 +341,7 @@ function ShortcutCard({
   onPress: () => void;
 }) {
   return (
-    <Surface elevated onPress={onPress} className="min-h-[176px] justify-between">
+    <Surface elevated onPress={onPress} accessibilityLabel={label} className="min-h-[212px] w-full justify-between">
       <View className="h-24 items-center justify-center">
         {thumbs.length > 0 ? <StackedThumbs uris={thumbs} /> : <LetterMark letter={fallback.slice(0, 1).toUpperCase()} />}
       </View>
@@ -421,48 +381,6 @@ function LetterMark({ letter }: { letter: string }) {
         {letter}
       </Text>
     </View>
-  );
-}
-
-function AccountEditor({
-  name,
-  phone,
-  error,
-  saved,
-  saving,
-  phoneRef,
-  onName,
-  onPhone,
-  onSave,
-}: {
-  name: string;
-  phone: string;
-  error: string | null;
-  saved: boolean;
-  saving: boolean;
-  phoneRef: Ref<PhoneFieldHandle>;
-  onName: (value: string) => void;
-  onPhone: (value: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <Surface muted className="gap-ds-16">
-      <MediaPicker kind="avatar" onUploaded={() => void api.auth.me()} />
-      <Field label="Nombre" value={name} onChangeText={onName} />
-      <PhoneField ref={phoneRef} label="Teléfono" value={phone} onChange={onPhone} />
-      {error ? (
-        <Text variant="helper" className="text-foreground">
-          {error}
-        </Text>
-      ) : saved ? (
-        <Text variant="helper" className="text-foreground">
-          Guardado
-        </Text>
-      ) : null}
-      <Button disabled={saving} onPress={onSave}>
-        <Text>{saving ? 'Guardando…' : 'Guardar'}</Text>
-      </Button>
-    </Surface>
   );
 }
 

@@ -8,6 +8,7 @@ import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { setPendingUpload } from '@/data/http-api';
 import { debugLog } from '@/data/log';
+import { bytesFromImageAsset } from '@/lib/image-asset';
 
 export type FlyerDraft = {
   uri: string;
@@ -36,15 +37,14 @@ export function FlyerDraftPicker({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.85,
+        base64: true,
       });
       if (result.canceled || !result.assets[0]) {
         return;
       }
       const asset = result.assets[0];
-      const mime = asset.mimeType || 'image/jpeg';
-      const res = await fetch(asset.uri);
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      const draft: FlyerDraft = { uri: asset.uri, mime, bytes };
+      const { mime, bytes, uri } = await bytesFromImageAsset(asset);
+      const draft: FlyerDraft = { uri, mime, bytes };
       onLocalPick(draft);
       if (!eventId) {
         return;

@@ -11,11 +11,13 @@ export function Surface({
   muted = false,
   elevated = false,
   onPress,
+  accessibilityLabel,
 }: PropsWithChildren<{
   className?: string;
   muted?: boolean;
   elevated?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
+  accessibilityLabel?: string;
 }>) {
   const body = (
     <View
@@ -34,5 +36,9 @@ export function Surface({
     return body;
   }
 
-  return <PressScale onPress={onPress}>{body}</PressScale>;
+  return (
+    <PressScale onPress={onPress} accessibilityLabel={accessibilityLabel}>
+      {body}
+    </PressScale>
+  );
 }

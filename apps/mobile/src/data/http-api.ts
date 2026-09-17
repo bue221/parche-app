@@ -79,7 +79,11 @@ function mapMe(raw: unknown): Me {
     email: str(rec.email),
     displayName: str(rec.display_name),
     phone: str(rec.phone) || undefined,
-    avatarUrl: mediaUrl(rec.avatar_url),
+    avatarUrl:
+      mediaUrl(asRecord(rec.avatar).public_url) ??
+      mediaUrl(asRecord(rec.avatar).thumb_url) ??
+      mediaUrl(rec.avatar_url) ??
+      mediaUrl(rec.avatarUrl),
     profiles,
     platformAdmin,
     memberships,
@@ -233,6 +237,22 @@ function mapOrder(raw: unknown): Order & { tickets: Ticket[] } {
       };
     }),
   };
+}
+
+function confirmedAssetUrl(confirmed: Record<string, unknown>, fallbackKey: string): string {
+  const nested = asRecord(confirmed.avatar ?? confirmed.asset ?? confirmed.media ?? confirmed.flyer);
+  const raw =
+    mediaUrl(nested.public_url) ??
+    mediaUrl(nested.thumb_url) ??
+    mediaUrl(confirmed.public_url) ??
+    mediaUrl(confirmed.thumb_url) ??
+    mediaUrl(confirmed.avatar_url);
+  if (raw) return raw;
+  const key = str(confirmed.key) || fallbackKey;
+  if (/^https?:\/\//i.test(key) || key.startsWith('/')) {
+    return mediaUrl(key) ?? key;
+  }
+  return mediaUrl(`/v1/media/${key}`) ?? key;
 }
 
 async function putBytes(url: string, mime: string, bytes: BodyInit, headers: Record<string, string>): Promise<void> {
@@ -865,7 +885,7 @@ export const httpApi: ParcheApi = {
         bytes as unknown as BodyInit,
         Object.fromEntries(Object.entries(headers).map(([k, v]) => [k, String(v)]))
       );
-      let url = str(rec.key);
+      let url = str(rec.public_url) || str(rec.key);
       if (kind === 'flyer' && eventId) {
         const confirmed = asRecord(
           await apiFetch(`/v1/events/${eventId}/assets`, {
@@ -874,7 +894,7 @@ export const httpApi: ParcheApi = {
             body: JSON.stringify({ key: rec.key, kind: 'flyer' }),
           })
         );
-        url = mediaUrl(confirmed.public_url) ?? str(rec.key);
+        url = confirmedAssetUrl(confirmed, rec.key);
       } else if (kind === 'avatar') {
         const confirmed = asRecord(
           await apiFetch('/v1/me/avatar', {
@@ -883,7 +903,7 @@ export const httpApi: ParcheApi = {
             body: JSON.stringify({ key: rec.key, kind: 'avatar' }),
           })
         );
-        url = mediaUrl(confirmed.public_url) ?? str(rec.key);
+        url = confirmedAssetUrl(confirmed, rec.key);
       } else if (kind === 'audio' && eventId) {
         const confirmed = asRecord(
           await apiFetch(`/v1/events/${eventId}/audio`, {

@@ -7,13 +7,13 @@ Parche es el home de identidad. La cuenta se nombra aquí, pero el cuerpo cambia
 | Sprint | 2 (campos); 1 puede mostrar email + salir |
 | RC | RC-010 |
 | Permiso UI | Access |
-| Pantallas | Tab `Parche` → `Me` |
+| Pantallas | Tab `Parche` → `Me`; `/parche/editar`; `/parche/siguiendo` |
 
 ## Quick path
 
 1. Abrir Parche.
 2. Ver el home de tu perfil primario (no una lista plana de settings).
-3. Editar nombre y avatar ([FEAT-010](feat-010-media-upload.md) kind `avatar`) en cuenta.
+3. Editar nombre y avatar en `/parche/editar` ([FEAT-010](feat-010-media-upload.md) kind `avatar`).
 4. `PATCH /v1/me` → se refleja en comentarios futuros / transferencia.
 
 ## Pantallas
@@ -26,9 +26,9 @@ El cuerpo logueado no es un listado plano: tarjeta de identidad, dos atajos y un
 |-------|-----------|
 | Identidad | Avatar circular + spark aurora, nombre, label del primario (Asistente / Artista / Organizador). Stats: Tiquetes, Siguiendo, Fechas |
 | Atajo 1 | Cambia con el primario: Tiquetes → wallet; Tu vitrina → editar ficha; Tus fechas → Operar |
-| Atajo 2 | Siguiendo → Guardados |
+| Atajo 2 | Siguiendo → `/parche/siguiendo` |
 | CTA | Una sola: Esta noche (puerta) > activar artista > primera fecha > completar perfil |
-| Cuenta | Editar perfil (inline), apariencia, ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
+| Cuenta | Editar perfil (`/parche/editar`), apariencia, ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
 
 | Primario | Mascota | Atajo 1 |
 |----------|---------|---------|
