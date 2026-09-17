@@ -15,7 +15,7 @@ import {
 
 import { Chip, ChipRow } from '@/components/chip-row';
 import { FadeSlideIn } from '@/components/motion';
-import { useFilters } from '@/data/filters';
+import { useFilters, type FilterScope } from '@/data/filters';
 import { activeDateChip, DATE_CHIPS, datePreset } from '@/lib/explore-rails';
 import { GENRE_CHIPS } from '@/lib/genres';
 
@@ -35,15 +35,14 @@ const GENRE_ICONS: Record<(typeof GENRE_CHIPS)[number], LucideIcon> = {
   concierto: Mic2,
 };
 
-export function ExploreChips() {
-  const filters = useFilters((s) => s.filters);
-  const setFilters = useFilters((s) => s.setFilters);
+export function ExploreChips({ scope }: { scope: FilterScope }) {
+  const { filters, setFilters } = useFilters(scope);
   const selectedDate = activeDateChip(filters.from, filters.to);
   const todoSelected = !selectedDate && !filters.genre;
 
   return (
     <ChipRow>
-      <FadeSlideIn index={0}>
+      <FadeSlideIn index={0} className="shrink-0">
         <Chip
           label="Todo"
           icon={LayoutGrid}
@@ -52,7 +51,7 @@ export function ExploreChips() {
         />
       </FadeSlideIn>
       {DATE_CHIPS.map((chip, index) => (
-        <FadeSlideIn key={chip.id} index={index + 1}>
+        <FadeSlideIn key={chip.id} index={index + 1} className="shrink-0">
           <Chip
             label={chip.label}
             icon={DATE_ICONS[chip.id]}
@@ -68,7 +67,7 @@ export function ExploreChips() {
         </FadeSlideIn>
       ))}
       {GENRE_CHIPS.map((genre, index) => (
-        <FadeSlideIn key={genre} index={index + DATE_CHIPS.length + 1}>
+        <FadeSlideIn key={genre} index={index + DATE_CHIPS.length + 1} className="shrink-0">
           <Chip
             label={genre}
             icon={GENRE_ICONS[genre]}

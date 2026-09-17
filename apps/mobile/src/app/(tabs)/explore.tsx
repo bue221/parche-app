@@ -36,7 +36,7 @@ function SearchCluster({
 }) {
   const theme = useTheme();
   return (
-    <View className="gap-ds-8">
+    <View className="gap-ds-8 overflow-visible">
       <View className="flex-row items-center gap-ds-8">
         <View className="min-w-0 flex-1">
           <SearchBar
@@ -53,7 +53,7 @@ function SearchCluster({
           </View>
         </PressScale>
       </View>
-      <ExploreChips />
+      <ExploreChips scope="map" />
     </View>
   );
 }
@@ -61,10 +61,10 @@ function SearchCluster({
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const path = usePathname();
-  const filters = useFilters((s) => s.filters);
+  const { filters } = useFilters('map');
   const { height: windowH } = useWindowDimensions();
   const { data: events = [], error, refetch, isLoading } = useQuery({
-    queryKey: ['events', filters],
+    queryKey: ['events', 'map', filters],
     queryFn: () => api.events.list(filters),
   });
   const [selected, setSelected] = useState<ParcheEvent | null>(null);
@@ -100,7 +100,7 @@ export default function ExploreScreen() {
   const { collapsedH } = mapSheetMetrics(windowH, wide ? 0 : overlayTop);
   const sheetOverlap = 16;
   const mapBottom = Math.max((sheetPad || collapsedH) - sheetOverlap, 24);
-  const openFilters = () => router.push('/filters' as Href);
+  const openFilters = () => router.push('/filters?scope=map' as Href);
 
   return (
     <Screen scroll={false} padded={false} width="full" flush contentClassName="relative flex-1">
@@ -108,7 +108,7 @@ export default function ExploreScreen() {
         <View className="relative min-h-0 flex-1">
           {wide ? null : (
             <View
-              className="gap-ds-8 bg-background px-ds-16 pb-ds-8"
+              className="gap-ds-8 overflow-visible bg-background px-ds-16 pb-ds-8"
               style={{ paddingTop: headerPad + 8 }}
               onLayout={(event) => {
                 const next = event.nativeEvent.layout.height;
@@ -122,8 +122,8 @@ export default function ExploreScreen() {
               className="overflow-hidden rounded-[24px]"
               style={
                 wide
-                  ? { flex: 1, marginHorizontal: 16, marginVertical: 16 }
-                  : { position: 'absolute', left: 16, right: 16, top: 8, bottom: mapBottom, borderRadius: 24 }
+                  ? { flex: 1 }
+                  : { position: 'absolute', left: 0, right: 0, top: 8, bottom: mapBottom, borderRadius: 24 }
               }>
               <OsmMap
                 fill
@@ -138,7 +138,7 @@ export default function ExploreScreen() {
             {wide ? (
               <View
                 pointerEvents="box-none"
-                className="absolute inset-x-0 z-40 px-ds-16"
+                className="absolute inset-x-0 z-40 overflow-visible px-ds-16"
                 style={{ top: (compact ? WebCompactTop : WebNavHeight) + 8 }}>
                 <View pointerEvents="auto" style={cardShadowStyle}>
                   <SearchCluster query={filters.q} filtered={filtered} onFilters={openFilters} />
@@ -178,8 +178,8 @@ export default function ExploreScreen() {
               {events.map((event) => (
                 <EventCard
                   key={event.id}
-                  layout="row"
                   event={event}
+                  saveable
                   selected={selected?.id === event.id}
                   onPress={() => setSelected(event)}
                 />

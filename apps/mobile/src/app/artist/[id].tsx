@@ -38,13 +38,8 @@ export default function ArtistPublicScreen() {
       <Screen back>
         <Skeleton className="size-24 rounded-full" />
         <Skeleton className="mt-ds-16 h-8 w-40" />
-        <View className="mt-ds-24 flex-row justify-between">
-          <View style={{ width: '48%' }}>
-            <ListingSkeleton />
-          </View>
-          <View style={{ width: '48%' }}>
-            <ListingSkeleton />
-          </View>
+        <View className="mt-ds-24">
+          <ListingSkeleton />
         </View>
       </Screen>
     );
@@ -93,7 +88,7 @@ export default function ArtistPublicScreen() {
             {artist.upcoming.map((event, index) => (
               <EventGridItem key={event.id}>
                 <FadeSlideIn index={index}>
-                  <EventCard event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
+                  <EventCard event={event} saveable onPress={() => router.push(`/event/${event.id}` as Href)} />
                 </FadeSlideIn>
               </EventGridItem>
             ))}

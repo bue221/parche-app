@@ -20,10 +20,9 @@ import { hasActiveFilters } from '@/lib/genres';
 
 export default function ExplorarScreen() {
   const { isLoggedIn, isPromoter } = useAuthSnapshot();
-  const filters = useFilters((s) => s.filters);
-  const setFilters = useFilters((s) => s.setFilters);
+  const { filters, setFilters } = useFilters('agenda');
   const eventsQuery = useQuery({
-    queryKey: ['events', filters],
+    queryKey: ['events', 'agenda', filters],
     queryFn: () => api.events.list(filters),
   });
   const recsQuery = useQuery({
@@ -48,14 +47,14 @@ export default function ExplorarScreen() {
     <Screen
       scroll
       refreshControl={<RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />}>
-      <View className="gap-ds-12">
-        <SearchBar value={filters.q} onPress={() => router.push('/filters' as Href)} />
+      <View className="gap-ds-12 overflow-visible">
+        <SearchBar value={filters.q} onPress={() => router.push('/filters?scope=agenda' as Href)} />
         {isPromoter ? (
           <Button size="sm" onPress={() => router.push('/event/create' as Href)}>
             <Text>Crear fecha</Text>
           </Button>
         ) : null}
-        <ExploreChips />
+        <ExploreChips scope="agenda" />
       </View>
       {tonight.length > 0 ? (
         <View className="mt-ds-32">
@@ -74,7 +73,7 @@ export default function ExplorarScreen() {
                     event={event}
                     saveable
                     badge="Esta noche"
-                    caption={left ? `Puerta en ${left}` : undefined}
+                    caption={left ?? undefined}
                     onPress={() => openEvent(event.id)}
                   />
                 </FadeSlideIn>

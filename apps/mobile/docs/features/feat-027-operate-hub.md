@@ -21,8 +21,8 @@ Punto de entrada para quien tiene membresías: mis eventos, puerta, métricas, e
 
 | Densidad | Cómo se siente |
 |----------|----------------|
-| Host (owner/manager) | Listings grandes, CTA Crear, “Continuar setup” si el draft está incompleto |
-| Puerta | Hero de la próxima fecha + CTA Puerta; el resto en `row` |
+| Host (owner/manager) | Listings overlay, CTA Crear, “Continuar setup” si el draft está incompleto |
+| Puerta | Hero de la próxima fecha + CTA Puerta; el resto en el mismo overlay |
 | Métricas | Listing con CTA Métricas |
 | Vacío promoter | “Crea tu primera fecha” |
 | Vacío door | “Cuando te inviten, escaneas aquí” |

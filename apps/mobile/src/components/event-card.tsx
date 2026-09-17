@@ -1,6 +1,6 @@
 import { Children, type ReactNode } from 'react';
-import { Heart } from 'lucide-react-native';
-import { Platform, Pressable, View } from 'react-native';
+import { Calendar, Heart, MapPin } from 'lucide-react-native';
+import { Platform, Pressable, View, type ViewStyle } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
 import { PressScale } from '@/components/motion';
@@ -11,13 +11,21 @@ import { useAuthSnapshot } from '@/data/session';
 import type { ParcheEvent } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cardShadowStyle } from '@/lib/card-shadow';
-import { formatDay, formatWhen } from '@/lib/format';
+import {
+  eventTagline,
+  eventTimeLabel,
+  eventVenueParts,
+  formatCardDate,
+  formatCardDayShort,
+  formatWhen,
+} from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const PAPER_WHITE = '#F5F5F8';
+const PAPER_MUTED = 'rgba(245, 245, 248, 0.72)';
 
-export const LISTING_CARD_MIN_PX = 220;
-export const LISTING_CARD_MAX_PX = 260;
+export const LISTING_CARD_MIN_PX = 280;
+export const LISTING_CARD_MAX_PX = 360;
 
 const desktopListingGridStyle = {
   display: 'grid',
@@ -25,6 +33,34 @@ const desktopListingGridStyle = {
   gap: 24,
   justifyContent: 'start',
 } as object;
+
+const overlayTextShadow = {
+  textShadowColor: 'rgba(0,0,0,0.55)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 8,
+};
+
+const flyerGlass: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backgroundColor: 'rgba(8, 10, 12, 0.4)',
+        backdropFilter: 'blur(22px)',
+        WebkitBackdropFilter: 'blur(22px)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.14)',
+      } as object)
+    : {
+        backgroundColor: 'rgba(8, 10, 12, 0.56)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.14)',
+      };
+
+const topVignette: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 48%, transparent 100%)',
+      } as object)
+    : { backgroundColor: 'rgba(0,0,0,0.22)' };
 
 export function EventCard({
   event,
@@ -47,7 +83,6 @@ export function EventCard({
 }) {
   const { isLoggedIn } = useAuthSnapshot();
   const saved = useInterestStore((s) => s.eventIds.includes(event.id));
-  const listingFrame = 'relative w-full';
 
   if (layout === 'row') {
     return (
@@ -76,67 +111,94 @@ export function EventCard({
     );
   }
 
-  if (layout === 'poster') {
-    return (
-      <PressScale onPress={onPress} className={listingFrame}>
-        <View className="relative w-full overflow-hidden rounded-images bg-muted">
-          <PosterThumb event={event} />
-          <View pointerEvents="none" className="absolute inset-x-0 bottom-0 h-[58%]" style={scrimStyle} />
-          <View className="absolute inset-x-0 bottom-0 gap-ds-8 p-ds-16">
-            {event.genre ? (
-              <Text variant="caption" className="uppercase text-paper-white">
-                {event.genre}
-              </Text>
-            ) : null}
-            <Text variant="caption" className="uppercase text-paper-white">
-              {formatWhen(event.startsAt)}
-            </Text>
-            <Text variant="headingSm" className="text-paper-white" numberOfLines={3}>
-              {event.name}
-            </Text>
-            <Text variant="caption" className="uppercase text-paper-white">
-              {event.venueName}
-            </Text>
-          </View>
-        </View>
-      </PressScale>
-    );
-  }
+  const overlayWide = layout === 'listing' && widePhoto;
+  const tagline = eventTagline(event.description, event.genres);
+  const { venue, city } = eventVenueParts(event.venueName, event.addressText);
+  const timeLabel = eventTimeLabel(event.startsAt, event.endsAt, caption);
+  const dateLabel = badge ?? formatCardDate(event.startsAt);
 
   return (
-    <View className={listingFrame}>
+    <View className="relative w-full">
       <PressScale onPress={onPress} className="w-full">
-        <View className="w-full">
+        <View
+          className={cn(
+            'relative w-full overflow-hidden rounded-cards bg-muted shadow-card',
+            selected ? 'border border-aurora' : 'border border-transparent'
+          )}
+          style={cardShadowStyle}>
+          <PosterThumb event={event} listing wide={overlayWide} />
           <View
-            className={cn(
-              'relative overflow-hidden rounded-images bg-muted shadow-card',
-              selected ? 'border border-aurora' : 'border border-transparent'
-            )}
-            style={cardShadowStyle}>
-            <PosterThumb event={event} listing wide={widePhoto} />
-            <View className="absolute left-ds-8 top-ds-8 rounded-tags bg-pitch-black/80 px-ds-8 py-ds-4">
-              <Text variant="caption" className="uppercase text-paper-white">
-                {badge ?? formatDay(event.startsAt)}
+            pointerEvents="none"
+            className={cn('absolute inset-x-0 top-0', overlayWide ? 'h-[46%]' : 'h-[38%]')}
+            style={topVignette}
+          />
+          <View pointerEvents="none" className="absolute inset-0 p-ds-12">
+            <View className={cn('shrink-0 flex-row items-start', saveable ? 'pr-11' : undefined)}>
+              <Text variant="caption" style={{ color: PAPER_WHITE, ...overlayTextShadow }} numberOfLines={1}>
+                {dateLabel}
               </Text>
             </View>
-          </View>
-          <View className="mt-ds-8 gap-ds-4">
-            {event.genre ? (
-              <Text variant="caption" className="uppercase text-muted-foreground">
-                {event.genre}
+            <View
+              className={cn('shrink-0 overflow-hidden rounded-[16px] px-ds-16', overlayWide ? 'mt-ds-8 py-ds-8' : 'mt-ds-12 py-ds-12')}
+              style={flyerGlass}>
+              {event.genre ? (
+                <Text
+                  variant="caption"
+                  style={{ color: genreOverlayColor(event.genre), ...overlayTextShadow }}
+                  numberOfLines={1}>
+                  {event.genre}
+                </Text>
+              ) : null}
+              <Text
+                variant={overlayWide ? 'headingSm' : 'heading'}
+                className="mt-ds-4"
+                style={{
+                  color: PAPER_WHITE,
+                  fontSize: overlayWide ? 22 : 28,
+                  lineHeight: overlayWide ? 26 : 32,
+                  fontWeight: '700',
+                }}
+                numberOfLines={2}>
+                {event.name}
               </Text>
-            ) : null}
-            <Text variant="subheading" numberOfLines={2}>
-              {event.name}
-            </Text>
-            <Text variant="muted" numberOfLines={1}>
-              {event.venueName}
-            </Text>
-            {caption ? (
-              <Text variant="caption" className="uppercase text-aurora">
-                {caption}
-              </Text>
-            ) : null}
+              {tagline ? (
+                <Text
+                  variant="caption"
+                  className="mt-ds-8"
+                  style={{ color: PAPER_MUTED }}
+                  numberOfLines={overlayWide ? 1 : 2}>
+                  {tagline}
+                </Text>
+              ) : null}
+            </View>
+            <View className="min-h-0 flex-1" />
+            <View className="shrink-0 flex-row items-stretch overflow-hidden rounded-[16px]" style={flyerGlass}>
+              <View className="min-w-0 flex-1 flex-row items-center gap-ds-8 px-ds-12 py-ds-12">
+                <MapPin size={14} color={PAPER_WHITE} strokeWidth={2} />
+                <View className="min-w-0 flex-1">
+                  <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
+                    {venue}
+                  </Text>
+                  {venue !== city ? (
+                    <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
+                      {city}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+              <View className="my-ds-8 w-px bg-paper-white/20" />
+              <View className="min-w-0 flex-1 flex-row items-center gap-ds-8 px-ds-12 py-ds-12">
+                <Calendar size={14} color={PAPER_WHITE} strokeWidth={2} />
+                <View className="min-w-0 flex-1">
+                  <Text variant="caption" style={{ color: PAPER_WHITE }} numberOfLines={1}>
+                    {formatCardDayShort(event.startsAt)}
+                  </Text>
+                  <Text variant="caption" style={{ color: PAPER_MUTED }} numberOfLines={1}>
+                    {timeLabel}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
       </PressScale>
@@ -147,21 +209,22 @@ export function EventCard({
           hitSlop={4}
           onPress={() => void toggleSave(event.id, isLoggedIn)}
           className="absolute right-ds-4 top-ds-4 z-10 size-11 items-center justify-center">
-          <View className="size-9 items-center justify-center rounded-full bg-pitch-black/55">
-            <Heart size={18} color={PAPER_WHITE} fill={saved ? PAPER_WHITE : 'transparent'} strokeWidth={2} />
-          </View>
+          <Heart size={20} color={PAPER_WHITE} fill={saved ? PAPER_WHITE : 'transparent'} strokeWidth={2} />
         </Pressable>
       ) : null}
     </View>
   );
 }
 
-const scrimStyle =
-  Platform.OS === 'web'
-    ? ({
-        backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.32) 55%, transparent 100%)',
-      } as object)
-    : { backgroundColor: 'rgba(0,0,0,0.48)' };
+function genreOverlayColor(genre: string) {
+  const key = genre.trim().toLowerCase();
+  if (key === 'techno') return '#7FFEB1';
+  if (key === 'industrial') return '#FF4D3D';
+  if (key === 'house') return '#3DDCFF';
+  if (key === 'trance') return '#B8A4FF';
+  if (key === 'club') return '#FFC44D';
+  return PAPER_WHITE;
+}
 
 function listingAspect(wide: boolean) {
   return wide ? 'aspect-[16/10] w-full' : 'aspect-[4/5] w-full';
@@ -179,11 +242,11 @@ function PosterThumb({
   wide?: boolean;
 }) {
   const framed = Boolean(className) || listing;
-  const fallback = listing ? listingAspect(wide) : 'aspect-[3/4] w-full';
+  const fallback = listing ? listingAspect(wide) : 'aspect-[4/5] w-full';
   if (event.flyerUrl) {
     return (
       <View className={cn('overflow-hidden bg-muted', className ?? fallback)}>
-        <FlyerImage uri={event.flyerUrl} className="h-full w-full" aspectRatio={framed ? undefined : 3 / 4} />
+        <FlyerImage uri={event.flyerUrl} className="h-full w-full" aspectRatio={framed ? undefined : 4 / 5} />
       </View>
     );
   }
@@ -198,11 +261,8 @@ function PosterThumb({
 
 export function EventGrid({ children }: { children: ReactNode }) {
   const compact = useCompactLayout();
-  if (Platform.OS !== 'web') {
-    return <View className="w-full flex-row flex-wrap justify-between gap-y-ds-24">{children}</View>;
-  }
-  if (compact) {
-    return <View className="w-full flex-row flex-wrap justify-between gap-y-ds-16">{children}</View>;
+  if (Platform.OS !== 'web' || compact) {
+    return <View className="w-full gap-ds-24">{children}</View>;
   }
   return (
     <View className="w-full" style={desktopListingGridStyle}>
@@ -214,12 +274,12 @@ export function EventGrid({ children }: { children: ReactNode }) {
 export function EventGridItem({ children }: { children: ReactNode }) {
   const compact = useCompactLayout();
   if (Platform.OS !== 'web' || compact) {
-    return <View style={{ width: '48%' }}>{children}</View>;
+    return <View className="w-full">{children}</View>;
   }
-  return <View className="min-w-0 w-full max-w-[260px]">{children}</View>;
+  return <View className="min-w-0 w-full max-w-[360px]">{children}</View>;
 }
 
-/** Stacked feed on phone; same 220–260px listing grid as Explorar on desktop web. */
+/** Stacked feed on phone; same listing grid as Explorar on desktop web. */
 export function EventFeed({ children }: { children: ReactNode }) {
   const compact = useCompactLayout();
   if (Platform.OS !== 'web' || compact) {
@@ -229,7 +289,7 @@ export function EventFeed({ children }: { children: ReactNode }) {
     <View className="w-full" style={desktopListingGridStyle}>
       {Children.map(children, (child) => {
         if (child == null || typeof child === 'boolean') return child;
-        return <View className="min-w-0 w-full max-w-[260px]">{child}</View>;
+        return <View className="min-w-0 w-full max-w-[360px]">{child}</View>;
       })}
     </View>
   );

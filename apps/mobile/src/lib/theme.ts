@@ -4,14 +4,14 @@ import { vars } from 'nativewind';
 export const THEME = {
   light: {
     // Semantic tokens
-    background: '#f7f7fa',
+    background: '#f2f2f5',
     foreground: '#0b0b12',
     foregroundMuted: '#5c5c6e',
     foregroundSubtle: '#8a8a9b',
 
-    // Surface hierarchy
+    // Surface hierarchy - visible contrast
     surface: '#ffffff',
-    surfaceSunken: '#f0f0f5',
+    surfaceSunken: '#e8e8ed',
     surfaceElevated: '#ffffff',
     surfaceRaised: '#ffffff',
     card: '#ffffff',
@@ -67,28 +67,28 @@ export const THEME = {
   },
   dark: {
     // Semantic tokens
-    background: '#07070c',
+    background: '#08080d',
     foreground: '#f5f5f8',
-    foregroundMuted: '#9a9aab',
-    foregroundSubtle: '#6a6a7b',
+    foregroundMuted: '#a0a0b0',
+    foregroundSubtle: '#6b6b7a',
 
-    // Surface hierarchy (3 levels for depth)
-    surface: '#0e0e14',
-    surfaceSunken: '#07070c',
-    surfaceElevated: '#16161f',
-    surfaceRaised: '#1e1e28',
-    card: '#0e0e14',
+    // Surface hierarchy (3 levels for visible depth)
+    surface: '#111118',
+    surfaceSunken: '#08080d',
+    surfaceElevated: '#1a1a22',
+    surfaceRaised: '#242430',
+    card: '#111118',
     cardForeground: '#f5f5f8',
-    popover: '#16161f',
+    popover: '#1a1a22',
     popoverForeground: '#f5f5f8',
 
     // Actions and states
     primary: '#f5f5f8',
     primaryForeground: '#0b0b12',
-    secondary: '#1c1c26',
+    secondary: '#1e1e28',
     secondaryForeground: '#f5f5f8',
-    muted: '#1a1a24',
-    mutedForeground: '#9a9aab',
+    muted: '#1c1c25',
+    mutedForeground: '#a0a0b0',
     accent: '#2a2248',
     accentForeground: '#f5f5f8',
     destructive: '#ff4d3d',

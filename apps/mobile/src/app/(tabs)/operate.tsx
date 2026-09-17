@@ -40,8 +40,7 @@ export default function OperateHubScreen() {
   }));
   const tonight = density === 'door' ? pickTonight(rows) : null;
   const rest = tonight ? rows.filter((row) => row.membership.id !== tonight.membership.id) : rows;
-  const listingRows = density === 'door' ? (tonight ? [tonight] : []) : rest;
-  const rowRows = density === 'door' ? rest : [];
+  const ordered = tonight ? [tonight, ...rest] : rest;
 
   const lead =
     density === 'door'
@@ -83,32 +82,20 @@ export default function OperateHubScreen() {
             lead={density === 'metrics' ? 'Las métricas aparecen cuando te sumen a una fecha.' : 'Cada quien entra con su cuenta. Nada de login compartido.'}
           />
         ) : null}
-        {listingRows.length > 0 ? (
+        {ordered.length > 0 ? (
           <EventFeed>
-            {listingRows.map((row, index) => (
+            {ordered.map((row, index) => (
               <FadeSlideIn key={row.membership.id} index={index} className="w-full">
                 <OperateEventBlock
                   userId={user.id}
                   membership={row.membership}
                   event={row.event}
                   loading={row.loading}
-                  layout="listing"
                 />
               </FadeSlideIn>
             ))}
           </EventFeed>
         ) : null}
-        {rowRows.map((row, index) => (
-          <FadeSlideIn key={row.membership.id} index={listingRows.length + index}>
-            <OperateEventBlock
-              userId={user.id}
-              membership={row.membership}
-              event={row.event}
-              loading={row.loading}
-              layout="row"
-            />
-          </FadeSlideIn>
-        ))}
       </View>
     </Screen>
   );
@@ -119,16 +106,14 @@ function OperateEventBlock({
   membership,
   event,
   loading,
-  layout,
 }: {
   userId: string;
   membership: Membership;
   event?: EventWithExtras;
   loading?: boolean;
-  layout: 'listing' | 'row';
 }) {
   if (loading && !event) {
-    return layout === 'row' ? <ListingSkeleton /> : <ListingSkeleton />;
+    return <ListingSkeleton />;
   }
   const cardEvent = event ?? placeholderEvent(membership.eventId);
   const { primary, overflow } = buildEventStaffActions({
@@ -142,7 +127,6 @@ function OperateEventBlock({
     <View className="w-full gap-ds-12">
       <EventCard
         event={cardEvent}
-        layout={layout}
         onPress={() => router.push(`/event/${membership.eventId}` as Href)}
       />
       <View className="flex-row flex-wrap gap-ds-8">

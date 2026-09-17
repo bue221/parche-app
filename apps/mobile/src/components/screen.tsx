@@ -27,6 +27,7 @@ type ScreenProps = PropsWithChildren<{
   eyebrow?: string;
   mark?: ReactNode;
   actions?: ReactNode;
+  headerAction?: ReactNode;
   footer?: ReactNode;
   refreshControl?: ScrollViewProps['refreshControl'];
 }>;
@@ -46,6 +47,7 @@ export function Screen({
   eyebrow,
   mark,
   actions,
+  headerAction,
   footer,
   refreshControl,
 }: ScreenProps) {
@@ -92,7 +94,14 @@ export function Screen({
       }>
       {back ? <BackBar /> : null}
       {title ? (
-        <PageHeader eyebrow={eyebrow} mark={mark} title={title} lead={lead} actions={actions} />
+        <PageHeader
+          eyebrow={eyebrow}
+          mark={mark}
+          title={title}
+          lead={lead}
+          actions={actions}
+          headerAction={headerAction}
+        />
       ) : null}
       {children}
     </View>

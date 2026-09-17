@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
@@ -23,8 +23,14 @@ type Segment = 'saved' | 'tickets';
 export default function WalletScreen() {
   const { isLoggedIn, user, hydrated } = useAuthSnapshot();
   const openAuth = useAuthSheet((s) => s.open);
-  const [segment, setSegment] = useState<Segment>('saved');
+  const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const tabParam = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const [segment, setSegment] = useState<Segment>(tabParam === 'tickets' ? 'tickets' : 'saved');
   const redirectedPrint = useRef(false);
+
+  useEffect(() => {
+    if (tabParam === 'tickets') setSegment('tickets');
+  }, [tabParam]);
   const artistIds = useInterestStore((s) => s.artistIds);
   const eventIds = useInterestStore((s) => s.eventIds);
   const { data: tickets = [], error, refetch, isLoading } = useQuery({
@@ -117,7 +123,7 @@ export default function WalletScreen() {
               <Text variant="headingSm">Fechas</Text>
               <EventFeed>
                 {savedEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onPress={() => router.push(`/event/${event.id}` as Href)} />
+                  <EventCard key={event.id} event={event} saveable onPress={() => router.push(`/event/${event.id}` as Href)} />
                 ))}
               </EventFeed>
             </View>

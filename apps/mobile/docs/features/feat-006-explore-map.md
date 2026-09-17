@@ -11,22 +11,22 @@ El mapa muestra pines de eventos publicados. Teselas OSM Humanitarian (HOT) + Le
 
 ## Quick path
 
-1. Abrir Mapa: mapa colorido con pills de fecha; la lista queda en una franja colapsada (asa + recuento).
-2. Subir el sheet al peek (~50%) o a lista completa. Tap pin abre peek; tap card → [FEAT-007](feat-007-event-detail.md).
-3. El botón **Mapa** (lista expandida) o bajar el sheet vuelve al mapa.
+1. Abrir Mapa: overview de Bogotá (zoom ≤ 11) con pills; la lista queda colapsada.
+2. Chips/filtros del mapa no cambian Explorar. Tap pin abre peek; tap card → [FEAT-007](feat-007-event-detail.md).
+3. El botón **Mapa** o bajar el sheet vuelve al mapa.
 
 ## Pantallas
 
 | Pieza | Regla |
 |-------|-------|
-| Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Contenedor `rounded-[24px]` alineado al sheet. Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
+| Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Full-bleed, `rounded-[24px]` alineado al sheet. Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
 | Pines | Pill blanca con fecha (`Hoy` / `18 sep`) y punto de género (neon / volt / amber). Seleccionado = fill aurora |
-| Lista/mapa | SearchBar + chips + botón filtros. Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con cards 16:10), expandido + botón **Mapa**. Wide web: lista al lado |
+| Lista/mapa | SearchBar + chips + botón filtros. Chips full-bleed hasta el borde (igual que Explorar). Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con cards overlay 16:10), expandido + botón **Mapa**. Wide web: lista al lado con el mismo overlay |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo
 
-Misma fuente que Explorar: `GET /v1/events`. Sprint 4: `min_lat`, `min_lng`, `max_lat`, `max_lng` al mover el viewport.
+Misma fuente que Explorar (`GET /v1/events`) pero **filtros propios** (`scope=map`). Sprint 4: `min_lat`, `min_lng`, `max_lat`, `max_lng` al mover el viewport.
 
 El pin de publicación es [FEAT-011](feat-011-map-pin.md), no esta pantalla.
 

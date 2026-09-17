@@ -227,11 +227,7 @@ export function MapSheet({
         ) : loading ? (
           <View style={{ paddingHorizontal: 16, gap: 24, paddingTop: 16 }}>
             {[0, 1].map((key) => (
-              <View key={key}>
-                <Skeleton className="aspect-[16/10] w-full rounded-images" />
-                <Skeleton className="mt-ds-8 h-4 w-2/3" />
-                <Skeleton className="mt-ds-4 h-3 w-1/2" />
-              </View>
+              <Skeleton key={key} className="aspect-[4/5] w-full rounded-cards" />
             ))}
           </View>
         ) : events.length === 0 ? (
@@ -265,7 +261,6 @@ export function MapSheet({
             renderItem={({ item }) => (
               <EventCard
                 layout="listing"
-                widePhoto
                 saveable
                 event={item}
                 selected={item.id === selectedId}

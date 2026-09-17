@@ -19,6 +19,109 @@ export function formatDay(iso: string): string {
   });
 }
 
+function stripDateDots(value: string) {
+  return value.replace(/\./g, '').trim();
+}
+
+const BOGOTA_TZ = 'America/Bogota';
+
+/** Overlay eyebrow: "JUE, 17 DE SEPT". */
+export function formatCardDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const weekday = stripDateDots(
+    date.toLocaleDateString('es-CO', { weekday: 'short', timeZone: BOGOTA_TZ })
+  ).toUpperCase();
+  const month = stripDateDots(
+    date.toLocaleDateString('es-CO', { month: 'short', timeZone: BOGOTA_TZ })
+  ).toUpperCase();
+  const day = date.toLocaleDateString('es-CO', { day: 'numeric', timeZone: BOGOTA_TZ });
+  return `${weekday}, ${day} DE ${month}`;
+}
+
+/** Overlay date cell: "17 SEPT". */
+export function formatCardDayShort(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const month = stripDateDots(
+    date.toLocaleDateString('es-CO', { month: 'short', timeZone: BOGOTA_TZ })
+  ).toUpperCase();
+  const day = date.toLocaleDateString('es-CO', { day: 'numeric', timeZone: BOGOTA_TZ });
+  return `${day} ${month}`;
+}
+
+const BOGOTA_HINT =
+  /bogot|teusaquillo|chapinero|usaqu[eé]n|suba|kennedy|engativ|fontib[oó]n|puente aranda|el dorado|sim[oó]n bol[ií]var|monserrate/i;
+
+export function eventCity(addressText?: string): string {
+  const raw = addressText?.trim() ?? '';
+  if (!raw || BOGOTA_HINT.test(raw)) return 'Bogotá';
+  const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  return parts[parts.length - 1] ?? 'Bogotá';
+}
+
+export function eventVenueParts(venueName?: string, addressText?: string): { venue: string; city: string } {
+  const city = eventCity(addressText);
+  if (venueName?.trim()) return { venue: venueName.trim(), city };
+  const parts = (addressText ?? '').split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) return { venue: parts[0], city };
+  return { venue: city, city };
+}
+
+export function isAllNight(startsAt: string, endsAt?: string): boolean {
+  if (endsAt) {
+    const ms = Date.parse(endsAt) - Date.parse(startsAt);
+    if (Number.isFinite(ms) && ms >= 6 * 60 * 60 * 1000) return true;
+  }
+  const hour = bogotaHour(startsAt);
+  if (hour == null) return false;
+  return hour >= 21 || hour < 6;
+}
+
+function bogotaHour(iso: string): number | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const raw = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BOGOTA_TZ,
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+  const hour = Number.parseInt(raw, 10);
+  return Number.isFinite(hour) ? hour : null;
+}
+
+export function eventTimeLabel(startsAt: string, endsAt?: string, caption?: string): string {
+  if (caption?.trim()) return caption.trim().toUpperCase();
+  if (isAllNight(startsAt, endsAt)) return 'ALL NIGHT';
+  const date = new Date(startsAt);
+  if (Number.isNaN(date.getTime())) return startsAt;
+  return date.toLocaleTimeString('es-CO', {
+    timeZone: BOGOTA_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Three-beat overlay line from genres or description: "NATURALEZA × RITMO × COMUNIDAD". */
+export function eventTagline(description?: string, genres?: string[]): string | null {
+  const extra = (genres ?? []).map((genre) => genre.trim()).filter(Boolean);
+  if (extra.length >= 2) {
+    return extra.slice(0, 3).map((genre) => genre.toUpperCase()).join('  ×  ');
+  }
+  const raw = description?.trim();
+  if (!raw) return null;
+  const beats = raw
+    .replace(/[:;/|]/g, ',')
+    .split(',')
+    .map((part) => part.replace(/\.$/, '').trim())
+    .filter((part) => part.length >= 3)
+    .map((part) => part.split(/\s+/).slice(0, 3).join(' ').toUpperCase());
+  if (beats.length >= 2) return beats.slice(0, 3).join('  ×  ');
+  const one = raw.replace(/\.$/, '').trim().toUpperCase();
+  if (one.length <= 42) return one;
+  return `${one.slice(0, 40).trim()}…`;
+}
+
 /** Compact pin label: "Hoy" or "18 sep". */
 export function formatPinDay(iso: string, now = new Date()): string {
   if (isSameLocalDay(iso, now)) return 'Hoy';

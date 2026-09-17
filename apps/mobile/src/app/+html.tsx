@@ -9,8 +9,8 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <title>Parche</title>
-        <meta name="theme-color" content="#f4f4f7" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#07070c" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#f2f2f5" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#08080d" media="(prefers-color-scheme: dark)" />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>

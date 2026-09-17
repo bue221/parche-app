@@ -2,12 +2,25 @@ import { create } from 'zustand';
 
 import type { EventFilters } from '@/data/types';
 
+export type FilterScope = 'agenda' | 'map';
+
 type FilterState = {
-  filters: EventFilters;
-  setFilters: (next: EventFilters) => void;
+  agenda: EventFilters;
+  map: EventFilters;
+  setFilters: (scope: FilterScope, filters: EventFilters) => void;
 };
 
-export const useFilters = create<FilterState>((set) => ({
-  filters: {},
-  setFilters: (filters) => set({ filters }),
+const store = create<FilterState>((set) => ({
+  agenda: {},
+  map: {},
+  setFilters: (scope, filters) => set({ [scope]: filters }),
 }));
+
+export function useFilters(scope: FilterScope) {
+  const filters = store((s) => s[scope]);
+  const setScopeFilters = store((s) => s.setFilters);
+  return {
+    filters,
+    setFilters: (next: EventFilters) => setScopeFilters(scope, next),
+  };
+}

@@ -61,7 +61,10 @@ const pick = ${opts.pick ? 'true' : 'false'};
 const zoom = ${zoom ? 'true' : 'false'};
 let padTop = ${padTop};
 let padBottom = ${padBottom};
-const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([${BOGOTA.lat}, ${BOGOTA.lng}], 12);
+const overview = ${zoom ? 'false' : 'true'};
+const startZoom = overview ? 11 : 13;
+const fitMaxZoom = overview ? 11 : 16;
+const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([${BOGOTA.lat}, ${BOGOTA.lng}], startZoom);
 if (zoom) L.control.zoom({ position: 'topright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -139,11 +142,15 @@ if (cluster) cluster.addTo(map);
 let marker = pin ? L.marker([pin.lat, pin.lng], { icon: makeIcon() }).addTo(map) : null;
 if (pin) markers.push(marker);
 function fitAll() {
-  if (markers.length > 1) {
-    map.fitBounds(L.featureGroup(markers).getBounds(), boundsPad());
-  } else if (markers.length === 1) {
-    panToVisible(markers[0].getLatLng());
+  if (markers.length === 0) return;
+  if (overview || markers.length > 1) {
+    map.fitBounds(L.featureGroup(markers).getBounds(), Object.assign(boundsPad(), {
+      maxZoom: fitMaxZoom,
+      animate: false
+    }));
+    return;
   }
+  panToVisible(markers[0].getLatLng());
 }
 fitAll();
 function setSelected(id) {

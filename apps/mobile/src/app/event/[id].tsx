@@ -11,6 +11,7 @@ import { ErrorState, Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
 import { OsmMap } from '@/components/osm-map';
 import { Screen } from '@/components/screen';
+import { SectionRail } from '@/components/section-rail';
 import { StickyCta } from '@/components/sticky-cta';
 import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
@@ -274,15 +275,17 @@ export default function EventDetailScreen() {
       ) : null}
 
       {similar.length > 0 ? (
-        <View className="mt-ds-32 gap-ds-16">
-          <Text variant="headingSm">Más como este</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+        <View className="mt-ds-32">
+          <SectionRail title="Más como este">
             {similar.map((row) => (
-              <View key={row.id} style={{ width: 168 }}>
-                <EventCard event={row} onPress={() => router.push(`/event/${row.id}` as Href)} />
-              </View>
+              <EventCard
+                key={row.id}
+                event={row}
+                saveable
+                onPress={() => router.push(`/event/${row.id}` as Href)}
+              />
             ))}
-          </ScrollView>
+          </SectionRail>
         </View>
       ) : null}
 

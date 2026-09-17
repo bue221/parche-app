@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { PressScale } from '@/components/motion';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cn } from '@/lib/utils';
 
@@ -12,12 +13,21 @@ const PITCH_BLACK = '#0B0B12';
 
 export function ChipRow({ children }: { children: ReactNode }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-      {children}
-    </ScrollView>
+    <View style={{ marginHorizontal: -Spacing.three, flexGrow: 0 }}>
+      <ScrollView
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{
+          gap: Spacing.two,
+          paddingHorizontal: Spacing.three,
+          alignItems: 'center',
+          flexGrow: 0,
+        }}>
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 

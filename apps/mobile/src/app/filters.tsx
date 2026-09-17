@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -9,7 +9,7 @@ import { Screen } from '@/components/screen';
 import { StickyCta } from '@/components/sticky-cta';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { useFilters } from '@/data/filters';
+import { useFilters, type FilterScope } from '@/data/filters';
 import {
   endOfDayISO,
   fromDateInput,
@@ -21,8 +21,9 @@ import {
 import { GENRE_CHIPS } from '@/lib/genres';
 
 export default function FiltersScreen() {
-  const current = useFilters((s) => s.filters);
-  const setFilters = useFilters((s) => s.setFilters);
+  const params = useLocalSearchParams<{ scope?: string }>();
+  const scope: FilterScope = params.scope === 'map' ? 'map' : 'agenda';
+  const { filters: current, setFilters } = useFilters(scope);
   const [q, setQ] = useState(current.q ?? '');
   const [genre, setGenre] = useState(current.genre ?? '');
   const [from, setFrom] = useState(toDateInput(current.from));
@@ -53,7 +54,7 @@ export default function FiltersScreen() {
               variant="outline"
               onPress={() => {
                 setFilters({});
-                router.replace('/' as Href);
+                router.back();
               }}>
               <Text>Limpiar</Text>
             </Button>

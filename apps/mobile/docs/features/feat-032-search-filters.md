@@ -17,7 +17,7 @@ El asistente recorta la agenda por fecha, subgénero, DJ y texto. El mapa puede 
 
 ## Pantallas
 
-SearchBar + chips en Explorar y Mapa. Pantalla compacta de filtros con CTA fijo. Sin color de acento. Bbox: al soltar el mapa en Mapa (debounce).
+SearchBar + chips en Explorar y Mapa, **estado independiente** (scope `agenda` vs `map`). Chips full-bleed hasta el borde de la pantalla en ambas. Pantalla compacta de filtros con CTA fijo. Sin color de acento. Bbox: al soltar el mapa en Mapa (debounce).
 
 ## Flujo
 
@@ -37,7 +37,7 @@ Filtro por clubes (RC-023). ML.
 
 ## Checklist
 
-- [ ] Filtros de Explorar y mapa no divergen en params.
+- [ ] Filtros de Explorar y mapa usan los mismos params de API, pero **no** el mismo estado.
 - [ ] Cambiar filtro no concatena páginas viejas.
 
 ## Relacionadas

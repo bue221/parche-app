@@ -17,7 +17,7 @@ export function SectionRail({
 }) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? Math.min(280, Math.max(220, width * 0.72)) : 240;
+  const cardWidth = width > 0 ? Math.min(340, Math.max(280, width * 0.82)) : 300;
 
   return (
     <View

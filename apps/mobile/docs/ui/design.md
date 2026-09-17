@@ -26,26 +26,26 @@ The system uses multiple surface levels and text weights to create visual hierar
 
 | Role | Light | Dark | Use |
 |------|-------|------|-----|
-| Canvas (`background`) | `#F7F7FA` | `#07070C` | Page background |
-| Surface (`surface`) | `#FFFFFF` | `#0E0E14` | Cards, containers |
-| Sunken (`surface-sunken`) | `#F0F0F5` | `#07070C` | Wells, inset areas |
-| Elevated (`surface-elevated`) | `#FFFFFF` | `#16161F` | Modals, popovers |
-| Raised (`surface-raised`) | — | `#1E1E28` | Prominent elements (dark only) |
+| Canvas (`background`) | `#F2F2F5` | `#08080D` | Page background |
+| Surface (`surface`) | `#FFFFFF` | `#111118` | Cards, containers |
+| Sunken (`surface-sunken`) | `#E8E8ED` | `#08080D` | Wells, inset areas |
+| Elevated (`surface-elevated`) | `#FFFFFF` | `#1A1A22` | Modals, popovers |
+| Raised (`surface-raised`) | — | `#242430` | Prominent elements (dark only) |
 
 ### Text hierarchy
 
 | Role | Light | Dark | Use |
 |------|-------|------|-----|
 | Primary (`foreground`) | `#0B0B12` | `#F5F5F8` | Titles, headings, body |
-| Muted (`foreground-muted`) | `#5C5C6E` | `#9A9AAB` | Secondary text, descriptions |
-| Subtle (`foreground-subtle`) | `#8A8A9B` | `#6A6A7B` | Captions, timestamps, hints |
+| Muted (`foreground-muted`) | `#5C5C6E` | `#A0A0B0` | Secondary text, descriptions |
+| Subtle (`foreground-subtle`) | `#8A8A9B` | `#6B6B7A` | Captions, timestamps, hints |
 
 ### Interactive elements
 
 | Role | Light | Dark |
 |------|-------|------|
 | Filled pill (`primary`) | `#0B0B12` / label `#F5F5F8` | `#F5F5F8` / label `#0B0B12` |
-| Soft fill (`muted`) | `#E8E8EE` / text `#5C5C6E` | `#1A1A24` / text `#9A9AAB` |
+| Soft fill (`muted`) | `#E8E8EE` / text `#5C5C6E` | `#1C1C25` / text `#A0A0B0` |
 | Hairline (`border`) | ink @ 8% | paper @ 10% |
 | Strong border (`border-strong`) | ink @ 16% | paper @ 20% |
 | Highlight (`aurora` / `ring`) | `#B8A4FF` | same |
@@ -132,7 +132,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and 
 - **Signal pill:** `variant="signal"` / `bg-aurora` + `shadow-signal` for brand highlight CTAs.
 - **Outlined pill:** 1px `border-border` on `bg-surface` with `shadow-control`; inverts with scheme.
 - **Confirm pill:** `variant="confirm"` / `bg-confirm` + `shadow-confirm` for the success beat only.
-- **Event card (listing):** 4:5 photo, 20px radius, date badge on the flyer, title / venue **below**. Default on Explorar. Optional save heart (glass on photo, 44px hit). Dense lists use `row` (`bg-surface`). Map sheet listing uses the same card with `widePhoto` (16:10). Explorar rails reuse `listing` with peek; `poster` (scrim + meta on the photo) is not the Explorar rail. `selected` = aurora border.
+- **Event card (listing):** 4:5 photo with **meta on the flyer**: date + heart, glass title block (genre, name, tagline), glass footer (venue/city + date/ALL NIGHT). 20px radius. Default on every event list. Optional save heart (44px hit; tap does not open detail). Dense staff lists may still use `row` (`bg-surface`). Map sheet uses the same overlay with `widePhoto` (16:10). `poster` is the same overlay. `selected` = aurora border.
 - **Search:** pill “¿Qué parche buscas?” is the Explorar hero on `bg-surface` with `shadow-control` and a muted icon well. Horizontal chips with icon: Todo + day windows + genres. No Inter page title on the tab.
 - **Hero (auth / onboarding):** Antonio display type is allowed. Event detail uses Inter title under a photo hero.
 - **Dark band:** full-bleed `pitch-black`. Use for auth/onboarding, not for every page header.
@@ -147,7 +147,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and 
 
 **Volver.** `Screen back` renders `BackBar`: caption 12 uppercase, `← Volver`, hit ≥44px, 16px below the control. Fallback is `router.replace('/')` if there is no history. Do not draw a custom back on stack screens.
 
-**Title.** `Screen title` / `lead` / `eyebrow` / `mark` / `actions` render `PageHeader`. Inter `heading` (28), never Antonio. Lead is `muted`. Use the props — do not compose `BackBar` + `PageHeader` by hand.
+**Title.** `Screen title` / `lead` / `eyebrow` / `mark` / `actions` / `headerAction` render `PageHeader`. Inter `heading` (28), never Antonio. Lead is `muted`. `headerAction` sits on the right of the title row (44px icon control — theme toggle on Parche). `actions` stay below the title for page CTAs. Use the props — do not compose `BackBar` + `PageHeader` by hand.
 
 ```tsx
 <Screen back title="Filtros" lead="Nombre, barrio, género o día.">

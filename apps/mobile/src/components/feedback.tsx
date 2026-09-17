@@ -34,13 +34,7 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 export function ListingSkeleton() {
-  return (
-    <View>
-      <Skeleton className="aspect-[4/5] w-full" />
-      <Skeleton className="mt-ds-8 h-4 w-2/3" />
-      <Skeleton className="mt-ds-4 h-3 w-1/2" />
-    </View>
-  );
+  return <Skeleton className="aspect-[4/5] w-full rounded-cards" />;
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {

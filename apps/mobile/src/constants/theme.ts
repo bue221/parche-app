@@ -4,15 +4,27 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
+    // Text hierarchy
     text: '#0b0b12',
-    background: '#f4f4f7',
-    surface: '#ffffff',
-    backgroundElement: '#ececf1',
-    backgroundSelected: '#ece6ff',
     textSecondary: '#5c5c6e',
     textMuted: '#8a8a9b',
+
+    // Surface hierarchy - visible contrast
+    background: '#f2f2f5',
+    surface: '#ffffff',
+    surfaceSunken: '#e8e8ed',
+    surfaceElevated: '#ffffff',
+    backgroundElement: '#e8e8ee',
+    backgroundSelected: '#ece6ff',
+
+    // Stage primitives
     charcoal: '#1c1c26',
-    border: 'rgba(11, 11, 18, 0.1)',
+
+    // Borders
+    border: 'rgba(11, 11, 18, 0.08)',
+    borderStrong: 'rgba(11, 11, 18, 0.16)',
+
+    // Pigment
     aurora: '#b8a4ff',
     neon: '#3ddcff',
     confirm: '#7ffeb1',
@@ -21,15 +33,28 @@ export const Colors = {
     danger: '#ff4d3d',
   },
   dark: {
+    // Text hierarchy
     text: '#f5f5f8',
-    background: '#07070c',
-    surface: '#12121a',
-    backgroundElement: '#1c1c26',
+    textSecondary: '#a0a0b0',
+    textMuted: '#6b6b7a',
+
+    // Surface hierarchy - 3 levels for visible depth
+    background: '#08080d',
+    surface: '#111118',
+    surfaceSunken: '#08080d',
+    surfaceElevated: '#1a1a22',
+    surfaceRaised: '#242430',
+    backgroundElement: '#1c1c25',
     backgroundSelected: '#2a2248',
-    textSecondary: '#9a9aab',
-    textMuted: '#8a8a9b',
+
+    // Stage primitives
     charcoal: '#ececf1',
+
+    // Borders
     border: 'rgba(245, 245, 248, 0.1)',
+    borderStrong: 'rgba(245, 245, 248, 0.2)',
+
+    // Pigment
     aurora: '#b8a4ff',
     neon: '#3ddcff',
     confirm: '#7ffeb1',
