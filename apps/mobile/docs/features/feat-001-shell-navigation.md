@@ -11,7 +11,7 @@ La app usa un chrome de producto: el asistente vive en Explorar (listado) y Mapa
 
 ## Quick path
 
-1. Abrir la app autenticado o no.
+1. Abrir la app autenticado o no. Sin sesión, el AuthSheet se ofrece al arrancar (se puede cerrar y seguir explorando).
 2. Ver **Explorar**, **Mapa**, **Guardados** y **Cuenta** (mismos labels).
 3. Si hay promoter o membresía activa: **Operar**, con badge si hay evento hoy o invitación pending.
 
@@ -28,7 +28,7 @@ La app usa un chrome de producto: el asistente vive en Explorar (listado) y Mapa
 
 ## Flujo
 
-- Invitado: Explorar + Mapa + Guardados (local) + Cuenta (CTA). Seguir/guardar no piden cuenta. Comprar abre checkout y el auth sheet.
+- Invitado: al arrancar se ofrece AuthSheet (X para seguir). Explorar + Mapa + Guardados (local) + Cuenta (CTA). Seguir/guardar no piden cuenta. Comprar abre checkout y el auth sheet.
 - Tras login, el tab seleccionado se conserva si sigue existiendo. No redirigir a Operar solo por ser promoter.
 - Acciones de un evento (editar, escanear, métricas) salen del **detalle** o de Operar, nunca de un “modo admin” global.
 

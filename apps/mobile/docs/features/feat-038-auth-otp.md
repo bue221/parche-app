@@ -1,6 +1,6 @@
 # FEAT-038: Auth sheet y OTP
 
-La compra y la cuenta piden identidad con un bottom sheet: email + código de 6 dígitos. No hay pantalla full-screen de OTP. El registro largo deja de bloquear el checkout.
+La compra y la cuenta piden identidad con un modal de página: email + código de 6 dígitos. No hay pantalla full-screen de OTP. El registro largo deja de bloquear el checkout.
 
 | Campo | Valor |
 |-------|-------|
@@ -11,14 +11,16 @@ La compra y la cuenta piden identidad con un bottom sheet: email + código de 6 
 
 ## Quick path
 
-1. CTA de cuenta o confirmar checkout sin sesión abre el sheet.
+1. Arranque sin sesión (tras onboarding) o CTA de cuenta / confirmar checkout abre el sheet.
 2. Email → `POST /v1/auth/otp/request` (siempre 204).
 3. Código → `POST /v1/auth/otp/verify` → sesión attendee (display name del local-part).
 4. Checkout continúa en la misma pantalla. Luego sync [FEAT-037](feat-037-local-interest.md).
 
 ## Pantallas
 
-Pasos: método → email → OTP. Password es “Otras opciones” hacia [FEAT-003](feat-003-auth-login.md). Google en [FEAT-039](feat-039-auth-google.md). Promoter sigue en [FEAT-002](feat-002-auth-register.md).
+Pasos: identidad (email + Google) → OTP. Modal de página dismissible (X, logo, Continuar, icono Google). No es un bottom sheet ni una ruta nueva. Password es “Otras opciones” hacia [FEAT-003](feat-003-auth-login.md). Google en [FEAT-039](feat-039-auth-google.md). Promoter sigue en [FEAT-002](feat-002-auth-register.md).
+
+El invitado puede cerrar el modal y seguir en Explorar. Cuenta y checkout lo vuelven a abrir.
 
 ## Flujo
 
@@ -41,6 +43,7 @@ Apple Sign In. Magic link HTTP. Order anónimo sin `users.id`.
 - [ ] Checkout no redirige a `/auth/register`.
 - [ ] Sheet no es una ruta nueva.
 - [ ] OTP no se loguea en cliente.
+- [ ] Sin sesión, el modal se ofrece al arrancar y se puede cerrar.
 
 ## Relacionadas
 
