@@ -1,11 +1,12 @@
 import { router, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { BackBar } from '@/components/back-bar';
 import { Field } from '@/components/field';
 import { MediaPicker } from '@/components/media-picker';
 import { PageHeader } from '@/components/page-header';
+import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -22,6 +23,7 @@ export default function CompleteProfileScreen() {
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const phoneFieldRef = useRef<PhoneFieldHandle>(null);
 
   useEffect(() => {
     setName(user?.displayName ?? '');
@@ -34,6 +36,7 @@ export default function CompleteProfileScreen() {
 
   async function save() {
     if (busy) return;
+    if (!phoneFieldRef.current?.validate()) return;
     setBusy(true);
     setError(null);
     try {
@@ -54,7 +57,7 @@ export default function CompleteProfileScreen() {
       <View className="mt-ds-24 max-w-xl gap-ds-16">
         <MediaPicker kind="avatar" onUploaded={() => void api.auth.me()} />
         <Field label="Nombre" value={name} onChangeText={setName} />
-        <Field label="Teléfono" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <PhoneField ref={phoneFieldRef} label="Teléfono" value={phone} onChange={setPhone} />
         {error ? <Text>{error}</Text> : null}
         <Button disabled={busy} onPress={() => void save()}>
           <Text>{busy ? 'Guardando…' : 'Guardar'}</Text>

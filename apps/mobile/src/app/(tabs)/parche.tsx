@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { View } from 'react-native';
 
 import { ArtistPreview } from '@/components/artist-preview';
@@ -9,6 +9,7 @@ import { ArtistRow } from '@/components/artist-row';
 import { EventCard, EventFeed } from '@/components/event-card';
 import { EmptyState, ErrorState } from '@/components/feedback';
 import { Field } from '@/components/field';
+import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { MediaPicker } from '@/components/media-picker';
 import { PageHeader } from '@/components/page-header';
 import { ProfileMascot } from '@/components/profile-mascot';
@@ -36,6 +37,7 @@ export default function ParcheScreen() {
   const openAuth = useAuthSheet((s) => s.open);
   const [name, setName] = useState(user?.displayName ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
+  const phoneFieldRef = useRef<PhoneFieldHandle>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -136,9 +138,11 @@ export default function ParcheScreen() {
           error={error}
           saved={saved}
           saving={saving}
+          phoneRef={phoneFieldRef}
           onName={setName}
           onPhone={setPhone}
           onSave={() => {
+            if (!phoneFieldRef.current?.validate()) return;
             setSaving(true);
             setSaved(false);
             void api.auth
@@ -249,6 +253,7 @@ function AccountEditor({
   error,
   saved,
   saving,
+  phoneRef,
   onName,
   onPhone,
   onSave,
@@ -258,6 +263,7 @@ function AccountEditor({
   error: string | null;
   saved: boolean;
   saving: boolean;
+  phoneRef: Ref<PhoneFieldHandle>;
   onName: (value: string) => void;
   onPhone: (value: string) => void;
   onSave: () => void;
@@ -266,13 +272,7 @@ function AccountEditor({
     <Surface muted className="mt-ds-24 gap-ds-16">
       <MediaPicker kind="avatar" onUploaded={() => void api.auth.me()} />
       <Field label="Nombre" value={name} onChangeText={onName} />
-      <Field
-        label="Teléfono"
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={onPhone}
-        placeholder="+57 300 000 0000"
-      />
+      <PhoneField ref={phoneRef} label="Teléfono" value={phone} onChange={onPhone} />
       {error ? (
         <Text variant="helper" className="text-foreground">
           {error}

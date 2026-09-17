@@ -1,9 +1,10 @@
 import { Link, router, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { AuthSplit } from '@/components/auth-split';
 import { Field } from '@/components/field';
+import { PhoneField, type PhoneFieldHandle } from '@/components/phone-field';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
@@ -22,9 +23,11 @@ export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const phoneFieldRef = useRef<PhoneFieldHandle>(null);
 
   async function onSubmit() {
     if (busy) return;
+    if (!phoneFieldRef.current?.validate()) return;
     setBusy(true);
     setError(null);
     setFieldErrors({});
@@ -51,13 +54,12 @@ export default function RegisterScreen() {
       lead="El perfil inicial no te hace staff. Después te invitan a una fecha.">
       <Text variant="headingSm">Registro</Text>
       <Field label="Nombre" value={displayName} onChangeText={setDisplayName} error={fieldErrors.displayName} />
-      <Field
+      <PhoneField
+        ref={phoneFieldRef}
         label="Teléfono"
-        keyboardType="phone-pad"
         value={phone}
-        onChangeText={setPhone}
+        onChange={setPhone}
         error={fieldErrors.phone}
-        placeholder="+57 300 000 0000"
       />
       <Field
         label="Email"
