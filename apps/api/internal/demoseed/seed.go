@@ -5,12 +5,9 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"image"
 	"image/color"
-	"image/png"
 	"log/slog"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/parche-app/backend/internal/artists"
@@ -18,7 +15,6 @@ import (
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/media"
 	"github.com/parche-app/backend/internal/objectstore"
-	"golang.org/x/image/draw"
 )
 
 const (
@@ -40,25 +36,22 @@ type publicBucket interface {
 	AllowPublicGet(ctx context.Context) error
 }
 
-type flyerTheme struct {
-	top, mid, bottom, accent color.RGBA
-}
-
 type demoSpec struct {
-	title       string
-	description string
-	startsAt    time.Time
-	endsAt      time.Time
-	pin         events.PinInput
-	genres      []string
-	agePolicy   string
-	publish     bool
-	tickets     []events.TicketTypeInput
-	theme       flyerTheme
-	doorStaff   bool
+	title        string
+	description  string
+	startsAt     time.Time
+	endsAt       time.Time
+	pin          events.PinInput
+	genres       []string
+	agePolicy    string
+	publish      bool
+	tickets      []events.TicketTypeInput
+	theme        flyerTheme
+	style        flyerStyle
+	doorStaff    bool
 	metricsStaff bool
-	lineupLuna  bool
-	withTracks  bool
+	lineupLuna   bool
+	withTracks   bool
 }
 
 // Run is idempotent: creates missing demo accounts/events and refreshes flyers.
@@ -155,14 +148,6 @@ func Run(ctx context.Context, d Deps) error {
 
 	now := time.Now().UTC()
 	catalog := demoCatalog(now)
-	missing := 0
-	for _, spec := range catalog {
-		if _, ok := byTitle[spec.title]; !ok {
-			missing++
-		}
-	}
-	// When the catalog grows (e.g. 2027 wave), refresh flyers on existing demos too.
-	refreshExistingFlyers := missing > 0
 
 	created := 0
 	refreshed := 0
@@ -185,7 +170,7 @@ func Run(ctx context.Context, d Deps) error {
 			}
 			created++
 
-			if err := attachFlyer(ctx, d, promoterID, ev, flyerPNG(spec.title, spec.theme)); err != nil {
+			if err := attachFlyer(ctx, d, promoterID, ev, flyerBytes(spec)); err != nil {
 				if spec.publish {
 					return err
 				}
@@ -229,12 +214,10 @@ func Run(ctx context.Context, d Deps) error {
 			continue
 		}
 
-		if refreshExistingFlyers || strings.TrimSpace(ev.FlyerAssetID) == "" {
-			if err := attachFlyer(ctx, d, promoterID, ev, flyerPNG(spec.title, spec.theme)); err != nil {
-				log.Error("demo seed flyer refresh", "title", spec.title, "err", err)
-			} else {
-				refreshed++
-			}
+		if err := attachFlyer(ctx, d, promoterID, ev, flyerBytes(spec)); err != nil {
+			log.Error("demo seed flyer refresh", "title", spec.title, "err", err)
+		} else {
+			refreshed++
 		}
 		if spec.withTracks {
 			if err := ensureSelvaTracks(ctx, d, promoterID, ev); err != nil {
@@ -291,7 +274,7 @@ func demoCatalog(now time.Time) []demoSpec {
 			title: "Selva 04", description: "Cuatro salas, un patio, cero sponsors de bebida energética.",
 			startsAt: now.Add(36 * time.Hour), endsAt: now.Add(44 * time.Hour),
 			pin: events.PinInput{Name: "Bodega 9", AddressText: "Cra 24 # 39, Teusaquillo", Lat: 4.6412, Lng: -74.0789},
-			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: forest,
+			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: forest, style: styleGrain,
 			tickets: []events.TicketTypeInput{
 				{Name: "Early", PriceCents: 60000, Capacity: 80, Status: events.TicketOnSale},
 				{Name: "Door", PriceCents: 90000, Capacity: 40, Status: events.TicketOnSale},
@@ -302,7 +285,7 @@ func demoCatalog(now time.Time) []demoSpec {
 			title: "Bodega Cerrada", description: "Cierre de temporada. Lineup corto, sistema largo.",
 			startsAt: now.Add(7 * 24 * time.Hour), endsAt: now.Add(7*24*time.Hour + 6*time.Hour),
 			pin: events.PinInput{Name: "Calle 26 warehouse", AddressText: "Av El Dorado, Bogotá", Lat: 4.6651, Lng: -74.1094},
-			genres: []string{"house"}, agePolicy: "18+", publish: true, theme: amber,
+			genres: []string{"house"}, agePolicy: "18+", publish: true, theme: amber, style: styleShards,
 			tickets: []events.TicketTypeInput{
 				{Name: "GA", PriceCents: 50000, Capacity: 120, Status: events.TicketOnSale},
 			},
@@ -312,63 +295,63 @@ func demoCatalog(now time.Time) []demoSpec {
 			title: "Ensayo privado", description: "Borrador sin pin todavía — demo draft.",
 			startsAt: now.Add(14 * 24 * time.Hour), endsAt: now.Add(14*24*time.Hour + 3*time.Hour),
 			pin: events.PinInput{Name: "Estudio", AddressText: "Teusaquillo, Bogotá", Lat: 4.641, Lng: -74.078},
-			genres: []string{"ambient"}, publish: false, theme: ice,
+			genres: []string{"ambient"}, publish: false, theme: ice, style: styleMinimal,
 		},
 		// —— Calendario 2027 ——
 		{
 			title: "Año Nuevo: Pulse 27", description: "Cuenta regresiva con kick. Fuegos afuera, lasers adentro.",
 			startsAt: bogota(2027, 1, 1, 0), endsAt: bogota(2027, 1, 1, 8),
 			pin: events.PinInput{Name: "Terraza Chapinero", AddressText: "Cra 7 # 67, Chapinero", Lat: 4.6533, Lng: -74.0586},
-			genres: []string{"club"}, agePolicy: "18+", publish: true, theme: neon,
+			genres: []string{"club"}, agePolicy: "18+", publish: true, theme: neon, style: styleNeonOrb,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 150000, Capacity: 400, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Neon Garden", description: "Plantas, neón y deep house. San Valentín sin playlist comercial.",
 			startsAt: bogota(2027, 2, 14, 21), endsAt: bogota(2027, 2, 15, 5),
 			pin: events.PinInput{Name: "Invernadero Norte", AddressText: "Cll 100 # 19, Bogotá", Lat: 4.6832, Lng: -74.0481},
-			genres: []string{"house"}, agePolicy: "18+", publish: true, theme: volt,
+			genres: []string{"house"}, agePolicy: "18+", publish: true, theme: volt, style: styleBands,
 			tickets: []events.TicketTypeInput{{Name: "Early", PriceCents: 70000, Capacity: 180, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Bruma Room", description: "Equinoccio quieto. Ambient en vivo, zero phone flash.",
 			startsAt: bogota(2027, 3, 20, 20), endsAt: bogota(2027, 3, 21, 1),
 			pin: events.PinInput{Name: "Sala Oscura", AddressText: "Cra 15 # 85, Bogotá", Lat: 4.6681, Lng: -74.0572},
-			genres: []string{"ambient"}, agePolicy: "16+", publish: true, theme: ice,
+			genres: []string{"ambient"}, agePolicy: "16+", publish: true, theme: ice, style: styleMinimal,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 45000, Capacity: 90, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Acid Roof", description: "303 al aire. Si llueve, subimos el volumen.",
 			startsAt: bogota(2027, 4, 17, 22), endsAt: bogota(2027, 4, 18, 6),
 			pin: events.PinInput{Name: "Azotea 45", AddressText: "Cll 45 # 22, Teusaquillo", Lat: 4.6358, Lng: -74.0721},
-			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: neon,
+			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: neon, style: styleWire,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 90000, Capacity: 220, Status: events.TicketOnSale}},
 		},
 		{
 			title: "House Río", description: "Tarde al sol, sunset set de Onda Río. Picnic permitido.",
 			startsAt: bogota(2027, 5, 29, 16), endsAt: bogota(2027, 5, 29, 22),
 			pin: events.PinInput{Name: "Parque Simón Bolívar", AddressText: "Bogotá", Lat: 4.6585, Lng: -74.0931},
-			genres: []string{"house"}, agePolicy: "all ages", publish: true, theme: sunset,
+			genres: []string{"house"}, agePolicy: "all ages", publish: true, theme: sunset, style: styleBands,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 35000, Capacity: 500, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Industrial Yard", description: "KILO + guests. Orejeras recomendadas, ego no.",
 			startsAt: bogota(2027, 6, 19, 23), endsAt: bogota(2027, 6, 20, 7),
 			pin: events.PinInput{Name: "Patio Metalúrgico", AddressText: "Zona Industrial Puente Aranda", Lat: 4.6289, Lng: -74.112},
-			genres: []string{"industrial"}, agePolicy: "18+", publish: true, theme: danger,
+			genres: []string{"industrial"}, agePolicy: "18+", publish: true, theme: danger, style: styleShards,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 85000, Capacity: 250, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Club 26 After", description: "Afterhours hasta que el metro abra. Cash bar.",
 			startsAt: bogota(2027, 7, 10, 2), endsAt: bogota(2027, 7, 10, 10),
 			pin: events.PinInput{Name: "Sótano 26", AddressText: "Av El Dorado # 68, Bogotá", Lat: 4.6482, Lng: -74.1015},
-			genres: []string{"club"}, agePolicy: "21+", publish: true, theme: violet,
+			genres: []string{"club"}, agePolicy: "21+", publish: true, theme: violet, style: styleSilhouette,
 			tickets: []events.TicketTypeInput{{Name: "After", PriceCents: 50000, Capacity: 120, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Luna Vox: En vivo", description: "Show sentado + encore de pie. Voces, no DJ set.",
 			startsAt: bogota(2027, 8, 14, 20), endsAt: bogota(2027, 8, 14, 23),
 			pin: events.PinInput{Name: "Teatro del Parque", AddressText: "Cll 63 # 10, Bogotá", Lat: 4.6491, Lng: -74.0628},
-			genres: []string{"concierto"}, agePolicy: "all ages", publish: true, theme: violet,
+			genres: []string{"concierto"}, agePolicy: "all ages", publish: true, theme: violet, style: styleMinimal,
 			tickets: []events.TicketTypeInput{{Name: "Platea", PriceCents: 120000, Capacity: 300, Status: events.TicketOnSale}},
 			lineupLuna: true,
 		},
@@ -376,21 +359,21 @@ func demoCatalog(now time.Time) []demoSpec {
 			title: "Trance Mirador", description: "Uplifting hasta el atardecer. Trae chaqueta.",
 			startsAt: bogota(2027, 9, 25, 18), endsAt: bogota(2027, 9, 25, 23),
 			pin: events.PinInput{Name: "Mirador Monserrate base", AddressText: "Cra 2 Este, Bogotá", Lat: 4.6056, Lng: -74.0565},
-			genres: []string{"trance"}, agePolicy: "18+", publish: true, theme: sunset,
+			genres: []string{"trance"}, agePolicy: "18+", publish: true, theme: sunset, style: styleNeonOrb,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 65000, Capacity: 350, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Motor Sur All-nighter", description: "Halloween hardware: sin laptop, con máscara.",
 			startsAt: bogota(2027, 10, 30, 22), endsAt: bogota(2027, 10, 31, 8),
 			pin: events.PinInput{Name: "Bodega Halloween", AddressText: "Cll 26 warehouse B, Bogotá", Lat: 4.6668, Lng: -74.108},
-			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: danger,
+			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: danger, style: styleGrain,
 			tickets: []events.TicketTypeInput{{Name: "GA", PriceCents: 100000, Capacity: 280, Status: events.TicketOnSale}},
 		},
 		{
 			title: "Selva 05", description: "Cierre de año Selva. Cinco salas, un patio, lineup TBA.",
 			startsAt: bogota(2027, 12, 11, 21), endsAt: bogota(2027, 12, 12, 8),
 			pin: events.PinInput{Name: "Bodega 9", AddressText: "Cra 24 # 39, Teusaquillo", Lat: 4.6412, Lng: -74.0789},
-			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: forest,
+			genres: []string{"techno"}, agePolicy: "18+", publish: true, theme: forest, style: styleSilhouette,
 			tickets: []events.TicketTypeInput{
 				{Name: "Early", PriceCents: 90000, Capacity: 250, Status: events.TicketOnSale},
 				{Name: "Door", PriceCents: 120000, Capacity: 100, Status: events.TicketOnSale},
@@ -403,6 +386,20 @@ func demoCatalog(now time.Time) []demoSpec {
 func bogota(year int, month time.Month, day, hour int) time.Time {
 	loc := time.FixedZone("COT", -5*3600)
 	return time.Date(year, month, day, hour, 0, 0, 0, loc).UTC()
+}
+
+func flyerBytes(spec demoSpec) []byte {
+	genre := ""
+	if len(spec.genres) > 0 {
+		genre = spec.genres[0]
+	}
+	return flyerPNG(flyerMeta{
+		title: spec.title,
+		venue: spec.pin.Name,
+		genre: genre,
+		theme: spec.theme,
+		style: spec.style,
+	})
 }
 
 func attachFlyer(ctx context.Context, d Deps, userID string, ev events.Event, png []byte) error {
@@ -430,122 +427,6 @@ func attachFlyer(ctx context.Context, d Deps, userID string, ev events.Event, pn
 	}
 	_ = d.Media.Process(ctx, img.ID)
 	return nil
-}
-
-// flyerPNG builds a portrait gig flyer: vertical gradient, neon bars, soft glow, label blocks.
-func flyerPNG(label string, th flyerTheme) []byte {
-	const w, h = 800, 1000
-	dst := image.NewRGBA(image.Rect(0, 0, w, h))
-
-	for y := 0; y < h; y++ {
-		t := float64(y) / float64(h-1)
-		var c color.RGBA
-		if t < 0.45 {
-			u := t / 0.45
-			c = lerpRGBA(th.top, th.mid, u)
-		} else {
-			u := (t - 0.45) / 0.55
-			c = lerpRGBA(th.mid, th.bottom, u)
-		}
-		for x := 0; x < w; x++ {
-			dst.SetRGBA(x, y, c)
-		}
-	}
-
-	// Soft radial glow behind the mid band.
-	cx, cy, radius := w/2, 380, 320.0
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			dx := float64(x - cx)
-			dy := float64(y - cy)
-			d := math.Sqrt(dx*dx+dy*dy) / radius
-			if d >= 1 {
-				continue
-			}
-			a := (1 - d) * (1 - d) * 0.55
-			base := dst.RGBAAt(x, y)
-			dst.SetRGBA(x, y, blendRGBA(base, th.accent, a))
-		}
-	}
-
-	// Diagonal light streak.
-	for y := 0; y < h; y++ {
-		x0 := int(120 + float64(y)*0.35)
-		for t := -18; t <= 18; t++ {
-			x := x0 + t
-			if x < 0 || x >= w {
-				continue
-			}
-			fall := 1 - math.Abs(float64(t))/18
-			base := dst.RGBAAt(x, y)
-			dst.SetRGBA(x, y, blendRGBA(base, color.RGBA{255, 255, 255, 255}, fall*0.12))
-		}
-	}
-
-	ink := color.RGBA{245, 245, 245, 255}
-	bars := []struct {
-		y, thickness int
-		col          color.RGBA
-	}{
-		{72, 52, th.accent},
-		{180, 18, ink},
-		{720, 18, ink},
-		{860, 36, th.accent},
-	}
-	for _, b := range bars {
-		draw.Draw(dst, image.Rect(56, b.y, w-56, b.y+b.thickness), &image.Uniform{C: b.col}, image.Point{}, draw.Src)
-	}
-
-	// Encode label as block groups so files differ per event.
-	n := len(strings.TrimSpace(label))
-	if n < 1 {
-		n = 1
-	}
-	for i := 0; i < n && i < 14; i++ {
-		x := 72 + i*48
-		col := ink
-		if i%3 == 0 {
-			col = th.accent
-		}
-		draw.Draw(dst, image.Rect(x, 400, x+32, 560), &image.Uniform{C: col}, image.Point{}, draw.Src)
-	}
-
-	// Bottom corner mark.
-	draw.Draw(dst, image.Rect(w-120, h-120, w-56, h-56), &image.Uniform{C: th.accent}, image.Point{}, draw.Src)
-
-	var buf bytes.Buffer
-	_ = png.Encode(&buf, dst)
-	return buf.Bytes()
-}
-
-func lerpRGBA(a, b color.RGBA, t float64) color.RGBA {
-	if t < 0 {
-		t = 0
-	}
-	if t > 1 {
-		t = 1
-	}
-	return color.RGBA{
-		R: uint8(float64(a.R) + (float64(b.R)-float64(a.R))*t),
-		G: uint8(float64(a.G) + (float64(b.G)-float64(a.G))*t),
-		B: uint8(float64(a.B) + (float64(b.B)-float64(a.B))*t),
-		A: 255,
-	}
-}
-
-func blendRGBA(base, overlay color.RGBA, a float64) color.RGBA {
-	if a <= 0 {
-		return base
-	}
-	if a >= 1 {
-		return overlay
-	}
-	return color.RGBA{
-		R: uint8(float64(base.R)*(1-a) + float64(overlay.R)*a),
-		G: uint8(float64(base.G)*(1-a) + float64(overlay.G)*a),
-		B: uint8(float64(base.B)*(1-a) + float64(overlay.B)*a),
-		A: 255,
-	}
 }
 
 func ensureSelvaTracks(ctx context.Context, d Deps, userID string, ev events.Event) error {
