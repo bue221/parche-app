@@ -35,7 +35,14 @@ export function AuthSplit({
   const insets = useSafeAreaInsets();
 
   return (
-    <Screen scroll={!split} width="full" padded={false} flush={split} center={!web || compact}>
+    <Screen
+      scroll={!split}
+      width="full"
+      padded={false}
+      flush={split}
+      center={!web || compact}
+      headTitle={title}
+      headDescription={lead}>
       <View className={split ? 'min-h-[100vh] w-full flex-row' : 'gap-ds-24'}>
         <View
           className={cn(

@@ -26,6 +26,7 @@ La app usa un chrome de producto: Explorar combina listado y mapa (estilo Airbnb
 | Tab Cuenta | [FEAT-012](feat-012-profile-me.md); label fijo |
 | Tab bar | `TabBar` + `TabBarItem`: `bg-surface`, `shadow-tab`, aurora filled en activo, slate outline en idle |
 | Stacks | Auth (modal), detalle evento/artista, checkout, impresión, scanner, invite |
+| Web `<head>` | `WebHead` via `Screen`: `<title>` + description + og. `headTitle` / `title` / path (`Explorar`). Defaults in `+html.tsx`. Browser tabs, not campaign SEO (eso es Next) |
 
 ## Flujo
 
@@ -57,6 +58,7 @@ Drawer hamburguesa. Navegación de la web Next. Personalización de tabs por el 
 - [ ] Staff de un solo evento ve Operar; no ve métricas de otros tenants.
 - [ ] Chrome semántico (canvas + surface); tab bar `bg-surface` + `shadow-tab`; `aurora` filled en activo, slate en idle; `primary` inverso en CTAs.
 - [ ] Parche logueado no se aplana a settings: sigue el home de perfil primario.
+- [ ] En web, el tab del navegador muestra `Pantalla · Parche` (evento/artista usan el nombre).
 
 ## Relacionadas
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 
 import { ArtistRow } from '@/components/artist-row';
@@ -21,6 +21,7 @@ import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { toggleFollow, toggleSave } from '@/data/interest-sync';
 import { useInterestStore } from '@/data/interest-store';
+import { useRecentStore } from '@/data/recent-store';
 import { useAuthSnapshot } from '@/data/session';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { formatMoney, formatTime, formatWhenRange, statusLabel } from '@/lib/format';
@@ -74,6 +75,12 @@ export default function EventDetailScreen() {
     enabled: Boolean(id),
   });
 
+  useEffect(() => {
+    if (event?.id) {
+      useRecentStore.getState().record(event.id);
+    }
+  }, [event?.id]);
+
   const mapEvents = useMemo(() => (event ? [event] : []), [event]);
   const mapPin = useMemo(
     () => (event?.lat != null && event?.lng != null ? { lat: event.lat, lng: event.lng } : undefined),
@@ -84,14 +91,14 @@ export default function EventDetailScreen() {
 
   if (error && !event) {
     return (
-      <Screen back>
+      <Screen back headTitle="Esta fecha ya no está">
         <ErrorState message={userMessage(error) || 'Esta fecha ya no está'} onRetry={() => void refetch()} />
       </Screen>
     );
   }
   if (!event || isLoading) {
     return (
-      <Screen back>
+      <Screen back headTitle="Fecha">
         <View className={wide ? 'flex-row items-start gap-ds-40' : 'gap-ds-16'}>
           <Skeleton className={wide ? 'aspect-[4/5] w-[42%] max-w-[480px]' : 'aspect-[4/5] w-full'} />
           <View className={wide ? 'flex-1 gap-ds-12' : undefined}>
@@ -198,6 +205,12 @@ export default function EventDetailScreen() {
   return (
     <Screen
       back
+      headTitle={event.name}
+      headDescription={
+        event.description?.trim() ||
+        [event.venueName, formatWhenRange(event.startsAt, event.endsAt)].filter(Boolean).join(' · ')
+      }
+      headImage={event.flyerUrl}
       footer={
         compact ? (
           <StickyCta>

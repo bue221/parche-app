@@ -1,4 +1,4 @@
-import { usePathname } from 'expo-router';
+import { useIsFocused, usePathname } from 'expo-router';
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Platform, ScrollView, View, type LayoutChangeEvent, type ScrollViewProps } from 'react-native';
 import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
@@ -6,11 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackBar } from '@/components/back-bar';
 import { PageHeader } from '@/components/page-header';
+import { WebHead } from '@/components/web-head';
 import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop, WebNavHeight } from '@/constants/theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
 const WEB_TAB_PATHS = new Set(['/', '/favorites', '/wallet', '/explore', '/tickets', '/parche', '/operate']);
+const PATH_HEAD_TITLES: Record<string, string> = {
+  '/': 'Explorar',
+};
 const native = Platform.OS !== 'web';
 
 type ScreenProps = PropsWithChildren<{
@@ -24,6 +28,12 @@ type ScreenProps = PropsWithChildren<{
   back?: boolean;
   title?: string;
   lead?: string;
+  /** Browser tab / og:title. Defaults to `title`, then the tab path label. */
+  headTitle?: string;
+  headDescription?: string;
+  headImage?: string;
+  /** Set document title even if this screen is not the focused route (404). */
+  headAlways?: boolean;
   eyebrow?: string;
   mark?: ReactNode;
   actions?: ReactNode;
@@ -45,6 +55,10 @@ export function Screen({
   back = false,
   title,
   lead,
+  headTitle,
+  headDescription,
+  headImage,
+  headAlways = false,
   eyebrow,
   mark,
   actions,
@@ -57,7 +71,15 @@ export function Screen({
   const web = Platform.OS === 'web';
   const compact = useCompactLayout();
   const path = usePathname();
+  const focused = useIsFocused();
   const inWebTabs = web && WEB_TAB_PATHS.has(path);
+  const pageHead = focused || headAlways ? (
+    <WebHead
+      title={headTitle ?? title ?? PATH_HEAD_TITLES[path]}
+      description={headDescription ?? lead}
+      image={headImage}
+    />
+  ) : null;
   const [footerHeight, setFooterHeight] = useState(0);
   const topSafe = flush
     ? 0
@@ -134,6 +156,7 @@ export function Screen({
   if (!scrollEnabled) {
     return (
       <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
+        {pageHead}
         {stickyChrome}
         <View className="flex-1" style={contentPadding}>
           {inner}
@@ -168,6 +191,7 @@ export function Screen({
 
   return (
     <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
+      {pageHead}
       {stickyChrome}
       {scroller}
       {stickyFooter}
