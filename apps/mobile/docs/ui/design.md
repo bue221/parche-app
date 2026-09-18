@@ -132,7 +132,8 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and 
 - **Signal pill:** `variant="signal"` / `bg-aurora` + `shadow-signal` for brand highlight CTAs.
 - **Outlined pill:** 1px `border-border` on `bg-surface` with `shadow-control`; inverts with scheme.
 - **Confirm pill:** `variant="confirm"` / `bg-confirm` + `shadow-confirm` for the success beat only.
-- **Event card (listing):** 4:5 photo with **meta on the flyer**: date + heart, glass title block (genre, name, tagline), glass footer (venue/city + date/ALL NIGHT). Rails show **2 cards + peek** (~168px). Under 240px the title is one line and the footer stacks venue + time so copy stays readable. 20px radius. Default on every event list. Optional save heart (44px hit; tap does not open detail). Dense staff lists may still use `row` (`bg-surface`). Map sheet uses the same overlay. `poster` is the same overlay. `selected` = aurora border.
+- **Event card (listing):** square flyer + meta **under** the photo (Airbnb catalog). White pill on the photo for badges like “Esta noche”, save heart top-right (44px hit; tap does not open detail). Title 16/700 two lines; muted line is venue · date · ALL NIGHT/hora. Rails show **2 cards + peek** (~168px). Lists (Explorar grid, Favoritos detalle, Operar, mapa sheet, wallet) use the same **2-column** catalog on phone — never a full-width stack. No glass overlay on listing photos. Dense staff lists may still use `row` (`bg-surface`). `poster` uses the same catalog card. `selected` = aurora border on the flyer.
+- **Collection tile (Favoritos):** square photo `rounded-images` + title 16/700 + muted count/time **under** the photo. 2-column grid on phone. **Vistos recientemente** is a 2×2 flyer collage; city/year and artists use a single cover. Not an `EventCard`. Edita is a muted sentence-case pill in `headerAction`, not a filled CTA.
 - **Search:** pill “¿Qué parche buscas?” is the Explorar hero on `bg-surface` with `shadow-control` and a muted icon well. Horizontal chips with icon: Todo + day windows + genres. No Inter page title on the tab.
 - **Hero (auth / onboarding):** Antonio display type is allowed. Event detail uses Inter title under a photo hero.
 - **Dark band:** full-bleed `pitch-black`. Use for auth/onboarding, not for every page header.
@@ -145,9 +146,11 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and 
 
 **Safe band.** A non-scrolling `bg-background` strip equal to `insets.top` on native, or the web tab nav height (`WebNavHeight` / `WebCompactTop`) on tab routes. Scroll content starts **16px** below that band. Title and Volver scroll with the page; they must not travel into the status bar. Do not put `paddingTop: insets.top` on `contentContainerStyle`.
 
+**Sticky chrome.** `Screen stickyHeader` sits under the safe band and does not scroll. Explorar uses it for SearchBar + chips. Map mode and the wide split pin the same hero above their own scroller.
+
 **Volver.** `Screen back` renders `BackBar`: caption 12 uppercase, `← Volver`, hit ≥44px, 16px below the control. Fallback is `router.replace('/')` if there is no history. Do not draw a custom back on stack screens.
 
-**Title.** `Screen title` / `lead` / `eyebrow` / `mark` / `actions` / `headerAction` render `PageHeader`. Inter `heading` (28), never Antonio. Lead is `muted`. `headerAction` sits on the right of the title row (44px icon control — theme toggle on Parche). `actions` stay below the title for page CTAs. Use the props — do not compose `BackBar` + `PageHeader` by hand.
+**Title.** `Screen title` / `lead` / `eyebrow` / `mark` / `actions` / `headerAction` render `PageHeader`. Inter `heading` (28), never Antonio. Lead is `muted`. `headerAction` sits on the right of the title row (44px icon control — theme toggle on Parche; **Edita** muted pill on Favoritos). `actions` stay below the title for page CTAs. Use the props — do not compose `BackBar` + `PageHeader` by hand.
 
 ```tsx
 <Screen back title="Filtros" lead="Nombre, barrio, género o día.">
@@ -155,7 +158,7 @@ Cards may use **one** soft lift (`shadow-card` / `cardShadowStyle`). Fields and 
 </Screen>
 ```
 
-**Exceptions (flush / no page title).** Edge-to-edge surfaces skip the band (`flush`) and pad their own overlay with `insets.top`: mapa, puerta, print, onboarding. Event and artist **detail** keep the resource name in the body under the photo; they still use `back`. Explorar has no Inter page title — the search pill is the tab hero.
+**Exceptions (flush / no page title).** Edge-to-edge surfaces skip the band (`flush`) and pad their own overlay with `insets.top`: mapa, puerta, print, onboarding. Event and artist **detail** keep the resource name in the body under the photo; they still use `back`. Explorar has no Inter page title — the search pill is the tab hero and stays pinned with the chips.
 
 ## Do
 

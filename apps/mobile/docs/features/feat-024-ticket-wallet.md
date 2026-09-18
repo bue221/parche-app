@@ -17,15 +17,15 @@ Lista de lo que el asistente puede mostrar en puerta. Es el archivo, no la celeb
 
 ## Pantallas
 
-Cards tipo pase (foto ancha + estado + Mostrar). En teléfono, ancho completo. En web desktop, grilla 280–400px (mismo criterio que Explorar: el flyer no estira a `MaxContentWidth`). Pull-to-refresh.
+Cards tipo pase (foto cuadrada + estado + Mostrar) en la **misma grilla de 2 columnas** que Explorar. En web desktop, 168–220px (el flyer no estira a `MaxContentWidth`). Pull-to-refresh. Agrupar por estado; no mezclar válidas con usadas.
 
 | Estado ticket | Lista |
 |---------------|-------|
-| valid | Primario; CTA mostrar |
-| reserved | “Pago pendiente” |
-| used | Tachado / “usado” |
-| transferred | “Cedido” |
-| cancelled | Ocultar o archivo |
+| valid | Sección **Para mostrar**. Primario; CTA Mostrar |
+| reserved | Sección **Pago pendiente**. Tag amber |
+| used | Sección **Usadas y cedidas**. Flyer en gris, título tachado, tag muted, sin Mostrar |
+| transferred | Misma sección archivo. Tag “Cedido” |
+| cancelled | Ocultar |
 
 ## Flujo
 

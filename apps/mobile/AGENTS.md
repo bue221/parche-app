@@ -54,7 +54,7 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 | [docs/features/feat-037-local-interest.md](docs/features/feat-037-local-interest.md) | Local follows/saves + sync |
 | [docs/features/feat-038-auth-otp.md](docs/features/feat-038-auth-otp.md) | Auth sheet and OTP |
 | [docs/features/feat-039-auth-google.md](docs/features/feat-039-auth-google.md) | Google sign-in |
-| [docs/features/feat-040-saved-tab.md](docs/features/feat-040-saved-tab.md) | Saved tab |
+| [docs/features/feat-040-saved-tab.md](docs/features/feat-040-saved-tab.md) | Favoritos collections |
 | [docs/features/feat-041-complete-profile.md](docs/features/feat-041-complete-profile.md) | Optional complete profile |
 | [docs/ui/design.md](docs/ui/design.md) | Visual system: light/dark tokens, type, components, assets |
 | [docs/ui/ux.md](docs/ui/ux.md) | Motion, cards, forms, feedback, shell hit targets |

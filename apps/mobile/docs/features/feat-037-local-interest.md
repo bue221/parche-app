@@ -7,7 +7,7 @@ El invitado puede seguir artistas y guardar fechas en el dispositivo. Al crear s
 | Sprint | 4 |
 | RC | RC-009 (ampliado) |
 | Permiso UI | Público (local); sync con access |
-| Pantallas | Detalle artista, detalle evento, tab Guardados |
+| Pantallas | Detalle artista, detalle evento, tab Favoritos |
 
 ## Quick path
 
@@ -18,7 +18,7 @@ El invitado puede seguir artistas y guardar fechas en el dispositivo. Al crear s
 
 ## Pantallas
 
-Botón Seguir en perfil de artista y trailing en lineup. Botón Guardar en detalle de evento. Lista en [FEAT-040](feat-040-saved-tab.md).
+Botón Seguir en perfil de artista y trailing en lineup. Botón Guardar en detalle de evento. Colecciones en [FEAT-040](feat-040-saved-tab.md).
 
 ## Flujo
 

@@ -15,14 +15,21 @@ export function FlyerImage({
   className,
   style,
   aspectRatio,
+  muted = false,
 }: {
   uri: string;
   className?: string;
   style?: StyleProp<ImageStyle>;
   aspectRatio?: number;
+  muted?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const fill: ImageStyle = { width: '100%', ...(aspectRatio != null ? { aspectRatio } : { height: '100%' }) };
+  const mutedStyle: ImageStyle | undefined = muted
+    ? Platform.OS === 'web'
+      ? ({ opacity: 0.62, filter: 'grayscale(1)' } as ImageStyle)
+      : { opacity: 0.5 }
+    : undefined;
 
   useEffect(() => {
     setFailed(false);
@@ -38,7 +45,7 @@ export function FlyerImage({
         source={{ uri }}
         className={cn('bg-muted', className)}
         resizeMode="cover"
-        style={[fill, style]}
+        style={[fill, mutedStyle, style]}
         onError={() => {
           debugLog('media', 'flyer failed', { uri });
           setFailed(true);
@@ -51,7 +58,7 @@ export function FlyerImage({
     <ExpoImage
       source={{ uri }}
       className={cn('bg-muted', className)}
-      style={[fill, style]}
+      style={[fill, mutedStyle, style]}
       contentFit="cover"
       cachePolicy="memory-disk"
       recyclingKey={uri}

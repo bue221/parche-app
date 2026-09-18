@@ -78,11 +78,11 @@ export function EventStaffPrimary({
   return (
     <View className="gap-ds-8">
       <View className="flex-row flex-wrap gap-ds-8">
-        <Button onPress={() => router.push(action.href)}>
+        <Button className="min-w-0 flex-1" onPress={() => router.push(action.href)}>
           <Text>{action.label}</Text>
         </Button>
         {overflow.length > 0 ? (
-          <Button variant="outline" onPress={() => setOpen(true)}>
+          <Button variant="outline" className="min-w-0 flex-1" onPress={() => setOpen(true)}>
             <Text>Más</Text>
           </Button>
         ) : null}

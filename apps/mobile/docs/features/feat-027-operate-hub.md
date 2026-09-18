@@ -17,12 +17,12 @@ Punto de entrada para quien tiene membresías: mis eventos, puerta, métricas, e
 
 ## Pantallas
 
-`EventCard` listing (foto-first) + un CTA. No inventar un tercer layout. HubCard deja de ser el default de fechas.
+`EventCard` listing (foto-first) en **grilla de 2 columnas** + un CTA. No inventar un tercer layout. HubCard deja de ser el default de fechas.
 
 | Densidad | Cómo se siente |
 |----------|----------------|
-| Host (owner/manager) | Listings overlay, CTA Crear, “Continuar setup” si el draft está incompleto |
-| Puerta | Hero de la próxima fecha + CTA Puerta; el resto en el mismo overlay |
+| Host (owner/manager) | Catalog cards, CTA Crear, “Continuar setup” si el draft está incompleto |
+| Puerta | Hero de la próxima fecha + CTA Puerta; el resto en el mismo catalog card |
 | Métricas | Listing con CTA Métricas |
 | Vacío promoter | “Crea tu primera fecha” |
 | Vacío door | “Cuando te inviten, escaneas aquí” |

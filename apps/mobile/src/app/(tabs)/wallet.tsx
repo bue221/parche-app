@@ -13,6 +13,7 @@ import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSheet } from '@/data/auth-sheet-store';
 import { useAuthSnapshot } from '@/data/session';
+import { groupWalletTickets } from '@/lib/ticket-label';
 
 export default function WalletScreen() {
   const { isLoggedIn, user, hydrated } = useAuthSnapshot();
@@ -26,6 +27,7 @@ export default function WalletScreen() {
   });
 
   const visible = tickets.filter((t) => t.status !== 'cancelled');
+  const groups = groupWalletTickets(visible);
   const ticketEventIds = [...new Set(visible.map((t) => t.eventId))];
   const eventQueries = useQueries({
     queries: ticketEventIds.map((eventId) => ({
@@ -50,7 +52,10 @@ export default function WalletScreen() {
     return (
       <Screen title="Boletas" lead="Muéstralos en puerta.">
         <View className="mt-ds-24">
-          <Skeleton className="aspect-[16/10] w-full max-w-[400px]" />
+          <TicketFeed>
+            <Skeleton className="aspect-square w-full rounded-images" />
+            <Skeleton className="aspect-square w-full rounded-images" />
+          </TicketFeed>
         </View>
       </Screen>
     );
@@ -60,7 +65,7 @@ export default function WalletScreen() {
 
   return (
     <Screen title="Boletas" lead="Muéstralos en puerta.">
-      <View className="mt-ds-24 gap-ds-16">
+      <View className="mt-ds-24 gap-ds-24">
         {needsProfile ? (
           <Surface elevated onPress={() => router.push('/parche/completar-perfil' as Href)}>
             <Text variant="subheading">Completa tu perfil</Text>
@@ -86,27 +91,33 @@ export default function WalletScreen() {
                 onAction={() => router.push('/' as Href)}
               />
             ) : null}
-            {isLoading || visible.length > 0 ? (
+            {isLoading ? (
               <TicketFeed>
-                {isLoading ? (
-                  <>
-                    <Skeleton className="aspect-[16/10] w-full max-w-[400px]" />
-                    <Skeleton className="aspect-[16/10] w-full max-w-[400px]" />
-                  </>
-                ) : null}
-                {visible.map((ticket) => {
-                  const event = eventQueries.find((q) => q.data?.id === ticket.eventId)?.data;
-                  return (
-                    <TicketCard
-                      key={ticket.id}
-                      ticket={ticket}
-                      event={event}
-                      onShow={ticket.status === 'valid' ? () => router.push(`/ticket/${ticket.id}` as Href) : undefined}
-                    />
-                  );
-                })}
+                <Skeleton className="aspect-square w-full rounded-images" />
+                <Skeleton className="aspect-square w-full rounded-images" />
               </TicketFeed>
-            ) : null}
+            ) : (
+              groups.map((group) => (
+                <View key={group.id} className="gap-ds-12">
+                  <Text variant="headingSm">{group.title}</Text>
+                  <TicketFeed>
+                    {group.tickets.map((ticket) => {
+                      const event = eventQueries.find((q) => q.data?.id === ticket.eventId)?.data;
+                      return (
+                        <TicketCard
+                          key={ticket.id}
+                          ticket={ticket}
+                          event={event}
+                          onShow={
+                            ticket.status === 'valid' ? () => router.push(`/ticket/${ticket.id}` as Href) : undefined
+                          }
+                        />
+                      );
+                    })}
+                  </TicketFeed>
+                </View>
+              ))
+            )}
           </>
         )}
       </View>

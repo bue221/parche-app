@@ -225,10 +225,11 @@ export function MapSheet({
             <ErrorState message="No pudimos cargar el mapa" onRetry={onRetry} />
           </View>
         ) : loading ? (
-          <View style={{ paddingHorizontal: 16, gap: 24, paddingTop: 16 }}>
-            {[0, 1].map((key) => (
-              <Skeleton key={key} className="aspect-square w-full rounded-images" />
-            ))}
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+            <View className="flex-row justify-between gap-ds-12">
+              <Skeleton className="aspect-square w-[48.2%] rounded-images" />
+              <Skeleton className="aspect-square w-[48.2%] rounded-images" />
+            </View>
           </View>
         ) : events.length === 0 ? (
           <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
@@ -256,16 +257,19 @@ export function MapSheet({
               paddingHorizontal: 16,
               paddingTop: 16,
               paddingBottom: snap === 'expanded' ? 72 : 16,
-              gap: 24,
             }}
+            numColumns={2}
+            columnWrapperStyle={{ justifyContent: 'space-between', gap: 12, marginBottom: 16 }}
             renderItem={({ item }) => (
-              <EventCard
-                layout="listing"
-                saveable
-                event={item}
-                selected={item.id === selectedId}
-                onPress={() => onOpen(item)}
-              />
+              <View style={{ flex: 1, maxWidth: '48.2%' }}>
+                <EventCard
+                  layout="listing"
+                  saveable
+                  event={item}
+                  selected={item.id === selectedId}
+                  onPress={() => onOpen(item)}
+                />
+              </View>
             )}
           />
         )}

@@ -1,3 +1,5 @@
+import type { TicketStatus } from '@/data/types';
+
 export function formatTicketDate(iso?: string): string {
   if (!iso) return '—';
   const date = new Date(iso);
@@ -34,4 +36,23 @@ export function ticketStubCode(eventName: string | undefined, ticketId: string):
   const slug = (marked ?? tokens.join('')).slice(0, 4) || 'PARC';
   const tail = ticketId.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '0000';
   return `TCK-${slug}-${tail}`;
+}
+
+export type WalletTicketGroupId = 'ready' | 'pending' | 'archive';
+
+const WALLET_TICKET_GROUPS: { id: WalletTicketGroupId; title: string; statuses: TicketStatus[] }[] = [
+  { id: 'ready', title: 'Para mostrar', statuses: ['valid'] },
+  { id: 'pending', title: 'Pago pendiente', statuses: ['reserved'] },
+  { id: 'archive', title: 'Usadas y cedidas', statuses: ['used', 'transferred'] },
+];
+
+export function isArchivedTicket(status: TicketStatus) {
+  return status === 'used' || status === 'transferred';
+}
+
+export function groupWalletTickets<T extends { status: TicketStatus }>(tickets: T[]) {
+  return WALLET_TICKET_GROUPS.map((group) => ({
+    ...group,
+    tickets: tickets.filter((ticket) => group.statuses.includes(ticket.status)),
+  })).filter((group) => group.tickets.length > 0);
 }

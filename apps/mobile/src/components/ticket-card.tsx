@@ -1,25 +1,22 @@
-import { Children, type ReactNode } from 'react';
-import { Platform, View } from 'react-native';
+import { type ReactNode } from 'react';
+import { View } from 'react-native';
 
+import { EventFeed } from '@/components/event-card';
 import { FlyerImage } from '@/components/flyer-image';
-import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
-import { Tag } from '@/components/ui/tag';
+import { Tag, type TagTone } from '@/components/ui/tag';
 import { Text } from '@/components/ui/text';
 import type { ParcheEvent, Ticket } from '@/data/types';
-import { useCompactLayout } from '@/hooks/use-compact-layout';
-import { formatWhen, statusLabel } from '@/lib/format';
+import { cardShadowStyle } from '@/lib/card-shadow';
+import { eventTimeLabel, eventVenueParts, formatListingDate, statusLabel } from '@/lib/format';
+import { isArchivedTicket } from '@/lib/ticket-label';
 import { cn } from '@/lib/utils';
 
-export const TICKET_CARD_MIN_PX = 280;
-export const TICKET_CARD_MAX_PX = 400;
-
-const desktopTicketGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: `repeat(auto-fill, minmax(${TICKET_CARD_MIN_PX}px, ${TICKET_CARD_MAX_PX}px))`,
-  gap: 24,
-  justifyContent: 'start',
-} as object;
+function ticketTone(status: Ticket['status']): TagTone {
+  if (status === 'valid') return 'confirm';
+  if (status === 'reserved') return 'amber';
+  return 'muted';
+}
 
 export function TicketCard({
   ticket,
@@ -30,62 +27,44 @@ export function TicketCard({
   event?: ParcheEvent;
   onShow?: () => void;
 }) {
-  const compact = useCompactLayout();
-  const frame = Platform.OS === 'web' && !compact ? 'w-full max-w-[400px]' : 'w-full';
+  const archived = isArchivedTicket(ticket.status);
+  const { venue } = eventVenueParts(event?.venueName ?? '', event?.addressText);
+  const dateLabel = event ? formatListingDate(event.startsAt) : ticket.eventId;
+  const timeLabel = event ? eventTimeLabel(event.startsAt, event.endsAt) : '';
+  const meta = [venue, dateLabel, timeLabel].filter(Boolean).join(' · ');
 
   return (
-    <Surface elevated className={cn('overflow-hidden p-0', frame)}>
-      {event?.flyerUrl ? (
-        <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />
-      ) : (
-        <View className="aspect-[16/10] w-full items-center justify-center bg-muted">
-          <Text variant="headingSm" className="uppercase text-muted-foreground">
-            {(event?.name ?? 'P').slice(0, 2)}
-          </Text>
-        </View>
-      )}
-      <View className="gap-ds-12 p-ds-16">
-        <View className="flex-row items-start justify-between gap-ds-12">
-          <View className="min-w-0 flex-1 gap-ds-4">
-            <Text variant="subheading" numberOfLines={2}>
-              {event?.name ?? 'Entrada'}
-            </Text>
-            <Text variant="muted" numberOfLines={1}>
-              {event ? formatWhen(event.startsAt) : ticket.eventId}
-            </Text>
-            <Text variant="caption" className="uppercase text-muted-foreground" numberOfLines={1}>
-              {event?.venueName ?? ''}
+    <View className={cn('w-full gap-ds-8', archived && 'opacity-90')}>
+      <View className="relative w-full overflow-hidden rounded-images bg-muted" style={archived ? undefined : cardShadowStyle}>
+        {event?.flyerUrl ? (
+          <FlyerImage uri={event.flyerUrl} className="aspect-square w-full" aspectRatio={1} muted={archived} />
+        ) : (
+          <View className="aspect-square w-full items-center justify-center bg-muted">
+            <Text variant="headingSm" className="uppercase text-muted-foreground">
+              {(event?.name ?? 'P').slice(0, 2)}
             </Text>
           </View>
-          <Tag tone={ticket.status === 'valid' ? 'confirm' : ticket.status === 'reserved' ? 'amber' : 'muted'}>
-            {statusLabel(ticket.status)}
-          </Tag>
-        </View>
-        {ticket.status === 'valid' && onShow ? (
-          <Button onPress={onShow}>
-            <Text>Mostrar</Text>
-          </Button>
-        ) : null}
-        {ticket.status === 'reserved' ? <Text variant="helper">Pago pendiente</Text> : null}
-        {ticket.status === 'used' ? <Text variant="muted">Usado</Text> : null}
-        {ticket.status === 'transferred' ? <Text variant="muted">Cedido</Text> : null}
+        )}
       </View>
-    </Surface>
+      <View className="gap-ds-4">
+        <Text className={cn('font-bold', archived && 'text-muted-foreground line-through')} numberOfLines={2}>
+          {event?.name ?? 'Entrada'}
+        </Text>
+        <Text variant="muted" numberOfLines={2}>
+          {meta}
+        </Text>
+        <Tag tone={ticketTone(ticket.status)}>{statusLabel(ticket.status)}</Tag>
+      </View>
+      {ticket.status === 'valid' && onShow ? (
+        <Button onPress={onShow}>
+          <Text>Mostrar</Text>
+        </Button>
+      ) : null}
+    </View>
   );
 }
 
-/** Full-width stack on phone; 280–400px pass grid on desktop web. */
+/** Same compact 2-up catalog grid as event lists. */
 export function TicketFeed({ children }: { children: ReactNode }) {
-  const compact = useCompactLayout();
-  if (Platform.OS !== 'web' || compact) {
-    return <View className="w-full gap-ds-16">{children}</View>;
-  }
-  return (
-    <View className="w-full" style={desktopTicketGridStyle}>
-      {Children.map(children, (child) => {
-        if (child == null || typeof child === 'boolean') return child;
-        return <View className="min-w-0 w-full max-w-[400px]">{child}</View>;
-      })}
-    </View>
-  );
+  return <EventFeed>{children}</EventFeed>;
 }

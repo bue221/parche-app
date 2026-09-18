@@ -77,7 +77,7 @@ Fuente de producto: [PRD](../product/prd.md). Visual: [design.md](../ui/design.m
 | FEAT-037 | [Interés local](feat-037-local-interest.md) | 4 |
 | FEAT-038 | [Auth sheet y OTP](feat-038-auth-otp.md) | 4 |
 | FEAT-039 | [Login Google](feat-039-auth-google.md) | 4 |
-| FEAT-040 | [Tab Guardados](feat-040-saved-tab.md) | 4 |
+| FEAT-040 | [Tab Favoritos](feat-040-saved-tab.md) | 4 |
 | FEAT-041 | [Completar perfil](feat-041-complete-profile.md) | 4 |
 
 **Impresión del tiquete:** no aparece el QR de golpe. Tras un pago `paid`, [FEAT-023](feat-023-ticket-print.md) reproduce una **impresora térmica**: el papel sale, el flyer se estampa, el QR se imprime al final. El wallet ([FEAT-024](feat-024-ticket-wallet.md)) guarda el resultado; no sustituye esa animación.

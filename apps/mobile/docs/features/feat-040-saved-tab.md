@@ -25,7 +25,7 @@ La segunda tab se llama **Favoritos**. Es un tablero de colecciones (estilo wish
 | Fechas | Una colección por **ciudad + año** (`Bogotá 2026`). Cover = primer flyer. Subtítulo `N guardados`. |
 | Artistas | Una colección si hay follows. Cover = primer avatar. Subtítulo `N seguidos`. |
 | Edita | En edición, X en la foto vacía la colección (limpia recents, unsaves fechas o unfollows artistas). Listo sale del modo. |
-| Detalle | `/collection/[id]` con `Screen back`. Fechas = `EventCard` listing + corazón. Artistas = `ArtistRow`. |
+| Detalle | `/collection/[id]` con `Screen back`. Fechas = grilla 2 columnas de `EventCard` listing + corazón. Artistas = `ArtistRow`. |
 | Empty | "Nada guardado aún" + CTA Explorar si no hay recents ni guardados. |
 
 ## Flujo

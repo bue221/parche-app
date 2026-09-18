@@ -1,4 +1,5 @@
-import type { MockSnapshot } from '@/data/types';
+import { issueTicketToken } from '@/data/tokens';
+import type { MockSnapshot, Ticket } from '@/data/types';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -15,6 +16,23 @@ function atBogota(year: number, month: number, day: number, hour = 21): string {
 /** Portrait flyer from Unsplash (stable photo ids, 800×1000 crop). */
 function flyer(photoId: string): string {
   return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=800&h=1000&q=80`;
+}
+
+function seedTicket(
+  ticket: Pick<Ticket, 'id' | 'orderId' | 'eventId' | 'ticketTypeId' | 'userId' | 'status'>
+): Ticket {
+  if (ticket.status !== 'valid') {
+    return { ...ticket, token: '', tokenJti: '', tokenExpiresAt: 0, printSeenByUserIds: [] };
+  }
+  const jti = `jti_${ticket.id}`;
+  const exp = Date.now() + 12 * HOUR;
+  return {
+    ...ticket,
+    token: issueTicketToken({ ticketId: ticket.id, eventId: ticket.eventId, jti, exp }),
+    tokenJti: jti,
+    tokenExpiresAt: exp,
+    printSeenByUserIds: [ticket.userId],
+  };
 }
 
 export const DEMO_PASSWORD = 'parche';
@@ -702,8 +720,82 @@ export function createSeed(): MockSnapshot {
         salesTo: atBogota(2027, 12, 11, 23),
       },
     ],
-    orders: [],
-    tickets: [],
+    orders: [
+      {
+        id: 'order_wallet_acid',
+        eventId: IDS.eventAcidRoof,
+        userId: IDS.attendee,
+        ticketTypeId: 'type_acid_ga',
+        quantity: 1,
+        status: 'paid',
+        totalCents: 9000000,
+        createdAt: iso(-21 * DAY),
+      },
+      {
+        id: 'order_wallet_rio',
+        eventId: IDS.eventHouseRio,
+        userId: IDS.attendee,
+        ticketTypeId: 'type_rio_ga',
+        quantity: 1,
+        status: 'paid',
+        totalCents: 3500000,
+        createdAt: iso(-14 * DAY),
+      },
+      {
+        id: 'order_wallet_neon',
+        eventId: IDS.eventNeonGarden,
+        userId: IDS.attendee,
+        ticketTypeId: 'type_neon_early',
+        quantity: 1,
+        status: 'paid',
+        totalCents: 7000000,
+        createdAt: iso(-40 * DAY),
+      },
+      {
+        id: 'order_wallet_bruma',
+        eventId: IDS.eventBrumaRoom,
+        userId: IDS.attendee,
+        ticketTypeId: 'type_bruma_ga',
+        quantity: 1,
+        status: 'paid',
+        totalCents: 4500000,
+        createdAt: iso(-30 * DAY),
+      },
+    ],
+    tickets: [
+      seedTicket({
+        id: 'ticket_wallet_acid',
+        orderId: 'order_wallet_acid',
+        eventId: IDS.eventAcidRoof,
+        ticketTypeId: 'type_acid_ga',
+        userId: IDS.attendee,
+        status: 'valid',
+      }),
+      seedTicket({
+        id: 'ticket_wallet_rio',
+        orderId: 'order_wallet_rio',
+        eventId: IDS.eventHouseRio,
+        ticketTypeId: 'type_rio_ga',
+        userId: IDS.attendee,
+        status: 'valid',
+      }),
+      seedTicket({
+        id: 'ticket_wallet_neon',
+        orderId: 'order_wallet_neon',
+        eventId: IDS.eventNeonGarden,
+        ticketTypeId: 'type_neon_early',
+        userId: IDS.attendee,
+        status: 'used',
+      }),
+      seedTicket({
+        id: 'ticket_wallet_bruma',
+        orderId: 'order_wallet_bruma',
+        eventId: IDS.eventBrumaRoom,
+        ticketTypeId: 'type_bruma_ga',
+        userId: IDS.attendee,
+        status: 'transferred',
+      }),
+    ],
     follows: [{ userId: IDS.attendee, artistId: IDS.artistLuna }],
     eventSaves: [],
     scans: [],
