@@ -10,7 +10,7 @@ import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop, WebNa
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
-const WEB_TAB_PATHS = new Set(['/', '/explore', '/tickets', '/parche', '/operate']);
+const WEB_TAB_PATHS = new Set(['/', '/favorites', '/wallet', '/explore', '/tickets', '/parche', '/operate']);
 const native = Platform.OS !== 'web';
 
 type ScreenProps = PropsWithChildren<{
@@ -28,6 +28,7 @@ type ScreenProps = PropsWithChildren<{
   mark?: ReactNode;
   actions?: ReactNode;
   headerAction?: ReactNode;
+  stickyHeader?: ReactNode;
   footer?: ReactNode;
   refreshControl?: ScrollViewProps['refreshControl'];
 }>;
@@ -48,6 +49,7 @@ export function Screen({
   mark,
   actions,
   headerAction,
+  stickyHeader,
   footer,
   refreshControl,
 }: ScreenProps) {
@@ -66,10 +68,12 @@ export function Screen({
           : WebNavHeight
         : 0
       : insets.top;
+  const pagePadX = padded ? (web && !compact ? 40 : 16) : 0;
+  const pagePadTop = web ? (inWebTabs ? 16 : compact ? 24 : 32) : 16;
   const contentPadding = flush
     ? { flexGrow: 1 }
     : {
-        paddingTop: web ? (inWebTabs ? 16 : compact ? 24 : 32) : 16,
+        paddingTop: stickyHeader ? 24 : pagePadTop,
         paddingBottom: web
           ? inWebTabs
             ? compact
@@ -79,19 +83,17 @@ export function Screen({
           : footer
             ? 24
             : insets.bottom + BottomTabInset + 24,
-        paddingHorizontal: padded ? (web && !compact ? 40 : 16) : 0,
+        paddingHorizontal: pagePadX,
         flexGrow: 1,
         alignItems: center ? ('center' as const) : ('stretch' as const),
         justifyContent: center ? ('center' as const) : ('flex-start' as const),
       };
+  const widthStyle =
+    width === 'page'
+      ? { maxWidth: MaxContentWidth, width: '100%' as const, alignSelf: 'center' as const }
+      : { width: '100%' as const, alignSelf: 'stretch' as const, flex: scrollEnabled ? undefined : 1 };
   const inner = (
-    <View
-      className={cn('w-full', !scrollEnabled && 'flex-1', contentClassName)}
-      style={
-        width === 'page'
-          ? { maxWidth: MaxContentWidth, width: '100%', alignSelf: 'center' }
-          : { width: '100%', alignSelf: 'stretch', flex: scrollEnabled ? undefined : 1 }
-      }>
+    <View className={cn('w-full', !scrollEnabled && 'flex-1', contentClassName)} style={widthStyle}>
       {back ? <BackBar /> : null}
       {title ? (
         <PageHeader
@@ -106,6 +108,15 @@ export function Screen({
       {children}
     </View>
   );
+  const stickyChrome = stickyHeader ? (
+    <View
+      className="z-10 overflow-visible bg-background"
+      style={{ paddingTop: pagePadTop, paddingHorizontal: pagePadX, paddingBottom: 8 }}>
+      <View className="overflow-visible" style={width === 'page' ? widthStyle : { width: '100%' }}>
+        {stickyHeader}
+      </View>
+    </View>
+  ) : null;
 
   function onFooterLayout(event: LayoutChangeEvent) {
     const next = event.nativeEvent.layout.height;
@@ -123,6 +134,7 @@ export function Screen({
   if (!scrollEnabled) {
     return (
       <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
+        {stickyChrome}
         <View className="flex-1" style={contentPadding}>
           {inner}
         </View>
@@ -156,6 +168,7 @@ export function Screen({
 
   return (
     <View className={cn('flex-1 bg-background', className)} style={frameStyle}>
+      {stickyChrome}
       {scroller}
       {stickyFooter}
     </View>

@@ -10,15 +10,21 @@ export function EmptyState({
   lead,
   actionLabel,
   onAction,
+  compact = false,
 }: {
   title: string;
   lead?: string;
   actionLabel?: string;
   onAction?: () => void;
+  compact?: boolean;
 }) {
   return (
-    <View className="items-start gap-ds-12 rounded-cards bg-muted px-ds-24 py-ds-32">
-      <Text variant="headingSm">{title}</Text>
+    <View
+      className={cn(
+        'items-start rounded-cards bg-muted px-ds-24',
+        compact ? 'min-h-[168px] justify-center gap-ds-8 py-ds-24' : 'gap-ds-12 py-ds-32'
+      )}>
+      <Text variant={compact ? 'subheading' : 'headingSm'}>{title}</Text>
       {lead ? <Text variant="muted">{lead}</Text> : null}
       {actionLabel && onAction ? (
         <Button onPress={onAction}>
@@ -34,7 +40,13 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 export function ListingSkeleton() {
-  return <Skeleton className="aspect-[4/5] w-full rounded-cards" />;
+  return (
+    <View className="w-full gap-ds-8">
+      <Skeleton className="aspect-square w-full rounded-images" />
+      <Skeleton className="h-4 w-[82%] rounded-full" />
+      <Skeleton className="h-3 w-[64%] rounded-full" />
+    </View>
+  );
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {

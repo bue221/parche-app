@@ -17,17 +17,17 @@ Sugerencias para el asistente autenticado. Si no hay señales, se dice; no se in
 
 ## Pantallas
 
-Título “Para ti”. Vacío: ocultar bloque o “Sigue artistas para ver sugerencias”.
+Título “Para ti”. Vacío: **mostrar** el riel con “Sigue artistas para ver sugerencias” — no ocultar el bloque ni dejar el scroll vacío.
 
 Invitado: no hay bloque (no hay `me`).
 
 ## Flujo
 
-Fallo de API: ocultar, no romper Explorar.
+Fallo de API: mismo vacío honesto (no inventar ranking); no romper Explorar.
 
 ## Estados
 
-Sin follows ni compras: vacío honesto.
+Sin follows ni compras: riel visible con copy de vacío.
 
 ## Contrato
 
