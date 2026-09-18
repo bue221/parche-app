@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import type { TabListProps, TabTriggerSlotProps } from 'expo-router/ui';
-import { Bookmark, CircleUser, MapPinned, Search, Wrench } from 'lucide-react-native';
+import { CircleUser, Heart, List, MapPinned, Search, Ticket, Wrench } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -23,10 +23,20 @@ export const TAB_GLYPHS = {
     md: 'map',
     Fallback: MapPinned,
   },
-  saved: {
-    ios: { default: 'bookmark', selected: 'bookmark.fill' },
-    md: 'bookmark',
-    Fallback: Bookmark,
+  list: {
+    ios: { default: 'list.bullet', selected: 'list.bullet' },
+    md: 'list',
+    Fallback: List,
+  },
+  favorites: {
+    ios: { default: 'heart', selected: 'heart.fill' },
+    md: 'favorite',
+    Fallback: Heart,
+  },
+  wallet: {
+    ios: { default: 'ticket', selected: 'ticket.fill' },
+    md: 'confirmation_number',
+    Fallback: Ticket,
   },
   account: {
     ios: { default: 'person.crop.circle', selected: 'person.crop.circle.fill' },

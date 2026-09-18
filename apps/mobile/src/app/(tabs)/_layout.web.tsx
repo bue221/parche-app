@@ -20,11 +20,11 @@ export default function TabsLayout() {
           <TabTrigger name="agenda" href="/" asChild>
             <TabLink glyph={TAB_GLYPHS.explore}>Explorar</TabLink>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabLink glyph={TAB_GLYPHS.map}>Mapa</TabLink>
+          <TabTrigger name="favorites" href={'/favorites' as Href} asChild>
+            <TabLink glyph={TAB_GLYPHS.favorites}>Favoritos</TabLink>
           </TabTrigger>
-          <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
-            <TabLink glyph={TAB_GLYPHS.saved}>Guardados</TabLink>
+          <TabTrigger name="wallet" href={'/wallet' as Href} asChild>
+            <TabLink glyph={TAB_GLYPHS.wallet}>Boletas</TabLink>
           </TabTrigger>
           <TabTrigger name="parche" href={'/parche' as Href} asChild>
             <TabLink glyph={TAB_GLYPHS.account}>Cuenta</TabLink>

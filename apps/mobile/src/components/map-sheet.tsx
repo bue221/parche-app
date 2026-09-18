@@ -192,7 +192,7 @@ export function MapSheet({
             overflow: 'hidden',
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            backgroundColor: theme.background,
+            backgroundColor: theme.surface,
             paddingBottom: tabClear,
           },
           cardShadowStyle,
@@ -227,7 +227,7 @@ export function MapSheet({
         ) : loading ? (
           <View style={{ paddingHorizontal: 16, gap: 24, paddingTop: 16 }}>
             {[0, 1].map((key) => (
-              <Skeleton key={key} className="aspect-[4/5] w-full rounded-cards" />
+              <Skeleton key={key} className="aspect-square w-full rounded-images" />
             ))}
           </View>
         ) : events.length === 0 ? (

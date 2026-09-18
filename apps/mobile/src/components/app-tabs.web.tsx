@@ -19,11 +19,11 @@ export default function AppTabs() {
           <TabTrigger name="agenda" href="/" asChild>
             <TabButton>Explorar</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Mapa</TabButton>
+          <TabTrigger name="favorites" href={'/favorites' as Href} asChild>
+            <TabButton>Favoritos</TabButton>
           </TabTrigger>
-          <TabTrigger name="tickets" href={'/tickets' as Href} asChild>
-            <TabButton>Tiquetes</TabButton>
+          <TabTrigger name="wallet" href={'/wallet' as Href} asChild>
+            <TabButton>Boletas</TabButton>
           </TabTrigger>
           <TabTrigger name="parche" href={'/parche' as Href} asChild>
             <TabButton>Parche</TabButton>
