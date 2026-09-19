@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/data/auth-store';
-import { API_URL, rewriteMediaUrl } from '@/data/env';
+import { API_URL, rewriteUploadUrl } from '@/data/env';
 import { ApiError } from '@/data/errors';
 import { useInterestStore } from '@/data/interest-store';
 import { apiFetch, asRecord, mediaUrl, num, refreshSession, revokeLocalSession, str } from '@/data/http';
@@ -14,7 +14,14 @@ import {
   rememberPrintSeen,
   setWalletTickets,
 } from '@/data/ticket-cache';
-import { getAccessExpiresAt, getRefreshToken, setTokens } from '@/data/token-store';
+import { bytesAsBody } from '@/lib/image-asset';
+import { eventHasEnded } from '@/lib/format';
+import { mergeOrderItems } from '@/lib/order-items';
+import {
+  getAccessExpiresAt,
+  getRefreshToken,
+  setTokens,
+} from '@/data/token-store';
 import type {
   Artist,
   CheckInCode,
@@ -23,6 +30,7 @@ import type {
   Membership,
   MembershipRole,
   Order,
+  OrderItem,
   ParcheEvent,
   ProfileKind,
   Ticket,
@@ -207,35 +215,54 @@ function mapArtist(raw: unknown): Artist {
   };
 }
 
-function mapOrder(raw: unknown): Order & { tickets: Ticket[] } {
+function mapOrderTickets(raw: unknown, orderId: string, eventId: string): Ticket[] {
+  const o = asRecord(raw);
+  const ticketsRaw = Array.isArray(o.tickets) ? o.tickets : [];
+  return ticketsRaw.map((row) => {
+    const t = asRecord(row);
+    return {
+      id: str(t.id),
+      orderId,
+      eventId,
+      ticketTypeId: str(t.ticket_type_id),
+      userId: useAuthStore.getState().me?.id ?? '',
+      status: (str(t.status) || 'reserved') as Ticket['status'],
+      token: '',
+      tokenJti: '',
+      tokenExpiresAt: 0,
+      printSeenByUserIds: [],
+    };
+  });
+}
+
+function mapOrderItems(raw: unknown, tickets: Ticket[]): OrderItem[] {
   const o = asRecord(raw);
   const items = Array.isArray(o.items) ? o.items : [];
-  const first = asRecord(items[0]);
-  const ticketsRaw = Array.isArray(o.tickets) ? o.tickets : [];
+  if (items.length > 0) {
+    return mergeOrderItems(
+      items.map((row) => {
+        const item = asRecord(row);
+        return { ticketTypeId: str(item.ticket_type_id), quantity: num(item.quantity, 1) };
+      })
+    );
+  }
+  return mergeOrderItems(tickets.map((ticket) => ({ ticketTypeId: ticket.ticketTypeId, quantity: 1 })));
+}
+
+function mapOrder(raw: unknown): Order & { tickets: Ticket[] } {
+  const o = asRecord(raw);
+  const id = str(o.id) || str(o.order_id);
+  const eventId = str(o.event_id);
+  const tickets = mapOrderTickets(raw, id, eventId);
   return {
-    id: str(o.id) || str(o.order_id),
-    eventId: str(o.event_id),
+    id,
+    eventId,
     userId: useAuthStore.getState().me?.id ?? '',
-    ticketTypeId: str(first.ticket_type_id),
-    quantity: num(first.quantity, ticketsRaw.length || 1),
+    items: mapOrderItems(raw, tickets),
     status: (str(o.status) || 'pending') as Order['status'],
     totalCents: num(o.amount_cents),
     createdAt: str(o.created_at) || new Date().toISOString(),
-    tickets: ticketsRaw.map((row) => {
-      const t = asRecord(row);
-      return {
-        id: str(t.id),
-        orderId: str(o.id) || str(o.order_id),
-        eventId: str(o.event_id),
-        ticketTypeId: str(t.ticket_type_id),
-        userId: useAuthStore.getState().me?.id ?? '',
-        status: (str(t.status) || 'reserved') as Ticket['status'],
-        token: '',
-        tokenJti: '',
-        tokenExpiresAt: 0,
-        printSeenByUserIds: [],
-      };
-    }),
+    tickets,
   };
 }
 
@@ -255,13 +282,19 @@ function confirmedAssetUrl(confirmed: Record<string, unknown>, fallbackKey: stri
   return mediaUrl(`/v1/media/${key}`) ?? key;
 }
 
-async function putBytes(url: string, mime: string, bytes: BodyInit, headers: Record<string, string>): Promise<void> {
-  const target = rewriteMediaUrl(url);
-  const res = await fetch(target.startsWith('http') ? target : `${API_URL}${target}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': mime, ...headers },
-    body: bytes,
-  });
+async function putBytes(url: string, mime: string, bytes: Uint8Array, headers: Record<string, string>): Promise<void> {
+  const target = rewriteUploadUrl(url);
+  const abs = target.startsWith('http') ? target : `${API_URL}${target}`;
+  let res: Response;
+  try {
+    res = await fetch(abs, {
+      method: 'PUT',
+      headers: { 'Content-Type': mime, ...headers },
+      body: bytesAsBody(bytes, mime),
+    });
+  } catch {
+    throw new ApiError('NETWORK', 'No pudimos subir el archivo');
+  }
   if (!res.ok) {
     throw new ApiError('NETWORK', 'No pudimos subir el archivo');
   }
@@ -358,6 +391,18 @@ export const httpApi: ParcheApi = {
       await apiFetch('/v1/me/profiles/artist', { method: 'POST', auth: true, body: JSON.stringify({}) });
       return this.me();
     },
+    async requestPasswordReset(email: string) {
+      await apiFetch('/v1/auth/password/forgot', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+    },
+    async resetPassword(token: string, password: string) {
+      await apiFetch('/v1/auth/password/reset', {
+        method: 'POST',
+        body: JSON.stringify({ token: token.trim(), password }),
+      });
+    },
     async requestOtp(email: string) {
       await apiFetch('/v1/auth/otp/request', {
         method: 'POST',
@@ -417,7 +462,9 @@ export const httpApi: ParcheApi = {
       if (filters?.maxLng != null) q.set('max_lng', String(filters.maxLng));
       q.set('limit', '50');
       const body = await apiFetch(`/v1/events?${q.toString()}`);
-      return itemsOf(body).map(mapEvent);
+      return itemsOf(body)
+        .map(mapEvent)
+        .filter((event) => !eventHasEnded(event));
     },
     async get(id: string) {
       return hydrateEvent(id);
@@ -437,7 +484,7 @@ export const httpApi: ParcheApi = {
         const body = await apiFetch(`/v1/events/${id}/similar`);
         const rec = asRecord(body);
         const events = Array.isArray(rec.events) ? rec.events : itemsOf(body);
-        return events.map(mapEvent);
+        return events.map(mapEvent).filter((event) => !eventHasEnded(event));
       } catch {
         return [];
       }
@@ -663,23 +710,28 @@ export const httpApi: ParcheApi = {
       const types = itemsOf(body).map(mapTicketType);
       return types[types.length - 1];
     },
-    async createOrder(eventId, ticketTypeId, quantity) {
+    async createOrder(eventId, items) {
+      const lines = mergeOrderItems(items);
+      if (lines.length === 0) {
+        throw new ApiError('VALIDATION_ERROR', 'Elige una cantidad');
+      }
       const created = asRecord(
         await apiFetch(`/v1/events/${eventId}/orders`, {
           method: 'POST',
           auth: true,
           idempotencyKey: createId('idem').slice(0, 32).padEnd(8, 'x'),
-          body: JSON.stringify({ items: [{ ticket_type_id: ticketTypeId, quantity }] }),
+          body: JSON.stringify({
+            items: lines.map((item) => ({ ticket_type_id: item.ticketTypeId, quantity: item.quantity })),
+          }),
         })
       );
       return {
         id: str(created.order_id) || str(created.id),
         eventId,
         userId: useAuthStore.getState().me?.id ?? '',
-        ticketTypeId,
-        quantity,
+        items: lines,
         status: (str(created.status) || 'pending') as Order['status'],
-        totalCents: 0,
+        totalCents: num(created.amount_cents),
         createdAt: new Date().toISOString(),
       };
     },
@@ -882,19 +934,21 @@ export const httpApi: ParcheApi = {
       await putBytes(
         str(upload.url),
         contentType,
-        bytes as unknown as BodyInit,
+        bytes,
         Object.fromEntries(Object.entries(headers).map(([k, v]) => [k, String(v)]))
       );
       let url = str(rec.public_url) || str(rec.key);
-      if (kind === 'flyer' && eventId) {
+      let id = str(rec.key);
+      if ((kind === 'flyer' || kind === 'gallery') && eventId) {
         const confirmed = asRecord(
           await apiFetch(`/v1/events/${eventId}/assets`, {
             method: 'POST',
             auth: true,
-            body: JSON.stringify({ key: rec.key, kind: 'flyer' }),
+            body: JSON.stringify({ key: rec.key, kind }),
           })
         );
-        url = confirmedAssetUrl(confirmed, rec.key);
+        id = str(confirmed.id) || str(asRecord(confirmed.asset).id) || id;
+        url = confirmedAssetUrl(confirmed, str(rec.key));
       } else if (kind === 'avatar') {
         const confirmed = asRecord(
           await apiFetch('/v1/me/avatar', {
@@ -903,7 +957,8 @@ export const httpApi: ParcheApi = {
             body: JSON.stringify({ key: rec.key, kind: 'avatar' }),
           })
         );
-        url = confirmedAssetUrl(confirmed, rec.key);
+        id = str(confirmed.id) || str(asRecord(confirmed.avatar).id) || id;
+        url = confirmedAssetUrl(confirmed, str(rec.key));
       } else if (kind === 'audio' && eventId) {
         const confirmed = asRecord(
           await apiFetch(`/v1/events/${eventId}/audio`, {
@@ -912,11 +967,12 @@ export const httpApi: ParcheApi = {
             body: JSON.stringify({ key: rec.key, kind: 'audio' }),
           })
         );
-        url = str(confirmed.id) || str(rec.key);
+        id = str(confirmed.id) || str(rec.key);
+        url = id;
       }
       const sessionUser = useAuthStore.getState().me?.id ?? '';
       return {
-        id: str(rec.key),
+        id,
         kind,
         mime: contentType,
         url,
@@ -924,6 +980,9 @@ export const httpApi: ParcheApi = {
         eventId,
         confirmed: true,
       } satisfies Upload;
+    },
+    async remove(eventId, assetId) {
+      await apiFetch(`/v1/events/${eventId}/assets/${assetId}`, { method: 'DELETE', auth: true });
     },
   },
 

@@ -1,6 +1,6 @@
-# FEAT-020: Tipos de tiquete
+# FEAT-020: Etapas de boleta
 
-El staff define qué se vende: nombre, precio, aforo, ventana. Sin esto no hay compra.
+El staff define qué se vende: nombre de etapa, precio, aforo, ventana. Sin esto no hay compra.
 
 | Campo | Valor |
 |-------|-------|
@@ -11,13 +11,13 @@ El staff define qué se vende: nombre, precio, aforo, ventana. Sin esto no hay c
 
 ## Quick path
 
-1. Operar → evento → tiquetes.
-2. Crear tipo (ej. Early, Door) con cupo y precio.
-3. Detalle público lista tipos vendibles en ventana.
+1. Operar → evento → etapas.
+2. Crear etapa (ej. Preventa, Taquilla) con cupo y precio.
+3. Detalle público lista etapas vendibles en ventana.
 
 ## Pantallas
 
-Lista + formulario. Sold out se marca en UI cuando disponibles = 0. No PII.
+Lista + formulario. Título **Etapas**. Sold out se marca en UI cuando disponibles = 0. No PII. Evento finalizado: lista en consulta, sin crear ni editar etapas.
 
 ## Flujo
 
@@ -25,21 +25,22 @@ CRUD según API de ticket_types (el PRD de backend lo agrupa en manage). Cerrar 
 
 ## Estados
 
-Evento sin tipos: detalle muestra “Aún no hay tiquetes”. Compra oculta.
+Evento sin etapas: detalle muestra “Aún no hay boletas a la venta”. Compra oculta.
 
 ## Contrato
 
-Permiso `event.tickets.manage`. Moneda del tenant.
+Permiso `event.tickets.manage`. Moneda del tenant. Copy de producto: **etapa**, no “tipo de tiquete”.
 
 ## Fuera de alcance
 
-Códigos de descuento. Mesas VIP complejas. Bundles.
+Códigos de descuento. Mesas VIP complejas. Bundles (SKU empaquetado). Mezclar etapas del mismo evento en un pago es [FEAT-021](feat-021-ticket-purchase.md).
 
 ## Checklist
 
-- [ ] `door` no edita tipos ni ve precios de dashboard (puede ver el precio público en detalle).
+- [ ] `door` no edita etapas ni ve precios de dashboard (puede ver el precio público en detalle).
 - [ ] Aforo 0 bloquea [FEAT-021](feat-021-ticket-purchase.md).
 - [ ] Cambiar precio no altera orders ya `paid`.
+- [ ] Evento finalizado no crea ni edita etapas.
 
 ## Relacionadas
 

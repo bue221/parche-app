@@ -4,6 +4,7 @@ import { useInterestStore } from '@/data/interest-store';
 import { debugLog } from '@/data/log';
 import { wait } from '@/data/mock/delay';
 import { compactTicketCode } from '@/lib/code128';
+import { ENDED_EVENT_COPY, eventHasEnded } from '@/lib/format';
 import { DEMO_PASSWORD } from '@/data/mock/seed';
 import { getSession, getSnapshot, useMockStore } from '@/data/mock/store';
 import {
@@ -12,11 +13,14 @@ import {
   issueTicketToken,
   parseTicketToken,
 } from '@/data/tokens';
+import { mergeOrderItems } from '@/lib/order-items';
+import { passwordIssue } from '@/lib/password';
 import type {
   Artist,
   CheckInCode,
   DevicePermission,
   EventFilters,
+  EventGalleryImage,
   EventTrack,
   EventWithExtras,
   Follow,
@@ -24,6 +28,7 @@ import type {
   Membership,
   MembershipRole,
   Order,
+  OrderItem,
   ParcheEvent,
   ProfileKind,
   ScanLog,
@@ -37,6 +42,7 @@ import type {
 const ACCESS_TTL_MS = 12 * 60 * 1000;
 const TICKET_TTL_MS = 12 * 60 * 60 * 1000;
 const BOGOTA = { lat: 4.711, lng: -74.072 };
+const pendingPasswordResets = new Map<string, string>();
 
 export type Me = Omit<User, 'password'> & {
   memberships: Membership[];
@@ -110,6 +116,17 @@ function requirePerm(userId: string, eventId: string, permission: string) {
   if (!can(userId, eventId, permission)) {
     throw new ApiError('FORBIDDEN', 'No puedes hacer eso en este evento');
   }
+}
+
+function requireWritableEvent(eventId: string) {
+  const event = getSnapshot().events.find((row) => row.id === eventId);
+  if (!event) {
+    throw new ApiError('NOT_FOUND', 'Este evento ya no está');
+  }
+  if (eventHasEnded(event)) {
+    throw new ApiError('CONFLICT', ENDED_EVENT_COPY);
+  }
+  return event;
 }
 
 function rotateSession(userId: string, familyId = createId('fam')): Session {
@@ -191,7 +208,9 @@ function hydrateEvent(event: ParcheEvent): EventWithExtras {
     lineup,
     tracks: data.tracks.filter((t) => t.eventId === event.id).sort((a, b) => a.sortOrder - b.sortOrder),
     ticketTypes: data.ticketTypes.filter((t) => t.eventId === event.id),
-    gallery: [],
+    gallery: (data.galleries ?? [])
+      .filter((item) => item.eventId === event.id)
+      .map(({ id, url }): EventGalleryImage => ({ id, url })),
   };
 }
 
@@ -324,6 +343,32 @@ export const mockApi = {
       return this.me();
     },
 
+    async requestPasswordReset(email: string): Promise<void> {
+      await wait(80);
+      const user = getSnapshot().users.find((u) => u.email === email.trim().toLowerCase());
+      if (user) {
+        pendingPasswordResets.set(createId('reset'), user.id);
+      }
+    },
+
+    async resetPassword(token: string, password: string): Promise<void> {
+      await wait();
+      if (!token.trim() || passwordIssue(password)) {
+        throw new ApiError('VALIDATION_ERROR', passwordIssue(password) || 'Revisa los campos');
+      }
+      const userId = pendingPasswordResets.get(token.trim());
+      if (!userId) {
+        throw new ApiError('GONE', 'El enlace venció o ya se usó.');
+      }
+      pendingPasswordResets.delete(token.trim());
+      useMockStore.getState().setData((d) => {
+        const user = d.users.find((u) => u.id === userId);
+        if (user) {
+          user.password = password;
+        }
+      });
+    },
+
     async requestOtp(email: string): Promise<void> {
       await wait();
       const normalized = email.trim().toLowerCase();
@@ -413,7 +458,7 @@ export const mockApi = {
     async list(filters?: EventFilters): Promise<ParcheEvent[]> {
       await wait();
       return getSnapshot()
-        .events.filter((e) => e.status === 'published' && matchesFilters(e, filters))
+        .events.filter((e) => e.status === 'published' && !eventHasEnded(e) && matchesFilters(e, filters))
         .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
     },
 
@@ -422,10 +467,10 @@ export const mockApi = {
       const session = optionalSession();
       const event = getSnapshot().events.find((e) => e.id === id);
       if (!event) {
-        throw new ApiError('NOT_FOUND', 'Esta fecha ya no está');
+        throw new ApiError('NOT_FOUND', 'Este evento ya no está');
       }
       if (!eventVisible(event, session?.userId)) {
-        throw new ApiError('GONE', 'Esta fecha ya no está');
+        throw new ApiError('GONE', 'Este evento ya no está');
       }
       return hydrateEvent(event);
     },
@@ -463,7 +508,11 @@ export const mockApi = {
         return [];
       }
       return getSnapshot().events.filter(
-        (row) => row.id !== id && row.status === 'published' && (row.genre === event.genre || Boolean(row.lat && event.lat))
+        (row) =>
+          row.id !== id &&
+          row.status === 'published' &&
+          !eventHasEnded(row) &&
+          (row.genre === event.genre || Boolean(row.lat && event.lat))
       );
     },
 
@@ -483,7 +532,7 @@ export const mockApi = {
       const session = requireSession();
       const user = getSnapshot().users.find((u) => u.id === session.userId);
       if (!user?.profiles.includes('promoter')) {
-        throw new ApiError('FORBIDDEN', 'Solo organizadores pueden crear fechas');
+        throw new ApiError('FORBIDDEN', 'Solo organizadores pueden crear eventos');
       }
       if (!input.name.trim() || !input.startsAt) {
         throw new ApiError('VALIDATION_ERROR', 'Nombre y fecha son obligatorios');
@@ -529,6 +578,7 @@ export const mockApi = {
       await wait();
       const session = requireSession();
       requirePerm(session.userId, id, 'event.write');
+      requireWritableEvent(id);
       let forbiddenPublish = false;
       useMockStore.getState().setData((d) => {
         const event = d.events.find((e) => e.id === id);
@@ -556,9 +606,10 @@ export const mockApi = {
     async addLineup(eventId: string, artistId: string): Promise<EventWithExtras> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.write');
+      requireWritableEvent(eventId);
       const exists = getSnapshot().lineup.some((l) => l.eventId === eventId && l.artistId === artistId);
       if (exists) {
-        throw new ApiError('CONFLICT', 'Ese artista ya está en el lineup');
+        throw new ApiError('CONFLICT', 'Ese artista ya está en el evento');
       }
       useMockStore.getState().setData((d) => {
         const max = d.lineup.filter((l) => l.eventId === eventId).reduce((m, l) => Math.max(m, l.sortOrder), -1);
@@ -570,6 +621,7 @@ export const mockApi = {
     async removeLineup(eventId: string, artistId: string): Promise<EventWithExtras> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.write');
+      requireWritableEvent(eventId);
       useMockStore.getState().setData((d) => {
         d.lineup = d.lineup.filter((l) => !(l.eventId === eventId && l.artistId === artistId));
       });
@@ -579,6 +631,7 @@ export const mockApi = {
     async reorderLineup(eventId: string, artistIds: string[]): Promise<EventWithExtras> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.write');
+      requireWritableEvent(eventId);
       useMockStore.getState().setData((d) => {
         d.lineup = d.lineup.filter((l) => l.eventId !== eventId);
         artistIds.forEach((artistId, sortOrder) => {
@@ -591,6 +644,7 @@ export const mockApi = {
     async putTracks(eventId: string, tracks: { title: string; url: string }[]): Promise<EventWithExtras> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.write');
+      requireWritableEvent(eventId);
       useMockStore.getState().setData((d) => {
         d.tracks = d.tracks.filter((t) => t.eventId !== eventId);
         tracks.forEach((t, sortOrder) => {
@@ -726,6 +780,7 @@ export const mockApi = {
     async invite(eventId: string, email: string, role: Exclude<MembershipRole, 'owner'>): Promise<Membership> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.members.manage');
+      requireWritableEvent(eventId);
       const token = createId('invite');
       const user = getSnapshot().users.find((u) => u.email === email.trim().toLowerCase());
       const membership: Membership = {
@@ -747,6 +802,7 @@ export const mockApi = {
     async revoke(eventId: string, membershipId: string): Promise<void> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.members.manage');
+      requireWritableEvent(eventId);
       useMockStore.getState().setData((d) => {
         const mem = d.memberships.find((m) => m.id === membershipId && m.eventId === eventId);
         if (mem && mem.role !== 'owner') {
@@ -803,6 +859,7 @@ export const mockApi = {
     ): Promise<TicketType> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.tickets.manage');
+      requireWritableEvent(eventId);
       let savedId = input.id;
       useMockStore.getState().setData((d) => {
         if (input.id) {
@@ -835,48 +892,55 @@ export const mockApi = {
       return getSnapshot().ticketTypes.find((t) => t.id === savedId) as TicketType;
     },
 
-    async createOrder(eventId: string, ticketTypeId: string, quantity: number): Promise<Order> {
+    async createOrder(eventId: string, items: OrderItem[]): Promise<Order> {
       await wait();
       const session = requireSession();
-      if (quantity < 1) {
+      const lines = mergeOrderItems(items);
+      if (lines.length === 0) {
         throw new ApiError('VALIDATION_ERROR', 'Elige una cantidad');
       }
-      const type = getSnapshot().ticketTypes.find((t) => t.id === ticketTypeId && t.eventId === eventId);
-      if (!type || !typeOnSale(type) || available(type) < quantity) {
-        throw new ApiError('CONFLICT', 'Ese tipo ya no tiene cupo');
-      }
+      requireWritableEvent(eventId);
+      const snapshot = getSnapshot();
+      const resolved = lines.map((line) => {
+        const type = snapshot.ticketTypes.find((t) => t.id === line.ticketTypeId && t.eventId === eventId);
+        if (!type || !typeOnSale(type) || available(type) < line.quantity) {
+          throw new ApiError('CONFLICT', type ? `${type.name} ya no tiene cupo` : 'Esa etapa ya no tiene cupo');
+        }
+        return { line, type };
+      });
       const order: Order = {
         id: createId('order'),
         eventId,
         userId: session.userId,
-        ticketTypeId,
-        quantity,
+        items: lines,
         status: 'pending',
-        totalCents: type.priceCents * quantity,
+        totalCents: resolved.reduce((sum, { line, type }) => sum + type.priceCents * line.quantity, 0),
         createdAt: new Date().toISOString(),
       };
       useMockStore.getState().setData((d) => {
-        const t = d.ticketTypes.find((x) => x.id === ticketTypeId);
-        if (t) {
-          t.reserved += quantity;
-        }
         d.orders.push(order);
-        for (let i = 0; i < quantity; i += 1) {
-          d.tickets.push({
-            id: createId('ticket'),
-            orderId: order.id,
-            eventId,
-            ticketTypeId,
-            userId: session.userId,
-            status: 'reserved',
-            token: '',
-            tokenJti: '',
-            tokenExpiresAt: 0,
-            printSeenByUserIds: [],
-          });
+        for (const { line } of resolved) {
+          const type = d.ticketTypes.find((x) => x.id === line.ticketTypeId);
+          if (type) {
+            type.reserved += line.quantity;
+          }
+          for (let i = 0; i < line.quantity; i += 1) {
+            d.tickets.push({
+              id: createId('ticket'),
+              orderId: order.id,
+              eventId,
+              ticketTypeId: line.ticketTypeId,
+              userId: session.userId,
+              status: 'reserved',
+              token: '',
+              tokenJti: '',
+              tokenExpiresAt: 0,
+              printSeenByUserIds: [],
+            });
+          }
         }
       });
-      debugLog('orders', 'created pending', { orderId: order.id, eventId });
+      debugLog('orders', 'created pending', { orderId: order.id, eventId, items: lines });
       return order;
     },
 
@@ -905,17 +969,22 @@ export const mockApi = {
       }
       useMockStore.getState().setData((d) => {
         const current = d.orders.find((o) => o.id === id);
-        const type = d.ticketTypes.find((t) => t.id === current?.ticketTypeId);
         if (!current) {
           return;
         }
         current.status = result;
         const tickets = d.tickets.filter((t) => t.orderId === id);
-        if (result === 'paid') {
-          if (type) {
-            type.reserved = Math.max(0, type.reserved - current.quantity);
-            type.sold += current.quantity;
+        for (const item of current.items) {
+          const type = d.ticketTypes.find((t) => t.id === item.ticketTypeId);
+          if (!type) {
+            continue;
           }
+          type.reserved = Math.max(0, type.reserved - item.quantity);
+          if (result === 'paid') {
+            type.sold += item.quantity;
+          }
+        }
+        if (result === 'paid') {
           tickets.forEach((ticket) => {
             const minted = mintTicketToken(ticket.id, ticket.eventId);
             ticket.status = 'valid';
@@ -924,9 +993,6 @@ export const mockApi = {
             ticket.tokenExpiresAt = minted.exp;
           });
         } else {
-          if (type) {
-            type.reserved = Math.max(0, type.reserved - current.quantity);
-          }
           tickets.forEach((ticket) => {
             ticket.status = 'cancelled';
           });
@@ -1015,6 +1081,10 @@ export const mockApi = {
       const session = requireSession();
       if (!can(session.userId, eventId, 'event.door.scan')) {
         return { code: 'forbidden', occupancy: this.occupancy(eventId) };
+      }
+      const event = getSnapshot().events.find((row) => row.id === eventId);
+      if (event && eventHasEnded(event)) {
+        return { code: 'expired', occupancy: this.occupancy(eventId) };
       }
       const parsed = parseTicketToken(token);
       const compact = compactTicketCode(token);
@@ -1160,6 +1230,7 @@ export const mockApi = {
       }
       if (eventId) {
         requirePerm(session.userId, eventId, 'event.write');
+        requireWritableEvent(eventId);
       }
       const upload: Upload = {
         id: createId('up'),
@@ -1171,16 +1242,44 @@ export const mockApi = {
         confirmed: true,
       };
       useMockStore.getState().setData((d) => {
+        d.galleries ??= [];
         d.uploads.push(upload);
         if (kind === 'flyer' && eventId) {
           const event = d.events.find((item) => item.id === eventId);
           if (event) {
+            if (event.flyerUrl) {
+              d.galleries.push({ eventId, id: createId('gal'), url: event.flyerUrl });
+            }
             event.flyerUrl = upload.url;
             event.updatedAt = new Date().toISOString();
           }
         }
+        if (kind === 'gallery' && eventId) {
+          d.galleries.push({ eventId, id: upload.id, url: upload.url });
+        }
       });
       return upload;
+    },
+    async remove(eventId: string, assetId: string): Promise<void> {
+      await wait();
+      const session = requireSession();
+      requirePerm(session.userId, eventId, 'event.write');
+      requireWritableEvent(eventId);
+      let found = false;
+      useMockStore.getState().setData((d) => {
+        d.galleries ??= [];
+        const next = d.galleries.filter((item) => {
+          if (item.eventId === eventId && item.id === assetId) {
+            found = true;
+            return false;
+          }
+          return true;
+        });
+        d.galleries = next;
+      });
+      if (!found) {
+        throw new ApiError('NOT_FOUND', 'Esa imagen ya no está');
+      }
     },
   },
 

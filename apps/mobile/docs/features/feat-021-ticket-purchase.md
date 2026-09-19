@@ -11,15 +11,15 @@ El asistente reserva aforo y paga. El tiquete `valid` no se muestra como QR hast
 
 ## Quick path
 
-1. Detalle → elegir tipo y cantidad.
+1. Detalle → cantidades por etapa (mismo evento).
 2. CTA; no doble tap.
-3. `POST /v1/events/{id}/orders` → order `pending`, tickets `reserved`.
+3. `POST /v1/events/{id}/orders` con `items[]` → order `pending`, tickets `reserved`.
 4. Abrir pasarela (URL del API).
 5. Vuelta: [FEAT-022](feat-022-order-return.md).
 
 ## Pantallas
 
-Resumen: evento, tipo, total, política corta. Sin campos de tarjeta en Parche (pasarela externa).
+Resumen: evento, etapas elegidas, total, política corta. Sin campos de tarjeta en Parche (pasarela externa). Las etapas del mismo evento se mezclan en un solo pago; no hay carrito entre eventos.
 
 Invitado: el checkout se abre igual; al confirmar, AuthSheet OTP/Google inline ([FEAT-038](feat-038-auth-otp.md)). No redirige a register. Nombre/teléfono van a [FEAT-041](feat-041-complete-profile.md) después.
 
@@ -35,11 +35,11 @@ La app **no** marca `valid` en local.
 
 ## Estados
 
-`CONFLICT` aforo: elegir otro tipo. Red: un retry idempotente del botón (mismo intento, no N orders).
+`CONFLICT` aforo: bajar cantidad de esa etapa o elegir otra. La order es atómica: si una línea no tiene cupo, no se reserva ninguna. Red: un retry idempotente del botón (mismo intento, no N orders). Evento finalizado: checkout en consulta, CTA Finalizado, el mock rechaza `createOrder`.
 
 ## Contrato
 
-`POST /v1/events/{id}/orders`, `GET /v1/orders/{id}`.
+`POST /v1/events/{id}/orders` con `{ items: [{ ticket_type_id, quantity }] }`, `GET /v1/orders/{id}`.
 
 ## Fuera de alcance
 
@@ -49,7 +49,9 @@ Wallet Apple/Google Pay nativo salvo que la pasarela lo abra. Impresión (spec 0
 
 - [ ] Sin sesión no hay order (sí hay carrito + sheet).
 - [ ] CTA no crea dos orders por doble tap.
+- [ ] Varias etapas del mismo evento salen en una order y un pago.
 - [ ] Tras paid no se salta la animación de impresión la primera vez.
+- [ ] Evento finalizado no crea order.
 
 ## Relacionadas
 

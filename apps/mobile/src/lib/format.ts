@@ -50,6 +50,17 @@ export function formatCardDayShort(iso: string): string {
   return `${day} ${month}`;
 }
 
+/** Catalog meta under the flyer: "17 sept". */
+export function formatListingDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const month = stripDateDots(
+    date.toLocaleDateString('es-CO', { month: 'short', timeZone: BOGOTA_TZ })
+  ).toLowerCase();
+  const day = date.toLocaleDateString('es-CO', { day: 'numeric', timeZone: BOGOTA_TZ });
+  return `${day} ${month}`;
+}
+
 const BOGOTA_HINT =
   /bogot|teusaquillo|chapinero|usaqu[eé]n|suba|kennedy|engativ|fontib[oó]n|puente aranda|el dorado|sim[oó]n bol[ií]var|monserrate/i;
 
@@ -58,6 +69,40 @@ export function eventCity(addressText?: string): string {
   if (!raw || BOGOTA_HINT.test(raw)) return 'Bogotá';
   const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
   return parts[parts.length - 1] ?? 'Bogotá';
+}
+
+/** Calendar year of the date in Bogotá, for collection titles like "Bogotá 2026". */
+export function eventYear(iso: string): number {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return new Date().getFullYear();
+  const year = Number.parseInt(
+    date.toLocaleDateString('en-CA', { timeZone: BOGOTA_TZ, year: 'numeric' }),
+    10
+  );
+  return Number.isFinite(year) ? year : date.getFullYear();
+}
+
+/** Relative past in Spanish: "Hace 2 semanas". */
+export function formatRelativePast(at: number | string, now = Date.now()): string {
+  const then = typeof at === 'string' ? Date.parse(at) : at;
+  if (!Number.isFinite(then)) return '';
+  const ms = Math.max(0, now - then);
+  if (ms < 45_000) return 'Ahora';
+  if (ms < 90_000) return 'Hace 1 min';
+  if (ms < 3_600_000) return `Hace ${Math.floor(ms / 60_000)} min`;
+  if (ms < 5_400_000) return 'Hace 1 hora';
+  if (ms < 86_400_000) return `Hace ${Math.floor(ms / 3_600_000)} horas`;
+  const days = Math.floor(ms / 86_400_000);
+  if (days === 1) return 'Hace 1 día';
+  if (days < 7) return `Hace ${days} días`;
+  const weeks = Math.floor(days / 7);
+  if (weeks === 1) return 'Hace 1 semana';
+  if (weeks < 5) return `Hace ${weeks} semanas`;
+  const months = Math.floor(days / 30);
+  if (months <= 1) return 'Hace 1 mes';
+  if (months < 12) return `Hace ${months} meses`;
+  const years = Math.floor(days / 365);
+  return years <= 1 ? 'Hace 1 año' : `Hace ${years} años`;
 }
 
 export function eventVenueParts(venueName?: string, addressText?: string): { venue: string; city: string } {
@@ -91,8 +136,8 @@ function bogotaHour(iso: string): number | null {
 }
 
 export function eventTimeLabel(startsAt: string, endsAt?: string, caption?: string): string {
-  if (caption?.trim()) return caption.trim().toUpperCase();
-  if (isAllNight(startsAt, endsAt)) return 'ALL NIGHT';
+  if (caption?.trim()) return caption.trim();
+  if (isAllNight(startsAt, endsAt)) return 'ALL\u00a0NIGHT';
   const date = new Date(startsAt);
   if (Number.isNaN(date.getTime())) return startsAt;
   return date.toLocaleTimeString('es-CO', {
@@ -137,6 +182,30 @@ export function formatTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+export const ENDED_EVENT_COPY =
+  'Este evento ya finalizó. Los datos quedan en consulta para no alterar métricas ni ventas.';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** True once the night is over. Missing `endsAt` uses a 12h window after start. */
+export function eventHasEnded(event: { startsAt: string; endsAt?: string }, now = Date.now()): boolean {
+  if (event.endsAt) {
+    const end = Date.parse(event.endsAt);
+    return Number.isFinite(end) && end < now;
+  }
+  const start = Date.parse(event.startsAt);
+  return Number.isFinite(start) && start + 12 * 60 * 60 * 1000 < now;
+}
+
+/** Published nights that start before seven local midnights from now (includes tonight). */
+export function eventIsThisWeek(event: { startsAt: string }, now = Date.now()): boolean {
+  const start = Date.parse(event.startsAt);
+  if (!Number.isFinite(start)) return false;
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return start < today.getTime() + 7 * DAY_MS;
 }
 
 export function formatWhenRange(startsAt: string, endsAt?: string): string {
@@ -237,7 +306,7 @@ export function countdownTo(iso: string, now = new Date()): string | null {
     return null;
   }
   if (hours < 1) {
-    return `${minutes} min`;
+    return `${minutes}\u00a0min`;
   }
-  return `${hours} h ${minutes} min`;
+  return `${hours}\u00a0h\u00a0${minutes}\u00a0min`;
 }

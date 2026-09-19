@@ -112,12 +112,16 @@ export type TicketType = {
   salesTo: string;
 };
 
+export type OrderItem = {
+  ticketTypeId: string;
+  quantity: number;
+};
+
 export type Order = {
   id: string;
   eventId: string;
   userId: string;
-  ticketTypeId: string;
-  quantity: number;
+  items: OrderItem[];
   status: OrderStatus;
   totalCents: number;
   createdAt: string;
@@ -190,6 +194,7 @@ export type MockSnapshot = {
   follows: Follow[];
   eventSaves: { userId: string; eventId: string }[];
   scans: ScanLog[];
+  galleries: (EventGalleryImage & { eventId: string })[];
   uploads: Upload[];
   permissions: DevicePermissions;
 };
