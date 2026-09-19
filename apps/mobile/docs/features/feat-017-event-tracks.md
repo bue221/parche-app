@@ -17,7 +17,7 @@ El evento puede llevar un preview corto de referencia. No es un streaming servic
 
 ## Pantallas
 
-Player mínimo: play/pause, título. Un track a la vez. Chrome B/N; no visualizer de colores.
+Player mínimo: play/pause, título. Un track a la vez. Chrome B/N; no visualizer de colores. Evento finalizado: lista en consulta, sin subir audio.
 
 ## Flujo
 
@@ -40,6 +40,7 @@ Transcoding, waveforms complejas, DJ sets de 2 h.
 - [ ] Play no abre Safari/Chrome externo como camino feliz.
 - [ ] `door` no edita tracks.
 - [ ] Upload sigue presign.
+- [ ] Evento finalizado no sube tracks.
 
 ## Relacionadas
 

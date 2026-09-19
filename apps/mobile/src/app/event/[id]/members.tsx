@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { EndedEventNotice } from '@/components/ended-event-notice';
 import { Field } from '@/components/field';
 import { FormSection } from '@/components/form-section';
 import { Screen } from '@/components/screen';
@@ -10,15 +11,16 @@ import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
-import { PendingAuth } from '@/components/feedback';
+import { PendingAuth, Skeleton } from '@/components/feedback';
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { statusLabel } from '@/lib/format';
-import type { Membership, MembershipRole } from '@/data/types';
+import { eventHasEnded, statusLabel } from '@/lib/format';
+import type { EventWithExtras, Membership, MembershipRole } from '@/data/types';
 
 export default function EventMembersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ok = useRequireAuth(`/event/${id}/members`);
   const { user } = useAuthSnapshot();
+  const [event, setEvent] = useState<EventWithExtras | null>(null);
   const [rows, setRows] = useState<Membership[]>([]);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Exclude<MembershipRole, 'owner'>>('door');
@@ -34,8 +36,9 @@ export default function EventMembersScreen() {
   }, [id]);
 
   useEffect(() => {
+    void api.events.get(id).then(setEvent);
     void load();
-  }, [load]);
+  }, [id, load]);
 
   if (!ok) {
     return <PendingAuth />;
@@ -47,51 +50,67 @@ export default function EventMembersScreen() {
       </Screen>
     );
   }
+  if (!event) {
+    return (
+      <Screen back title="Equipo">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="mt-ds-16 h-24 w-full" />
+      </Screen>
+    );
+  }
+
+  const ended = eventHasEnded(event);
 
   return (
-    <Screen back title="Equipo" lead="Invita a quien cubre la puerta.">
+    <Screen
+      back
+      title="Equipo"
+      lead={ended ? 'Consulta. El staff de esa noche se queda registrado.' : 'Invita a quien cubre la puerta.'}>
+      {ended ? <EndedEventNotice /> : null}
       {rows.length === 0 ? <Text variant="muted">Invita a quien cubre la puerta</Text> : null}
       {rows.map((row) => (
         <View key={row.id} className="mt-ds-12 gap-ds-8">
           <Text>
             {row.email} · {row.role} · {statusLabel(row.status)}
           </Text>
-          {row.inviteToken ? (
+          {row.inviteToken && !ended ? (
             <Text variant="helper" selectable>
               Link mock: parche://invites/{row.inviteToken}
             </Text>
           ) : null}
-          {row.role !== 'owner' && row.status !== 'revoked' ? (
+          {!ended && row.role !== 'owner' && row.status !== 'revoked' ? (
             <Button variant="outline" onPress={() => void api.members.revoke(id, row.id).then(load)}>
               <Text>Revocar</Text>
             </Button>
           ) : null}
         </View>
       ))}
-      <FormSection title="Invitar" className="mt-ds-24">
-        <Field label="Email" autoCapitalize="none" value={email} onChangeText={setEmail} />
-        <View className="flex-row flex-wrap gap-ds-8">
-          {(['manager', 'door', 'metrics'] as const).map((r) => (
-            <Button key={r} variant={role === r ? 'default' : 'outline'} onPress={() => setRole(r)}>
-              <Text>{r}</Text>
-            </Button>
-          ))}
-        </View>
-        {error ? (
-          <Text variant="helper" className="text-foreground">
-            {error}
-          </Text>
-        ) : null}
-        <Button
-          onPress={() => {
-            void api.members
-              .invite(id, email, role)
-              .then(load)
-              .catch((err) => setError(userMessage(err)));
-          }}>
-          <Text>Invitar</Text>
-        </Button>
-      </FormSection>
+      {ended ? null : (
+        <FormSection title="Invitar" className="mt-ds-24">
+          <Field label="Email" autoCapitalize="none" value={email} onChangeText={setEmail} />
+          <View className="flex-row flex-wrap gap-ds-8">
+            {(['manager', 'door', 'metrics'] as const).map((r) => (
+              <Button key={r} variant={role === r ? 'default' : 'outline'} onPress={() => setRole(r)}>
+                <Text>{r}</Text>
+              </Button>
+            ))}
+          </View>
+          {error ? (
+            <Text variant="helper" className="text-foreground">
+              {error}
+            </Text>
+          ) : null}
+          <Button
+            onPress={() => {
+              void api.members
+                .invite(id, email, role)
+                .then(load)
+                .catch((err) => setError(userMessage(err)));
+            }}>
+            <Text>Invitar</Text>
+          </Button>
+        </FormSection>
+      )}
     </Screen>
   );
 }

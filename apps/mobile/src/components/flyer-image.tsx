@@ -16,12 +16,14 @@ export function FlyerImage({
   style,
   aspectRatio,
   muted = false,
+  contentFit = 'cover',
 }: {
   uri: string;
   className?: string;
   style?: StyleProp<ImageStyle>;
   aspectRatio?: number;
   muted?: boolean;
+  contentFit?: 'cover' | 'contain';
 }) {
   const [failed, setFailed] = useState(false);
   const fill: ImageStyle = { width: '100%', ...(aspectRatio != null ? { aspectRatio } : { height: '100%' }) };
@@ -44,7 +46,7 @@ export function FlyerImage({
       <RNImage
         source={{ uri }}
         className={cn('bg-muted', className)}
-        resizeMode="cover"
+        resizeMode={contentFit}
         style={[fill, mutedStyle, style]}
         onError={() => {
           debugLog('media', 'flyer failed', { uri });
@@ -59,7 +61,7 @@ export function FlyerImage({
       source={{ uri }}
       className={cn('bg-muted', className)}
       style={[fill, mutedStyle, style]}
-      contentFit="cover"
+      contentFit={contentFit}
       cachePolicy="memory-disk"
       recyclingKey={uri}
       transition={200}

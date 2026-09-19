@@ -12,6 +12,7 @@ import { debugLog } from '@/data/log';
 import { hydratePrintSeen } from '@/data/ticket-cache';
 import { useInterestStore } from '@/data/interest-store';
 import { syncLocalInterest } from '@/data/interest-sync';
+import { useRecentStore } from '@/data/recent-store';
 import { getAccessExpiresAt, hasPersistedSession, hydrateRefresh } from '@/data/token-store';
 
 const REFRESH_SKEW_MS = 90 * 1000;
@@ -66,6 +67,7 @@ export function SessionLifecycle() {
       try {
         await hydratePrintSeen();
         await useInterestStore.getState().hydrate();
+        await useRecentStore.getState().hydrate();
         const refresh = await hydrateRefresh();
         if (!refresh) {
           return;

@@ -53,7 +53,7 @@ export default function TicketTransferScreen() {
               onPress={() => {
                 void api.tickets
                   .transfer(id, found.id)
-                  .then(() => router.replace('/tickets' as Href))
+                  .then(() => router.replace('/wallet' as Href))
                   .catch((err) => setError(userMessage(err)));
               }}>
               <Text>Confirmar cesión</Text>

@@ -43,7 +43,7 @@ Orden fijo; no reordenar en implementación:
 1. **Idle de máquina** (≤ 300 ms): ranura vacía.
 2. **Feed**: el rectángulo de papel crece desde la ranura (máscara), con jitter leve de impresora, ~800–1400 ms según alto del talón.
 3. **Stamp de flyer**: la imagen aparece como si el cabezal pasara (barrido horizontal o dither progresivo), no fade genérico.
-4. **Tipo** (evento, fecha, tipo): líneas de texto se revelan de arriba abajo, ritmo de punto térmico.
+4. **Copy** (evento, fecha, etapa): líneas de texto se revelan de arriba abajo, ritmo de punto térmico.
 5. **QR**: última pasada. Hasta que esta pasada termina, el código no es scaneable a propósito (placeholder en gris `muted` o líneas incompletas).
 6. **Corte**: micro-pausa + perforación; papel ya no se mueve.
 7. **Confirm**: overlay o banda `confirm` (~400 ms) + opcional haptic success. Copy: “Tiquete impreso”.

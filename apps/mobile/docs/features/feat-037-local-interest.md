@@ -1,6 +1,6 @@
 # FEAT-037: Interés local (seguir y guardar sin cuenta)
 
-El invitado puede seguir artistas y guardar fechas en el dispositivo. Al crear sesión, esos IDs se fusionan en la cuenta.
+El invitado puede seguir artistas y guardar eventos en el dispositivo. Al crear sesión, esos IDs se fusionan en la cuenta.
 
 | Campo | Valor |
 |-------|-------|
@@ -18,7 +18,7 @@ El invitado puede seguir artistas y guardar fechas en el dispositivo. Al crear s
 
 ## Pantallas
 
-Botón Seguir en perfil de artista y trailing en lineup. Botón Guardar en detalle de evento. Colecciones en [FEAT-040](feat-040-saved-tab.md).
+Botón Seguir en perfil de artista y trailing en el cartel. Corazón overlay en el flyer del detalle de evento. Colecciones en [FEAT-040](feat-040-saved-tab.md).
 
 ## Flujo
 

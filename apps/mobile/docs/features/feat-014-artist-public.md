@@ -11,7 +11,7 @@ El asistente ve quién toca: bio, próximos eventos, follow.
 
 ## Quick path
 
-1. Tap en lineup o búsqueda.
+1. Tap en artistas del evento o búsqueda.
 2. Ver bio, avatar, lista de próximos eventos.
 3. Evento tap → detalle. Follow → [FEAT-016](feat-016-artist-follow.md).
 
@@ -25,7 +25,7 @@ Hero B/N. Lista de eventos reutiliza card de Explorar. Dueño ve CTA “editar�
 
 ## Estados
 
-Sin fechas: “Sin fechas anunciadas”.
+Sin eventos: “Sin eventos anunciados”.
 
 ## Contrato
 
@@ -37,7 +37,7 @@ Chat. Stats de seguidores públicas detalladas (número simple OK).
 
 ## Checklist
 
-- [ ] Lineup y esta pantalla muestran el mismo nombre/avatar.
+- [ ] Artistas del evento y esta pantalla muestran el mismo nombre/avatar.
 - [ ] Invitado lee; follow pide cuenta.
 
 ## Relacionadas

@@ -89,7 +89,7 @@ export function mapEventDetail(raw: unknown): EventWithExtras {
     gallery: galleryRaw
       .map((row): EventGalleryImage | null => {
         const img = asRecord(row);
-        const url = mediaUrl(img.public_url) ?? mediaUrl(img.thumb_url);
+        const url = mediaUrl(img.public_url) ?? mediaUrl(img.thumb_url) ?? mediaUrl(img.url);
         const id = str(img.id);
         if (!id || !url) return null;
         return { id, url };

@@ -17,7 +17,7 @@ Conteo de la noche para quien está en puerta o mira métricas. Sin PII de compr
 
 ## Pantallas
 
-Números grandes Inter. `door` ve aforo, no ingresos. Lista “últimos” corta.
+Números grandes Inter. `door` ve aforo, no ingresos. Lista “últimos” corta. Tras el evento, la pantalla sigue abierta como archivo de esa noche (sin escanear).
 
 ## Flujo
 

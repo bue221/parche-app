@@ -80,9 +80,9 @@ export default function ArtistPublicScreen() {
         )}
       </View>
       <View className="mt-ds-32 gap-ds-16">
-        <Text variant="headingSm">Próximas fechas</Text>
+        <Text variant="headingSm">Próximos eventos</Text>
         {artist.upcoming.length === 0 ? (
-          <EmptyState title="Sin fechas anunciadas" lead="Cuando publique, aparecen aquí." />
+          <EmptyState title="Sin eventos anunciados" lead="Cuando publique, aparecen aquí." />
         ) : (
           <EventGrid>
             {artist.upcoming.map((event, index) => (

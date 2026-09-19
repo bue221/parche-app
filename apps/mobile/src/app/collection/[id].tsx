@@ -62,7 +62,7 @@ export default function CollectionScreen() {
         <View className="mt-ds-24">
           <EmptyState
             title="Esta colección ya no está"
-            lead="Puede que la hayas vaciado o que la fecha ya no exista."
+            lead="Puede que la hayas vaciado o que el evento ya no exista."
             actionLabel="Volver a favoritos"
             onAction={() => (router.canGoBack() ? router.back() : router.replace('/favorites' as Href))}
           />
@@ -100,7 +100,7 @@ export default function CollectionScreen() {
         {events.length === 0 && artists.length === 0 ? (
           <EmptyState
             title="Colección vacía"
-            lead="Guarda una fecha o sigue un artista para llenarla."
+            lead="Guarda un evento o sigue un artista para llenarla."
             actionLabel="Explorar"
             onAction={() => router.push('/' as Href)}
           />

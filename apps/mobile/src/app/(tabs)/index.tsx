@@ -32,12 +32,12 @@ import { hasActiveFilters } from '@/lib/genres';
 
 const TONIGHT_EMPTY = {
   title: 'Nada esta noche',
-  lead: 'Hoy no hay fechas anunciadas.',
+  lead: 'Hoy no hay eventos anunciados.',
 };
 
 const FOR_YOU_EMPTY = {
   title: 'Sigue artistas para ver sugerencias',
-  lead: 'Cuando sigas a alguien, sus fechas aparecen aquí.',
+  lead: 'Cuando sigas a alguien, sus eventos aparecen aquí.',
 };
 
 function ExploreHero({
@@ -54,7 +54,7 @@ function ExploreHero({
       <SearchBar value={query} onPress={onFilters} />
       {isPromoter ? (
         <Button size="sm" onPress={() => router.push('/event/create' as Href)}>
-          <Text>Crear fecha</Text>
+          <Text>Crear evento</Text>
         </Button>
       ) : null}
       <ExploreChips scope="agenda" />
@@ -204,11 +204,11 @@ function ExploreFeed({
           ))
         : null}
       <View className="gap-ds-16">
-        <Text variant="headingSm">Todas las fechas</Text>
+        <Text variant="headingSm">Todos los eventos</Text>
         {error ? <ErrorState message={error} onRetry={onRetry} /> : null}
         {events.length === 0 && !error && !loading ? (
           <EmptyState
-            title={filtered ? 'Nada en esos filtros' : 'Aún no hay fechas'}
+            title={filtered ? 'Nada en esos filtros' : 'Aún no hay eventos'}
             lead={filtered ? 'Prueba otro día o género.' : 'Vuelve más tarde o limpia la búsqueda.'}
             actionLabel={filtered ? 'Limpiar filtros' : undefined}
             onAction={filtered ? onClearFilters : undefined}
@@ -280,7 +280,7 @@ export default function ExplorarScreen() {
   const recs = (recsQuery.data ?? []).filter((event) => matchesExploreFilters(event, filters));
   const tonight = events.filter((event) => isSameLocalDay(event.startsAt));
   const railsByGenre = genreRails(events, filters.genre);
-  const error = eventsQuery.error ? 'No pudimos cargar las fechas' : null;
+  const error = eventsQuery.error ? 'No pudimos cargar los eventos' : null;
   const filtered = hasActiveFilters(filters);
   const selectedDate = activeDateChip(filters.from, filters.to);
   const openFilters = () => router.push('/filters?scope=agenda' as Href);

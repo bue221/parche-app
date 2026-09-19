@@ -37,14 +37,14 @@ export default function FollowingScreen() {
   ].filter((artist, index, list) => list.findIndex((row) => row.id === artist.id) === index);
 
   return (
-    <Screen back title="Siguiendo" lead="Artistas que te avisan de fechas.">
+    <Screen back title="Siguiendo" lead="Artistas que te avisan de eventos.">
       <View className="mt-ds-24 max-w-xl gap-ds-8">
         {followingQuery.error ? (
           <ErrorState message={userMessage(followingQuery.error)} onRetry={() => void followingQuery.refetch()} />
         ) : following.length === 0 ? (
           <EmptyState
             title="Todavía no sigues a nadie"
-            lead="Entra a un lineup y toca Seguir."
+            lead="Entra a un evento y toca Seguir."
             actionLabel="Explorar"
             onAction={() => router.push('/' as Href)}
           />

@@ -19,7 +19,7 @@ El productor o DJ arma su vitrina (bio, avatar, nombre de escena). No da permiso
 
 Formulario corto. Preview de cómo se ve en [FEAT-014](feat-014-artist-public.md).
 
-Promoter puede crear ficha de artista no ligada a user (`user_id` opcional) para lineup de invitados.
+Promoter puede crear ficha de artista no ligada a user (`user_id` opcional) para el cartel de invitados.
 
 ## Flujo
 
@@ -40,7 +40,7 @@ SoundCloud embed. Subida de discografía completa.
 ## Checklist
 
 - [ ] Asistente sin perfil artist no edita fichas ajenas.
-- [ ] Cambios salen en detalle de evento lineup.
+- [ ] Cambios salen en el cartel del evento.
 - [ ] No abre métricas ni puerta.
 
 ## Relacionadas

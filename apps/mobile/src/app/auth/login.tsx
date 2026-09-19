@@ -39,7 +39,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <AuthSplit title={'Entra\nal parche'} lead="Compra, sigue artistas u opera una fecha.">
+    <AuthSplit title={'Entra\nal parche'} lead="Compra, sigue artistas u opera un evento.">
       <Text variant="headingSm">Entrar</Text>
       <Field
         label="Email"
@@ -50,6 +50,11 @@ export default function LoginScreen() {
         placeholder="tu@correo.com"
       />
       <Field label="Contraseña" secureTextEntry value={password} onChangeText={setPassword} />
+      <Link href={'/reset' as Href}>
+        <Text variant="small" className="font-bold uppercase">
+          Restablecer contraseña
+        </Text>
+      </Link>
       {error ? <Text className="rounded-cards border border-foreground px-ds-12 py-ds-8">{error}</Text> : null}
       <Button disabled={busy} onPress={() => void onSubmit()}>
         <Text>{busy ? 'Entrando…' : 'Entrar'}</Text>

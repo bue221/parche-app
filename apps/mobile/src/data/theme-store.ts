@@ -3,6 +3,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type ThemePref = 'system' | 'light' | 'dark';
 
+export const THEME_PREFS: ThemePref[] = ['system', 'light', 'dark'];
+
+export const THEME_PREF_LABEL: Record<ThemePref, string> = {
+  system: 'Sistema',
+  light: 'Claro',
+  dark: 'Oscuro',
+};
+
+export function nextThemePref(pref: ThemePref): ThemePref {
+  return THEME_PREFS[(THEME_PREFS.indexOf(pref) + 1) % THEME_PREFS.length];
+}
+
 const KEY = 'parche.theme';
 
 type ThemeState = {

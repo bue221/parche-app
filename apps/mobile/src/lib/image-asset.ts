@@ -12,6 +12,37 @@ export function normalizeImageMime(mime?: string): string {
   return mime;
 }
 
+function sniffImageMime(bytes: Uint8Array, fallback: string): string {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return 'image/png';
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+  return normalizeImageMime(fallback);
+}
+
+export function bytesAsBody(bytes: Uint8Array, mime: string): BodyInit {
+  const copy = bytes.slice();
+  if (typeof Blob !== 'undefined') {
+    return new Blob([copy as unknown as BlobPart], { type: mime });
+  }
+  return copy as unknown as BodyInit;
+}
+
 function bytesFromBase64(value: string): Uint8Array {
   const binary = globalThis.atob(value);
   const bytes = new Uint8Array(binary.length);
@@ -24,21 +55,21 @@ function bytesFromBase64(value: string): Uint8Array {
 export async function bytesFromImageAsset(asset: ImagePickerAsset): Promise<{ mime: string; bytes: Uint8Array; uri: string }> {
   const mime = normalizeImageMime(asset.mimeType);
   const file = asset.file;
+  let bytes: Uint8Array;
+  let declared = mime;
   if (file && typeof file.arrayBuffer === 'function') {
-    return {
-      mime: normalizeImageMime(file.type) || mime,
-      bytes: new Uint8Array(await file.arrayBuffer()),
-      uri: asset.uri,
-    };
+    declared = file.type ? normalizeImageMime(file.type) : mime;
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } else if (asset.base64) {
+    bytes = bytesFromBase64(asset.base64);
+  } else {
+    const res = await fetch(asset.uri);
+    if (!res.ok) {
+      throw new ApiError('NETWORK', 'No pudimos leer la imagen');
+    }
+    bytes = new Uint8Array(await res.arrayBuffer());
   }
-  if (asset.base64) {
-    return { mime, bytes: bytesFromBase64(asset.base64), uri: asset.uri };
-  }
-  const res = await fetch(asset.uri);
-  if (!res.ok) {
-    throw new ApiError('NETWORK', 'No pudimos leer la imagen');
-  }
-  return { mime, bytes: new Uint8Array(await res.arrayBuffer()), uri: asset.uri };
+  return { mime: sniffImageMime(bytes, declared), bytes, uri: asset.uri };
 }
 
 export function assertImageUpload(mime: string, size: number) {

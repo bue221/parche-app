@@ -48,7 +48,7 @@ export default function FiltersScreen() {
         <StickyCta>
           <View className="gap-ds-8">
             <Button onPress={() => apply()}>
-              <Text>Ver fechas</Text>
+              <Text>Ver eventos</Text>
             </Button>
             <Button
               variant="outline"

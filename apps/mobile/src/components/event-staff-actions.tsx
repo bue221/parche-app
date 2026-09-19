@@ -1,19 +1,33 @@
-import { router, type Href } from 'expo-router';
-import { useState } from 'react';
-import { View } from 'react-native';
+import { type Href } from 'expo-router';
 
-import { BottomSheet } from '@/components/bottom-sheet';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import type { EventWithExtras, MembershipRole } from '@/data/types';
+import { eventHasEnded } from '@/lib/format';
 import { isDraftListingIncomplete } from '@/lib/listing-setup';
 
 export type StaffAction = {
   key: string;
   label: string;
   href: Href;
+  detail?: string;
 };
+
+const STAFF_PERMS = [
+  'event.write',
+  'event.tickets.manage',
+  'event.members.manage',
+  'event.door.scan',
+  'event.door.live',
+  'event.metrics.read',
+] as const;
+
+export function canOperateEvent(userId: string, eventId: string): boolean {
+  return STAFF_PERMS.some((permission) => api.helpers.can(userId, eventId, permission));
+}
+
+export function eventOperateHref(eventId: string): Href {
+  return `/event/${eventId}/operate` as Href;
+}
 
 export function buildEventStaffActions({
   userId,
@@ -25,99 +39,112 @@ export function buildEventStaffActions({
   eventId: string;
   role: MembershipRole;
   event?: EventWithExtras;
-}): { primary: StaffAction; overflow: StaffAction[] } {
+}): { primary: StaffAction; rest: StaffAction[] } {
   const write = api.helpers.can(userId, eventId, 'event.write');
   const tickets = api.helpers.can(userId, eventId, 'event.tickets.manage');
   const members = api.helpers.can(userId, eventId, 'event.members.manage');
   const door = api.helpers.can(userId, eventId, 'event.door.scan');
   const live = api.helpers.can(userId, eventId, 'event.door.live');
   const metrics = api.helpers.can(userId, eventId, 'event.metrics.read');
-  const setup = write && isDraftListingIncomplete(event);
+  const ended = event ? eventHasEnded(event) : false;
+  const setup = write && !ended && isDraftListingIncomplete(event);
 
   const all: StaffAction[] = [];
-  all.push({ key: 'detail', label: 'Detalle', href: `/event/${eventId}` as Href });
   if (setup) {
-    all.push({ key: 'setup', label: 'Continuar setup', href: `/event/${eventId}/setup` as Href });
+    all.push({
+      key: 'setup',
+      label: 'Continuar setup',
+      href: `/event/${eventId}/setup` as Href,
+      detail: 'Flyer, pin, etapas y artistas',
+    });
+  }
+  if (write && !ended) {
+    all.push({
+      key: 'edit',
+      label: 'Editar',
+      href: `/event/${eventId}/edit` as Href,
+      detail: 'Flyer, datos y pin',
+    });
   }
   if (write) {
-    all.push({ key: 'edit', label: 'Editar', href: `/event/${eventId}/edit` as Href });
-    all.push({ key: 'lineup', label: 'Lineup', href: `/event/${eventId}/lineup` as Href });
-    all.push({ key: 'tracks', label: 'Tracks', href: `/event/${eventId}/tracks` as Href });
+    all.push({
+      key: 'lineup',
+      label: 'Artistas',
+      href: `/event/${eventId}/lineup` as Href,
+      detail: ended ? 'Quién tocó (consulta)' : 'Quién toca',
+    });
+    all.push({
+      key: 'tracks',
+      label: 'Tracks',
+      href: `/event/${eventId}/tracks` as Href,
+      detail: ended ? 'Audio de referencia (consulta)' : 'Audio de referencia',
+    });
   }
   if (tickets) {
-    all.push({ key: 'tickets', label: 'Tipos', href: `/event/${eventId}/tickets` as Href });
+    all.push({
+      key: 'tickets',
+      label: 'Etapas',
+      href: `/event/${eventId}/tickets` as Href,
+      detail: ended ? 'Preventa, taquilla y cupos (consulta)' : 'Preventa, taquilla y cupos',
+    });
   }
   if (members) {
-    all.push({ key: 'members', label: 'Equipo', href: `/event/${eventId}/members` as Href });
+    all.push({
+      key: 'members',
+      label: 'Equipo',
+      href: `/event/${eventId}/members` as Href,
+      detail: ended ? 'Staff del evento (consulta)' : 'Staff del evento',
+    });
   }
-  if (door) {
-    all.push({ key: 'door', label: 'Puerta', href: `/event/${eventId}/door` as Href });
+  if (door && !ended) {
+    all.push({
+      key: 'door',
+      label: 'Puerta',
+      href: `/event/${eventId}/door` as Href,
+      detail: 'Escanear ingresos',
+    });
   }
   if (live) {
-    all.push({ key: 'live', label: 'Aforo', href: `/event/${eventId}/live` as Href });
+    all.push({
+      key: 'live',
+      label: 'Aforo',
+      href: `/event/${eventId}/live` as Href,
+      detail: 'Quién ya entró',
+    });
   }
   if (metrics) {
-    all.push({ key: 'metrics', label: 'Métricas', href: `/event/${eventId}/metrics` as Href });
+    all.push({
+      key: 'metrics',
+      label: 'Métricas',
+      href: `/event/${eventId}/metrics` as Href,
+      detail: 'Ventas y puerta',
+    });
   }
 
-  const primaryKey =
-    role === 'door' ? 'door' : role === 'metrics' ? 'metrics' : setup ? 'setup' : write ? 'edit' : all[0]?.key;
-  const primary = all.find((action) => action.key === primaryKey) ?? all[0];
-  const overflow = all.filter((action) => action.key !== primary.key);
-  return { primary, overflow };
-}
-
-export function EventStaffPrimary({
-  action,
-  overflow,
-}: {
-  action: StaffAction;
-  overflow: StaffAction[];
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <View className="gap-ds-8">
-      <View className="flex-row flex-wrap gap-ds-8">
-        <Button className="min-w-0 flex-1" onPress={() => router.push(action.href)}>
-          <Text>{action.label}</Text>
-        </Button>
-        {overflow.length > 0 ? (
-          <Button variant="outline" className="min-w-0 flex-1" onPress={() => setOpen(true)}>
-            <Text>Más</Text>
-          </Button>
-        ) : null}
-      </View>
-      <EventStaffSheet visible={open} onClose={() => setOpen(false)} actions={overflow} />
-    </View>
-  );
-}
-
-export function EventStaffSheet({
-  visible,
-  onClose,
-  actions,
-  title = 'Más acciones',
-}: {
-  visible: boolean;
-  onClose: () => void;
-  actions: StaffAction[];
-  title?: string;
-}) {
-  return (
-    <BottomSheet visible={visible} onClose={onClose} title={title}>
-      <View className="gap-ds-8 pb-ds-8">
-        {actions.map((action) => (
-          <Button
-            key={action.key}
-            variant="outline"
-            onPress={() => {
-              onClose();
-              router.push(action.href);
-            }}>
-            <Text>{action.label}</Text>
-          </Button>
-        ))}
-      </View>
-    </BottomSheet>
-  );
+  const fallback: StaffAction = {
+    key: 'preview',
+    label: 'Ver ficha pública',
+    href: `/event/${eventId}` as Href,
+    detail: 'Como la ve el público',
+  };
+  const primaryKey = ended
+    ? role === 'door' && live
+      ? 'live'
+      : metrics
+        ? 'metrics'
+        : live
+          ? 'live'
+          : all[0]?.key
+    : role === 'door'
+      ? 'door'
+      : role === 'metrics'
+        ? 'metrics'
+        : setup
+          ? 'setup'
+          : write
+            ? 'edit'
+            : all[0]?.key;
+  const primary = all.find((action) => action.key === primaryKey) ?? all[0] ?? fallback;
+  const rest = all.filter((action) => action.key !== primary.key);
+  return { primary, rest };
 }

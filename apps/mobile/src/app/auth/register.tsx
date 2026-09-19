@@ -51,7 +51,7 @@ export default function RegisterScreen() {
   return (
     <AuthSplit
       title={'Crea\ntu cuenta'}
-      lead="El perfil inicial no te hace staff. Después te invitan a una fecha.">
+      lead="El perfil inicial no te hace staff. Después te invitan a un evento.">
       <Text variant="headingSm">Registro</Text>
       <Field label="Nombre" value={displayName} onChangeText={setDisplayName} error={fieldErrors.displayName} />
       <PhoneField

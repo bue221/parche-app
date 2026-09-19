@@ -5,6 +5,7 @@ import {
   CalendarPlus,
   CircleUser,
   ClipboardList,
+  KeyRound,
   LogOut,
   ShieldCheck,
   UserRound,
@@ -15,7 +16,7 @@ import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
-import { FadeSlideIn } from '@/components/motion';
+import { FadeSlideIn, PressScale } from '@/components/motion';
 import { ProfileMascot } from '@/components/profile-mascot';
 import { Screen } from '@/components/screen';
 import { SettingsRow } from '@/components/settings-row';
@@ -163,6 +164,9 @@ export default function ParcheScreen() {
             following={following.length}
             dates={owned.length}
             onPress={() => router.push('/parche/editar' as Href)}
+            onTickets={() => router.push('/wallet' as Href)}
+            onFollowing={() => router.push('/parche/siguiendo' as Href)}
+            onDates={() => router.push('/operate' as Href)}
           />
         </FadeSlideIn>
 
@@ -210,6 +214,12 @@ export default function ParcheScreen() {
             onPress={() => router.push('/parche/editar' as Href)}
             divided={false}
           />
+          <SettingsRow
+            icon={<MenuIcon icon={KeyRound} />}
+            label="Restablecer contraseña"
+            onPress={() => router.push('/parche/contrasena' as Href)}
+            divided={false}
+          />
           <SettingsRow icon={<MenuIcon icon={UserRound} />} label="Apariencia" trailing={<ThemeToggle />} divided={false} />
           {hasArtist && artist?.id ? (
             <SettingsRow
@@ -235,7 +245,7 @@ export default function ParcheScreen() {
             {isPromoter ? (
               <SettingsRow
                 icon={<MenuIcon icon={CalendarPlus} />}
-                label="Crear fecha"
+                label="Crear evento"
                 onPress={() => router.push('/event/create' as Href)}
                 divided={false}
               />
@@ -272,6 +282,9 @@ function IdentityCard({
   following,
   dates,
   onPress,
+  onTickets,
+  onFollowing,
+  onDates,
 }: {
   user: Omit<User, 'password'>;
   role: string;
@@ -279,53 +292,60 @@ function IdentityCard({
   following: number;
   dates: number;
   onPress: () => void;
+  onTickets: () => void;
+  onFollowing: () => void;
+  onDates: () => void;
 }) {
   const initials = user.displayName.slice(0, 2).toUpperCase();
   return (
-    <Surface elevated className="flex-row items-center gap-ds-16 p-ds-24" onPress={onPress} accessibilityLabel="Editar perfil">
-      <View className="min-w-0 flex-1 items-center gap-ds-12">
-        <View className="relative">
-          {user.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              className="rounded-full bg-muted"
-              style={{ width: 112, height: 112 }}
-            />
-          ) : (
-            <View className="size-28 items-center justify-center rounded-full bg-muted">
-              <Text variant="heading">{initials}</Text>
+    <Surface elevated className="flex-row items-center gap-ds-16 p-ds-24">
+      <PressScale className="min-w-0 flex-1" onPress={onPress} accessibilityLabel="Editar perfil">
+        <View className="items-center gap-ds-12">
+          <View className="relative">
+            {user.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                className="rounded-full bg-muted"
+                style={{ width: 112, height: 112 }}
+              />
+            ) : (
+              <View className="size-28 items-center justify-center rounded-full bg-muted">
+                <Text variant="heading">{initials}</Text>
+              </View>
+            )}
+            <View className="absolute bottom-0 right-1 size-8 items-center justify-center rounded-full border-2 border-surface bg-aurora">
+              <Icon as={ShieldCheck} size={16} className="text-pitch-black" />
             </View>
-          )}
-          <View className="absolute bottom-0 right-1 size-8 items-center justify-center rounded-full border-2 border-surface bg-aurora">
-            <Icon as={ShieldCheck} size={16} className="text-pitch-black" />
+          </View>
+          <View className="items-center gap-ds-4">
+            <Text variant="subheading" numberOfLines={1} className="text-center">
+              {user.displayName}
+            </Text>
+            <Text variant="muted" numberOfLines={1} className="text-center">
+              {role}
+            </Text>
           </View>
         </View>
-        <View className="items-center gap-ds-4">
-          <Text variant="subheading" numberOfLines={1} className="text-center">
-            {user.displayName}
-          </Text>
-          <Text variant="muted" numberOfLines={1} className="text-center">
-            {role}
-          </Text>
-        </View>
-      </View>
+      </PressScale>
       <View className="w-[42%] justify-center">
-        <Stat value={tickets} label="Tiquetes" />
+        <Stat value={tickets} label="Tiquetes" onPress={onTickets} />
         <View className="my-ds-12 h-px bg-border" />
-        <Stat value={following} label="Siguiendo" />
+        <Stat value={following} label="Siguiendo" onPress={onFollowing} />
         <View className="my-ds-12 h-px bg-border" />
-        <Stat value={dates} label="Fechas" />
+        <Stat value={dates} label="Eventos" onPress={onDates} />
       </View>
     </Surface>
   );
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label, onPress }: { value: number; label: string; onPress: () => void }) {
   return (
-    <View className="gap-ds-4">
-      <Text variant="heading">{value}</Text>
-      <Text variant="muted">{label}</Text>
-    </View>
+    <PressScale onPress={onPress} accessibilityLabel={label}>
+      <View className="min-h-11 justify-center gap-ds-4">
+        <Text variant="heading">{value}</Text>
+        <Text variant="muted">{label}</Text>
+      </View>
+    </PressScale>
   );
 }
 
@@ -389,7 +409,7 @@ function MenuIcon({ icon, danger = false }: { icon: typeof CircleUser; danger?: 
 }
 
 function shortcutLabel(primary: PrimaryProfile) {
-  if (primary === 'promoter') return 'Tus fechas';
+  if (primary === 'promoter') return 'Tus eventos';
   if (primary === 'artist') return 'Tu vitrina';
   return 'Tiquetes';
 }
@@ -397,7 +417,7 @@ function shortcutLabel(primary: PrimaryProfile) {
 function shortcutHref(primary: PrimaryProfile) {
   if (primary === 'promoter') return '/operate';
   if (primary === 'artist') return '/artist/edit';
-  return '/tickets?tab=tickets';
+  return '/wallet';
 }
 
 function compactUris(uri?: string) {
@@ -443,7 +463,7 @@ function profileCta({
   }
   if (promoterEmpty) {
     return {
-      title: 'Crea tu primera fecha',
+      title: 'Crea tu primer evento',
       lead: 'Flyer primero, luego datos y pin.',
       onPress: onCreate,
       mascot: <ProfileMascot profile="promoter" size={36} />,

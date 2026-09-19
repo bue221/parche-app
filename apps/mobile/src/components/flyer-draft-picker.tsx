@@ -11,6 +11,7 @@ import { debugLog } from '@/data/log';
 import { bytesFromImageAsset } from '@/lib/image-asset';
 
 export type FlyerDraft = {
+  id?: string;
   uri: string;
   mime: string;
   bytes: Uint8Array;

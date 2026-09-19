@@ -11,7 +11,7 @@ const SLIDES = [
   {
     kicker: 'Explorar',
     title: 'Encuentra el parche',
-    body: 'Fotos, mapa y el día. Toca y ves lineup y boleta.',
+    body: 'Fotos, mapa y el día. Toca y ves artistas y boleta.',
   },
   {
     kicker: 'Wallet',

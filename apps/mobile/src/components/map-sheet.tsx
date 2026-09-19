@@ -174,9 +174,9 @@ export function MapSheet({
   }));
 
   const countLabel =
-    events.length === 0 ? 'Sin fechas en el mapa' : `${events.length} ${events.length === 1 ? 'fecha' : 'fechas'}`;
+    events.length === 0 ? 'Sin eventos en el mapa' : `${events.length} ${events.length === 1 ? 'evento' : 'eventos'}`;
   const handleLabel =
-    snap === 'expanded' ? 'Ver mapa' : snap === 'peek' ? 'Ver lista completa' : 'Ver lista de fechas';
+    snap === 'expanded' ? 'Ver mapa' : snap === 'peek' ? 'Ver lista completa' : 'Ver lista de eventos';
 
   return (
     <>
@@ -215,7 +215,7 @@ export function MapSheet({
               }}
             />
             <Text className="text-center font-bold">
-              {loading ? 'Cargando fechas' : error ? 'No se pudo cargar' : countLabel}
+              {loading ? 'Cargando eventos' : error ? 'No se pudo cargar' : countLabel}
             </Text>
           </Pressable>
         </GestureDetector>
@@ -234,7 +234,7 @@ export function MapSheet({
         ) : events.length === 0 ? (
           <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
             <Text variant="muted" className="text-center">
-              No hay fechas en esta vista. Cambia filtros o vuelve a Explorar.
+              No hay eventos en esta vista. Cambia filtros o vuelve a Explorar.
             </Text>
           </View>
         ) : (

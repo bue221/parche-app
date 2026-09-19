@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { DateTimeField } from '@/components/date-field';
 import { EventCard } from '@/components/event-card';
+import { EventGalleryPicker } from '@/components/event-gallery-picker';
 import { Field } from '@/components/field';
 import { FlyerDraftPicker, type FlyerDraft } from '@/components/flyer-draft-picker';
 import { FormSection } from '@/components/form-section';
@@ -19,7 +20,7 @@ import { ApiError, userMessage } from '@/data/errors';
 import { setPendingUpload } from '@/data/http-api';
 import { debugLog } from '@/data/log';
 import { toast } from '@/data/toast-store';
-import type { ParcheEvent } from '@/data/types';
+import type { EventGalleryImage, EventWithExtras, ParcheEvent } from '@/data/types';
 import { GENRE_CHIPS } from '@/lib/genres';
 
 export type EventFormValue = {
@@ -35,8 +36,8 @@ export type EventFormValue = {
 };
 
 const STEPS = [
-  { title: 'Elige el flyer', lead: 'La foto manda. Sin flyer no se envía a revisión.' },
-  { title: 'Nombre y momento', lead: 'Lo mínimo para armar la fecha.' },
+  { title: 'Fotos del evento', lead: 'El flyer es la portada. Puedes sumar más fotos para la ficha.' },
+  { title: 'Nombre y momento', lead: 'Lo mínimo para armar el evento.' },
   { title: 'Dónde es', lead: 'Toca el mapa para soltar el pin. El API pide pin para guardar el borrador.' },
   { title: 'Así se ve', lead: 'Revisa el listing antes de guardar o enviar.' },
 ] as const;
@@ -47,7 +48,7 @@ export function EventWizard({
   eventId: initialEventId,
 }: {
   mode: 'create' | 'edit';
-  initial?: Partial<ParcheEvent>;
+  initial?: Partial<EventWithExtras>;
   eventId?: string;
 }) {
   const queryClient = useQueryClient();
@@ -64,6 +65,8 @@ export function EventWizard({
   const [flyerUrl, setFlyerUrl] = useState(initial?.flyerUrl);
   const [localFlyerUri, setLocalFlyerUri] = useState<string | undefined>(initial?.flyerUrl);
   const [pendingFlyer, setPendingFlyer] = useState<FlyerDraft | null>(null);
+  const [gallery, setGallery] = useState<EventGalleryImage[]>(initial?.gallery ?? []);
+  const [pendingGallery, setPendingGallery] = useState<FlyerDraft[]>([]);
   const [flyerFailed, setFlyerFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,19 +92,43 @@ export function EventWizard({
   const canSubmit = lat != null && lng != null && Boolean(flyerUrl) && !flyerFailed;
   const current = STEPS[step];
 
+  async function uploadBytes(kind: 'flyer' | 'gallery', draft: FlyerDraft, id: string) {
+    setPendingUpload({ mime: draft.mime, bytes: draft.bytes });
+    return api.media.upload(kind, draft.mime, draft.bytes.byteLength, id);
+  }
+
   async function uploadPending(id: string) {
-    if (!pendingFlyer) return;
-    try {
-      setPendingUpload({ mime: pendingFlyer.mime, bytes: pendingFlyer.bytes });
-      const upload = await api.media.upload('flyer', pendingFlyer.mime, pendingFlyer.bytes.byteLength, id);
-      setFlyerUrl(upload.url);
-      setLocalFlyerUri(upload.url);
-      setPendingFlyer(null);
-      setFlyerFailed(false);
-    } catch (err) {
-      setFlyerFailed(true);
-      debugLog('events', 'flyer upload failed', { eventId: id });
-      throw err;
+    if (pendingFlyer) {
+      try {
+        const upload = await uploadBytes('flyer', pendingFlyer, id);
+        setFlyerUrl(upload.url);
+        setLocalFlyerUri(upload.url);
+        setPendingFlyer(null);
+        setFlyerFailed(false);
+      } catch (err) {
+        setFlyerFailed(true);
+        debugLog('events', 'flyer upload failed', { eventId: id });
+        throw err;
+      }
+    }
+    if (pendingGallery.length === 0) return;
+    const remaining: FlyerDraft[] = [];
+    const added: EventGalleryImage[] = [];
+    for (const draft of pendingGallery) {
+      try {
+        const upload = await uploadBytes('gallery', draft, id);
+        added.push({ id: upload.id, url: upload.url });
+      } catch {
+        remaining.push(draft);
+        debugLog('events', 'gallery upload failed', { eventId: id });
+      }
+    }
+    if (added.length > 0) {
+      setGallery((current) => [...current, ...added]);
+    }
+    setPendingGallery(remaining);
+    if (remaining.length > 0) {
+      throw new ApiError('NETWORK', 'No se subieron todas las fotos. Vuelve al paso 1 e inténtalo de nuevo.');
     }
   }
 
@@ -131,7 +158,7 @@ export function EventWizard({
   }
 
   function validateDatos() {
-    const nextName = name.trim() ? undefined : 'Ponle nombre a la fecha';
+    const nextName = name.trim() ? undefined : 'Ponle nombre al evento';
     const parsed = startsAt ? new Date(startsAt) : null;
     const nextDate = parsed && !Number.isNaN(parsed.getTime()) ? undefined : 'Fecha y hora son obligatorias';
     setNameError(nextName);
@@ -158,7 +185,7 @@ export function EventWizard({
         setError(message);
         debugLog('events', 'wizard persist failed', { step, mode });
         if (err instanceof ApiError && err.code === 'FORBIDDEN') {
-          router.replace((eventId ? `/event/${eventId}` : '/operate') as Href);
+          router.replace((eventId ? `/event/${eventId}/operate` : '/operate') as Href);
         }
       } finally {
         setBusy(false);
@@ -177,9 +204,9 @@ export function EventWizard({
       await persistDraft();
       await api.events.patch(eventId, { ...value, publish });
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] });
-      toast(publish ? 'Enviada a revisión' : 'Borrador guardado', 'success');
+      toast(publish ? 'Enviado a revisión' : 'Borrador guardado', 'success');
       if (publish || mode === 'edit') {
-        router.replace(`/event/${eventId}` as Href);
+        router.replace(`/event/${eventId}/operate` as Href);
       } else {
         router.replace(`/event/${eventId}/setup` as Href);
       }
@@ -188,7 +215,7 @@ export function EventWizard({
       setError(message);
       debugLog('events', 'wizard finish failed', { publish, mode });
       if (err instanceof ApiError && err.code === 'CONFLICT' && eventId) {
-        toast('Alguien más editó esta fecha. Recarga e intenta de nuevo.');
+        toast('Alguien más editó este evento. Recarga e intenta de nuevo.');
         try {
           const fresh = await api.events.get(eventId);
           setName(fresh.name);
@@ -201,12 +228,14 @@ export function EventWizard({
           setLng(fresh.lng);
           setFlyerUrl(fresh.flyerUrl);
           setLocalFlyerUri(fresh.flyerUrl);
+          setGallery(fresh.gallery);
+          setPendingGallery([]);
         } catch {
           /* keep local values */
         }
       }
       if (err instanceof ApiError && err.code === 'FORBIDDEN') {
-        router.replace(`/event/${eventId}` as Href);
+        router.replace(`/event/${eventId}/operate` as Href);
       }
     } finally {
       setBusy(false);
@@ -215,23 +244,41 @@ export function EventWizard({
 
   const body =
     step === 0 ? (
-      <FlyerDraftPicker
-        previewUri={localFlyerUri}
-        eventId={eventId}
-        onLocalPick={(draft) => {
-          setLocalFlyerUri(draft.uri);
-          setFlyerFailed(false);
-          if (!eventId) {
-            setPendingFlyer(draft);
-          }
-        }}
-        onUploaded={(url) => {
-          setFlyerUrl(url);
-          setLocalFlyerUri(url);
-          setPendingFlyer(null);
-          setFlyerFailed(false);
-        }}
-      />
+      <View className="gap-ds-24">
+        <FlyerDraftPicker
+          previewUri={localFlyerUri}
+          eventId={eventId}
+          onLocalPick={(draft) => {
+            setLocalFlyerUri(draft.uri);
+            setFlyerFailed(false);
+            if (!eventId) {
+              setPendingFlyer(draft);
+            }
+          }}
+          onUploaded={(url) => {
+            setFlyerUrl(url);
+            setLocalFlyerUri(url);
+            setPendingFlyer(null);
+            setFlyerFailed(false);
+            if (eventId) {
+              void api.events
+                .get(eventId)
+                .then((fresh) => setGallery(fresh.gallery))
+                .catch(() => {
+                  /* keep local gallery */
+                });
+            }
+          }}
+        />
+        <EventGalleryPicker
+          eventId={eventId}
+          images={gallery}
+          pending={pendingGallery}
+          disabled={busy}
+          onPendingChange={setPendingGallery}
+          onImagesChange={setGallery}
+        />
+      </View>
     ) : step === 1 ? (
       <FormSection title="Datos">
         <Field label="Nombre" value={name} onChangeText={setName} error={nameError} />
@@ -304,7 +351,7 @@ export function EventWizard({
     <Screen
       back
       eyebrow={`${step + 1} de 4`}
-      title={mode === 'edit' && step === 0 ? 'Editar fecha' : current.title}
+      title={mode === 'edit' && step === 0 ? 'Editar evento' : current.title}
       lead={current.lead}
       footer={
         <StickyCta>

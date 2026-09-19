@@ -145,7 +145,7 @@ export function EventCard({
       {saveable ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar fecha'}
+          accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar evento'}
           hitSlop={4}
           onPress={() => void toggleSave(event.id, isLoggedIn)}
           className="absolute right-ds-4 top-ds-4 z-10 size-11 items-center justify-center">

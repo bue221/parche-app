@@ -11,16 +11,17 @@ import { useThemePref } from '@/data/theme-store';
 import { THEME_VARS } from '@/lib/theme';
 
 function applyNativeScheme(pref: 'system' | 'light' | 'dark') {
-  const next = pref === 'system' ? 'system' : pref;
   try {
-    Appearance.setColorScheme(pref === 'system' ? 'unspecified' : pref);
+    // `null` restores OS appearance. The string `'unspecified'` is not a RN ColorSchemeName
+    // and leaves a previously forced light/dark lock in place.
+    Appearance.setColorScheme(pref === 'system' ? null : pref);
   } catch (err) {
     debugLog('theme', 'Appearance.setColorScheme failed', {
       err: err instanceof Error ? err.message : String(err),
     });
   }
   try {
-    colorScheme.set(next);
+    colorScheme.set(pref === 'system' ? 'system' : pref);
   } catch (err) {
     debugLog('theme', 'nativewind colorScheme.set failed', {
       err: err instanceof Error ? err.message : String(err),

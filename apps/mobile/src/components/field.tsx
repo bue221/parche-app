@@ -30,23 +30,42 @@ export function FieldLabel({
   );
 }
 
-export function Field({ label, error, helper, className, multiline, onFocus, onBlur, style, ...props }: FieldProps) {
+export function Field({
+  label,
+  error,
+  helper,
+  className,
+  multiline,
+  onFocus,
+  onBlur,
+  style,
+  editable,
+  ...props
+}: FieldProps) {
   const [focused, setFocused] = useState(false);
   const theme = useTheme();
-  const tone = controlTone({ focused, error: Boolean(error) });
+  const locked = editable === false;
+  const tone = controlTone({ focused: focused && !locked, error: Boolean(error) });
 
   return (
     <View className="gap-ds-8">
-      <FieldLabel focused={focused} error={Boolean(error)}>
+      <FieldLabel focused={focused && !locked} error={Boolean(error)}>
         {label}
       </FieldLabel>
       <TextInput
-        className={fieldChromeClassName(tone, cn(multiline && 'min-h-24 py-ds-16', className))}
+        className={fieldChromeClassName(
+          tone,
+          cn(multiline && 'min-h-24 py-ds-16', locked && 'bg-muted text-muted-foreground', className)
+        )}
         style={[controlShadowStyle(tone), style]}
         placeholderTextColor={theme.textMuted}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
+        {...props}
+        editable={!locked}
+        selectTextOnFocus={!locked}
         onFocus={(event) => {
+          if (locked) return;
           setFocused(true);
           onFocus?.(event);
         }}
@@ -54,7 +73,6 @@ export function Field({ label, error, helper, className, multiline, onFocus, onB
           setFocused(false);
           onBlur?.(event);
         }}
-        {...props}
       />
       {error ? (
         <Text variant="helper" className="text-danger">

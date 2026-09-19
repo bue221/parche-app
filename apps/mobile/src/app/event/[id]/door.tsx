@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Field } from '@/components/field';
 import { PendingAuth } from '@/components/feedback';
+import { useBlockEndedEventWrite } from '@/components/ended-event-notice';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
@@ -14,7 +15,9 @@ import { userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
 import { useAuthSnapshot } from '@/data/session';
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import type { CheckInCode } from '@/data/types';
+import type { CheckInCode, EventWithExtras } from '@/data/types';
+import { eventHasEnded } from '@/lib/format';
+import { createScanHold, SCAN_RESUME_MS } from '@/lib/scan-hold';
 
 const COPY: Record<CheckInCode, string> = {
   approved: 'PASA',
@@ -51,11 +54,42 @@ export default function DoorScannerScreen() {
   const [asking, setAsking] = useState(false);
   const [token, setToken] = useState('');
   const [manual, setManual] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
   const [result, setResult] = useState<CheckInCode | null>(null);
   const [occupancy, setOccupancy] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [event, setEvent] = useState<EventWithExtras | null>(null);
   const scanning = useRef(false);
-  const lastScan = useRef(0);
+  const resumeAt = useRef(0);
+  const hold = useRef(createScanHold());
+
+  useEffect(() => {
+    const tracker = hold.current;
+    return () => {
+      tracker.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ok || !id) return;
+    let cancelled = false;
+    void api.events
+      .get(id)
+      .then((row) => {
+        if (!cancelled) setEvent(row);
+      })
+      .catch((err) => {
+        console.warn('door.event', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ok, id]);
+
+  const canLive = user ? api.helpers.can(user.id, id, 'event.door.live') : false;
+  useBlockEndedEventWrite(event, id, (canLive ? `/event/${id}/live` : `/event/${id}/operate`) as Href);
 
   useEffect(() => {
     if (!ok || !id) return;
@@ -75,12 +109,32 @@ export default function DoorScannerScreen() {
     };
   }, [ok, id]);
 
-  async function scan(value: string) {
+  function pauseCamera(ms = SCAN_RESUME_MS) {
+    resumeAt.current = Date.now() + ms;
+    hold.current.reset();
+    setHolding(false);
+  }
+
+  function lockCode(payload: string) {
+    const value = payload.trim();
+    if (!value || scanning.current) return;
+    hold.current.reset();
+    setHolding(false);
+    setError(null);
+    setPending(value);
+  }
+
+  function cancelPending() {
+    setPending(null);
+    setError(null);
+    pauseCamera();
+  }
+
+  async function confirmEntry(value: string) {
     const payload = value.trim();
     if (scanning.current || !payload) return;
-    if (Date.now() - lastScan.current < 1600) return;
-    lastScan.current = Date.now();
     scanning.current = true;
+    setBusy(true);
     setError(null);
     try {
       const res = await api.door.checkIn(id, payload);
@@ -88,6 +142,7 @@ export default function DoorScannerScreen() {
         router.replace('/operate' as Href);
         return;
       }
+      setPending(null);
       setResult(res.code);
       setOccupancy(res.occupancy);
     } catch (err) {
@@ -96,6 +151,7 @@ export default function DoorScannerScreen() {
       toast(message);
     } finally {
       scanning.current = false;
+      setBusy(false);
     }
   }
 
@@ -109,9 +165,16 @@ export default function DoorScannerScreen() {
       </View>
     );
   }
+  if (!event || eventHasEnded(event)) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background px-ds-24">
+        <PendingAuth />
+      </View>
+    );
+  }
 
   const cameraReady = Boolean(permission?.granted || webGranted);
-  const scanningEnabled = cameraReady && !result && !manual;
+  const scanningEnabled = cameraReady && !result && !manual && !pending;
 
   async function askCamera() {
     if (asking) return;
@@ -149,8 +212,9 @@ export default function DoorScannerScreen() {
   }
 
   function resumeScan() {
-    lastScan.current = 0;
     setResult(null);
+    setError(null);
+    pauseCamera();
   }
 
   return (
@@ -163,7 +227,9 @@ export default function DoorScannerScreen() {
           onBarcodeScanned={
             scanningEnabled
               ? (scanResult) => {
-                  void scan(scanResult.data);
+                  if (Date.now() < resumeAt.current) return;
+                  const status = hold.current.observe(scanResult.data, lockCode);
+                  if (status === 'restarted') setHolding(true);
                 }
               : undefined
           }
@@ -192,12 +258,14 @@ export default function DoorScannerScreen() {
 
         {scanningEnabled ? (
           <View className="flex-1 items-center justify-center" style={{ pointerEvents: 'none' }}>
-            <View className="h-52 w-52 rounded-cards border-2 border-paper-white" />
+            <View
+              className={`h-52 w-52 rounded-cards border-2 ${holding ? 'border-aurora' : 'border-paper-white'}`}
+            />
             <Text className="mt-ds-16 font-favorit text-caption font-bold uppercase tracking-favorit text-paper-white">
-              QR o código de barras
+              {holding ? 'Mantén el código' : 'QR o código de barras'}
             </Text>
           </View>
-        ) : !cameraReady && !manual ? (
+        ) : !cameraReady && !manual && !pending ? (
           <View className="flex-1 items-center justify-center px-ds-24">
             <Text className="text-center text-paper-white">
               {Platform.OS === 'web'
@@ -214,6 +282,47 @@ export default function DoorScannerScreen() {
         ) : (
           <View className="flex-1" style={{ pointerEvents: 'none' }} />
         )}
+
+        {pending ? (
+          <View className="absolute inset-0 bg-paper-white">
+            <View className="px-ds-16" style={{ paddingTop: Math.max(insets.top, 12) }}>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={goBack}
+                className="min-h-11 self-start items-start justify-center py-ds-8 active:opacity-70">
+                <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-pitch-black">
+                  ← Volver
+                </Text>
+              </Pressable>
+            </View>
+            <View className="flex-1 items-center justify-center px-ds-24">
+              <Text className="text-center font-foggy text-[48px] uppercase leading-none text-pitch-black">
+                Código leído
+              </Text>
+              <Text className="mt-ds-16 text-center font-favorit text-caption font-bold uppercase tracking-favorit text-pitch-black">
+                Confirma para dar ingreso. El ticket no se marca solo.
+              </Text>
+              {error ? (
+                <Text variant="helper" className="mt-ds-12 text-center text-danger">
+                  {error}
+                </Text>
+              ) : null}
+            </View>
+            <View className="gap-ds-8 px-ds-24" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
+              <Button disabled={busy} onPress={() => void confirmEntry(pending)}>
+                <Text>{busy ? 'Ingresando…' : 'Dar ingreso'}</Text>
+              </Button>
+              <Button
+                variant="outline"
+                className="border-pitch-black"
+                disabled={busy}
+                onPress={cancelPending}>
+                <Text className="text-pitch-black">Cancelar</Text>
+              </Button>
+            </View>
+          </View>
+        ) : null}
 
         {result ? (
           <View
@@ -245,7 +354,7 @@ export default function DoorScannerScreen() {
           </View>
         ) : null}
 
-        {!result ? (
+        {!result && !pending ? (
           <KeyboardStickyView enabled={Platform.OS !== 'web'}>
             <View className="px-ds-16" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
               {manual ? (
@@ -256,8 +365,8 @@ export default function DoorScannerScreen() {
                       {error}
                     </Text>
                   ) : null}
-                  <Button className="mt-ds-12" onPress={() => void scan(token)}>
-                    <Text>Escanear</Text>
+                  <Button className="mt-ds-12" onPress={() => lockCode(token)}>
+                    <Text>Revisar código</Text>
                   </Button>
                 </View>
               ) : error ? (
@@ -267,6 +376,8 @@ export default function DoorScannerScreen() {
                 variant="outline"
                 className="border-paper-white"
                 onPress={() => {
+                  hold.current.reset();
+                  setHolding(false);
                   setManual((open) => !open);
                   setError(null);
                 }}>

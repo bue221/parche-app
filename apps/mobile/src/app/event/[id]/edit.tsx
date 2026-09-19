@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { useBlockEndedEventWrite } from '@/components/ended-event-notice';
 import { EventWizard } from '@/components/event-wizard';
 import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
 import { Screen } from '@/components/screen';
@@ -25,7 +26,7 @@ export default function EventEditScreen() {
       .catch((err) => {
         setError(userMessage(err));
         if (err instanceof ApiError && err.code === 'FORBIDDEN') {
-          router.replace(`/event/${id}` as Href);
+          router.replace(`/event/${id}/operate` as Href);
         }
       });
   }, [id]);
@@ -36,7 +37,7 @@ export default function EventEditScreen() {
   if (user && !api.helpers.can(user.id, id, 'event.write')) {
     return (
       <Screen back>
-        <Text>No puedes editar esta fecha.</Text>
+        <Text>No puedes editar este evento.</Text>
       </Screen>
     );
   }
@@ -52,5 +53,10 @@ export default function EventEditScreen() {
     );
   }
 
+  return <EventEditBody event={event} />;
+}
+
+function EventEditBody({ event }: { event: EventWithExtras }) {
+  useBlockEndedEventWrite(event, event.id);
   return <EventWizard mode="edit" eventId={event.id} initial={event} />;
 }

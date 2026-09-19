@@ -7,7 +7,7 @@ Quien ya tiene cuenta entra a sus funciones (wallet, follows, eventos propios) c
 | Sprint | 1 |
 | RC | RC-002 |
 | Permiso UI | Público |
-| Pantallas | `Login` |
+| Pantallas | `Login`, `/reset` |
 
 ## Quick path
 
@@ -16,6 +16,8 @@ Quien ya tiene cuenta entra a sus funciones (wallet, follows, eventos propios) c
 3. Entra al destino pendiente (deep link) o a Explorar. Dispara sync [FEAT-037](feat-037-local-interest.md).
 
 El camino de compra es [FEAT-038](feat-038-auth-otp.md), no esta pantalla.
+
+Olvidé la clave: enlace a `/reset` → `POST /v1/auth/password/forgot`. El mail abre `/reset?token=` → `POST /v1/auth/password/reset` (siempre 204; no enumerar cuentas). Desde Parche, [FEAT-012](feat-012-profile-me.md) pide el mismo enlace con el email de la sesión.
 
 ## Pantallas
 
@@ -36,11 +38,11 @@ Deep link pendiente (invite, evento, pago) se retoma después del login ([FEAT-0
 
 ## Contrato
 
-`POST /v1/auth/login` → access + refresh.
+`POST /v1/auth/login` → access + refresh. `POST /v1/auth/password/forgot`, `POST /v1/auth/password/reset`.
 
 ## Fuera de alcance
 
-Biometría como único factor (puede llegar después sobre la misma sesión). Reset de clave.
+Biometría como único factor (puede llegar después sobre la misma sesión).
 
 ## Checklist
 
@@ -50,4 +52,4 @@ Biometría como único factor (puede llegar después sobre la misma sesión). Re
 
 ## Relacionadas
 
-[FEAT-002](feat-002-auth-register.md), [FEAT-004](feat-004-auth-session.md)
+[FEAT-002](feat-002-auth-register.md), [FEAT-004](feat-004-auth-session.md), [FEAT-012](feat-012-profile-me.md)

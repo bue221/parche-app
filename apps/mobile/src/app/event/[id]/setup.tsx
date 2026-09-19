@@ -3,6 +3,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
+import { useBlockEndedEventWrite } from '@/components/ended-event-notice';
 import { EventSetupChecklist } from '@/components/event-setup-checklist';
 import { LoadError, PendingAuth, Skeleton } from '@/components/feedback';
 import { Screen } from '@/components/screen';
@@ -11,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useAuthSnapshot } from '@/data/session';
+import type { EventWithExtras } from '@/data/types';
 import { listingGaps } from '@/lib/listing-setup';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
@@ -27,7 +29,7 @@ export default function EventSetupScreen() {
 
   useEffect(() => {
     if (ok && user && !canWrite) {
-      router.replace(`/event/${id}` as Href);
+      router.replace(`/event/${id}/operate` as Href);
     }
   }, [ok, user, canWrite, id]);
 
@@ -49,12 +51,19 @@ export default function EventSetupScreen() {
     );
   }
 
-  const remaining = listingGaps(query.data).length;
+  return <EventSetupBody event={query.data} />;
+}
 
+function EventSetupBody({ event }: { event: EventWithExtras }) {
+  useBlockEndedEventWrite(event, event.id);
+  const remaining = listingGaps(event).length;
   return (
-    <Screen back title="Termina el listing" lead={remaining ? `Faltan ${remaining} para publicarlo con calma.` : 'Flyer, pin, boleta y lineup listos.'}>
+    <Screen
+      back
+      title="Termina el listing"
+      lead={remaining ? `Faltan ${remaining} para publicarlo con calma.` : 'Flyer, pin, etapas y artistas listos.'}>
       <View className="mt-ds-16">
-        <EventSetupChecklist event={query.data} />
+        <EventSetupChecklist event={event} />
       </View>
       <Button className="mt-ds-24" variant="outline" onPress={() => router.replace('/operate' as Href)}>
         <Text>Ir a Operar</Text>

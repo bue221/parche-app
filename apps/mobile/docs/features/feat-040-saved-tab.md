@@ -11,9 +11,9 @@ La segunda tab se llama **Favoritos**. Es un tablero de colecciones (estilo wish
 
 ## Quick path
 
-1. Invitado abre Favoritos: ve colecciones locales (recientes, fechas por ciudad/año, artistas).
+1. Invitado abre Favoritos: ve colecciones locales (recientes, eventos por ciudad/año, artistas).
 2. Logueado: las mismas colecciones mezclan local + API.
-3. Tap en una colección → listado de fechas o artistas. Tap en un ítem → detalle.
+3. Tap en una colección → listado de eventos o artistas. Tap en un ítem → detalle.
 
 ## Pantallas
 
@@ -22,10 +22,10 @@ La segunda tab se llama **Favoritos**. Es un tablero de colecciones (estilo wish
 | Header | Título Inter "Favoritos". Sin lead. `headerAction` **Edita** / **Listo**: pill `bg-muted`, sentence case, hit ≥44px. |
 | Grilla | 2 columnas en teléfono. Cada tile: foto cuadrada `rounded-images` + título 16/700 + subtítulo muted. |
 | Vistos recientemente | Primera tile si hay visitas. Collage 2×2 de flyers. Subtítulo relativo (`Hace 2 semanas`). Local `parche.recent.v1`. |
-| Fechas | Una colección por **ciudad + año** (`Bogotá 2026`). Cover = primer flyer. Subtítulo `N guardados`. |
+| Eventos | Una colección por **ciudad + año** (`Bogotá 2026`). Cover = primer flyer. Subtítulo `N guardados`. |
 | Artistas | Una colección si hay follows. Cover = primer avatar. Subtítulo `N seguidos`. |
-| Edita | En edición, X en la foto vacía la colección (limpia recents, unsaves fechas o unfollows artistas). Listo sale del modo. |
-| Detalle | `/collection/[id]` con `Screen back`. Fechas = grilla 2 columnas de `EventCard` listing + corazón. Artistas = `ArtistRow`. |
+| Edita | En edición, X en la foto vacía la colección (limpia recents, unsaves eventos o unfollows artistas). Listo sale del modo. |
+| Detalle | `/collection/[id]` con `Screen back`. Eventos = grilla 2 columnas de `EventCard` listing + corazón. Artistas = `ArtistRow`. |
 | Empty | "Nada guardado aún" + CTA Explorar si no hay recents ni guardados. |
 
 ## Flujo
@@ -49,7 +49,7 @@ Boletas (tab separado). Wishlists con nombre libre. Orden drag-and-drop. Recents
 - [ ] Edita / Listo; X vacía la colección.
 - [ ] Invitado ve recents y guardados locales sin login.
 - [ ] Logueado ve merge de local + API.
-- [ ] Tap en colección abre el listado; tap en fecha o artista abre el detalle.
+- [ ] Tap en colección abre el listado; tap en evento o artista abre el detalle.
 - [ ] Empty state incluye CTA para explorar.
 
 ## Relacionadas

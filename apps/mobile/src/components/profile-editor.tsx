@@ -58,6 +58,12 @@ export function ProfileEditor({
           void api.auth.me();
         }}
       />
+      <Field
+        label="Email"
+        value={user?.email ?? ''}
+        editable={false}
+        helper="No se puede cambiar desde la app."
+      />
       <Field label="Nombre" value={name} onChangeText={setName} />
       <PhoneField ref={phoneFieldRef} label="Teléfono" value={phone} onChange={setPhone} />
       {error ? <Text>{error}</Text> : null}

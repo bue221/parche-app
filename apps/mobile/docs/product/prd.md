@@ -15,7 +15,7 @@ Parche es la plataforma que unifica la escena techno (Bogotá primero): eventos,
 
 1. Arrancar con `pnpm start` (solo pnpm). Hoy hay tabs Home / Explore de plantilla; el producto reemplaza esa UI.
 2. Sprint 1: cuenta, agenda, detalle de evento, mapa con pin, CRUD de organizador (flyer + coordenadas).
-3. Sprint 2: perfiles, lineup, follows, audio de referencia, invitaciones de staff.
+3. Sprint 2: perfiles, artistas del evento, follows, audio de referencia, invitaciones de staff.
 4. Sprint 3: compra, wallet de QR, scanner multi-dispositivo, métricas de evento, cola de aprobación (admin).
 
 ## Problema que resuelve
@@ -25,7 +25,7 @@ La escena está dispersa (Facebook, chats, flyers). La app es el **cliente de us
 | Actor | Dolor hoy | Qué hace la app |
 |-------|-----------|-----------------|
 | Asistente | No hay una agenda única; tiquetes en screenshots | Explora, compra, muestra QR, transfiere |
-| Artista / DJ | Poca vitrina local | Perfil, lineup, seguidores |
+| Artista / DJ | Poca vitrina local | Perfil, cartel, seguidores |
 | Promoter | Publicar y controlar aforo a mano | Publica, invita staff, ve ventas y puerta |
 | Staff de puerta | Un login compartido; doble ingreso | Cada quien escanea con su cuenta |
 | Platform admin | Calidad desigual de publicaciones | Aprueba o rechaza eventos |
@@ -69,7 +69,7 @@ Tras `GET /v1/me` y `GET /v1/me/memberships`, la app muestra **acciones por even
 
 | Rol de evento | Qué muestra la app en ese evento |
 |---------------|----------------------------------|
-| `owner` | Editar, media, lineup, invitaciones, tipos de tiquete, métricas, acceso a puerta |
+| `owner` | Editar, media, artistas, invitaciones, etapas, métricas, acceso a puerta |
 | `manager` | Editar, media, métricas, invitar `door`; no borrar ni transferir ownership |
 | `door` | Scanner + aforo en vivo; **sin** ingresos ni PII de compradores |
 | `metrics` | Dashboard de solo lectura; **sin** cámara de check-in |
@@ -84,7 +84,7 @@ La UI autoriza por **permiso atómico** (mismo contrato que el backend). Si el A
 | `event.metrics.read` | Dashboard |
 | `event.door.scan` | Cámara / check-in |
 | `event.door.live` | Contador y últimos scans |
-| `event.tickets.manage` | Tipos de tiquete y aforo |
+| `event.tickets.manage` | Etapas de boleta y aforo |
 
 Revocar membresía: el access JWT **sigue vivo**, pero la app deja de mostrar puerta/métricas en cuanto falle el API o se refresque membresía. No cachear permisos como fuente de verdad más allá de una sesión corta.
 
@@ -96,7 +96,7 @@ Navegación objetivo (reemplaza Home/Explore de plantilla):
 |-------------|-------|-----------|
 | **Explorar** | Todos (lectura pública parcial) | Próximos eventos; rail “Esta noche” con countdown si hay same-day |
 | **Mapa** | Todos | Mapa + lista; clustering por densidad |
-| **Guardados** | Todos | Follows/fechas locales o sync; segmento Boletas = wallet |
+| **Guardados** | Todos | Follows/eventos locales o sync; segmento Boletas = wallet |
 | **Cuenta** | Todos (label fijo) | Invitado: valor + CTA sheet; logueado: perfil |
 | **Operar** | Quien tenga membresía o promoter | Badge si hay evento hoy o invite pending |
 
@@ -116,8 +116,8 @@ Objetivo: una agenda centralizada y un promoter que publica con flyer y pin.
 | RC-002 | Login | Access en memoria; refresh en almacenamiento seguro nativo (`SecureStore`). Refresh al expirar el access (10–15 min). Logout revoca familia. |
 | RC-003 | Crear evento | Nombre, fecha, descripción, venue (texto), **pin en mapa** (`lat`/`lng` obligatorio al publicar), flyer vía presign (`POST /v1/uploads` → PUT → confirmar asset). |
 | RC-004 | Lista de eventos | Cursor + limit; flyer, fecha, venue. Caché de lista no debe mostrar eventos stale tras pull-to-refresh. |
-| RC-005 | Detalle | Flyer, copy, mapa estático/interactivo del pin, lineup cuando exista. CTA según rol: comprar / editar / escanear. |
-| RC-022 | Editar evento | `PATCH` con `event.write`. Mismo formulario que crear. |
+| RC-005 | Detalle | Flyer, copy, mapa estático/interactivo del pin, artistas cuando existan. CTA público: comprar. Noche pasada: CTA Finalizado. Staff opera en la mesa del evento (`/event/{id}/operate`), no en la ficha de compra. |
+| RC-022 | Editar evento | `PATCH` con `event.write`. Mismo formulario que crear. Evento finalizado: solo consulta (métricas, aforo, cartel, etapas, equipo). |
 
 **Mapa:** MapLibre GL + teselas OSM. El promoter **suelta el pin**; geocoding (Nominatim/Photon) es opcional. Listados y detalle usan `lat`/`lng` del API. Sin SDK de Google.
 
@@ -138,7 +138,7 @@ Reuso de refresh rotado: tratar como sesión invalidada; volver a login.
 | ID | Historia | Comportamiento en app |
 |----|----------|------------------------|
 | RC-006 | Perfil de artista | Crear/editar bio, avatar (`kind: avatar`), enlaces mínimos. Visible en público. |
-| RC-007 | Lineup | Owner/manager asocia/quita artistas al evento. Orden visible en detalle. |
+| RC-007 | Artistas | Owner/manager asocia/quita artistas al evento. Orden visible en detalle. |
 | RC-008 | Ver artista | Trayectoria corta + próximos eventos. |
 | RC-009 | Follow | Solo autenticado; lista en `GET /v1/me/following`. |
 | RC-010 | Perfil personal | Nombre, foto; `PATCH /v1/me`. |
@@ -151,9 +151,9 @@ Reuso de refresh rotado: tratar como sesión invalidada; volver a login.
 
 | ID | Historia | Comportamiento en app |
 |----|----------|------------------------|
-| RC-011 | Comprar | Elige `ticket_type` → order `pending` → abre pasarela → vuelve a la app. Reserva visible como “pendiente”; si falla o expira, se libera aforo y se explica. |
+| RC-011 | Comprar | Elige cantidades por etapa del mismo evento → order `pending` → abre pasarela → vuelve a la app. Reserva visible como “pendiente”; si falla o expira, se libera aforo y se explica. |
 | RC-012 | Mis tiquetes | Lista `valid` / `used` / `transferred`. QR = **token firmado**, no UUID crudo. Brillo alto, modo offline corto si el token ya está en dispositivo (validación real es en puerta). |
-| RC-013 | Check-in | Staff con `event.door.scan`. Cámara → `POST /v1/events/{eventId}/check-in` con ticket token + access **del scanner**. Varios dispositivos a la vez. |
+| RC-013 | Check-in | Staff con `event.door.scan`. Cámara sostiene el QR ~0.5s, confirma ingreso, entonces `POST /v1/events/{eventId}/check-in` con ticket token + access **del scanner**. Varios dispositivos a la vez. |
 | RC-014 | Transferir | Dueño elige usuario destino; el QR anterior deja de valer. Confirmación explícita. |
 | RC-015 | Aprobación | `platform_admin`: cola, aprobar/rechazar. El promoter ve estado `en revisión` / `publicado` / `rechazado`. |
 
@@ -188,7 +188,7 @@ Métricas de tenant (`GET /v1/tenants/{id}/metrics`): owner del colectivo; no me
 
 ### Compra
 
-1. Asistente autenticado elige tipo y cantidad.
+1. Asistente autenticado elige cantidades por etapa del mismo evento (un pago).
 2. App crea order; muestra “reservado” y abre pasarela.
 3. Al volver, consulta `GET /v1/orders/{id}` hasta `paid` / `failed` / `expired` (no inventar `valid` en local).
 4. Wallet muestra QR solo si el tiquete está `valid`.
@@ -199,7 +199,7 @@ Errores de red: no doble-tap de compra; el API es idempotente en webhook, el cli
 
 1. Staff elige el evento de su membresía `door` (o `owner`/`manager` con permiso de scan).
 2. Pantalla inmersiva: cámara + aforo.
-3. Cada frame útil envía el token del QR; la app **no** decide approved/duplicate en local.
+3. El código debe sostenerse un instante; la puerta confirma **Dar ingreso** y recién entonces se envía el token. La app **no** decide approved/duplicate en local.
 4. Feedback inmediato según código; el mismo QR no “pasa” dos veces aunque dos teléfonos escaneen juntos.
 
 Sin permiso: no abrir cámara. Tras revocación: el siguiente scan falla `forbidden` y se sale del modo puerta.
@@ -219,7 +219,7 @@ Cada flujo de red tiene: **carga**, **vacío**, **error recuperable**, **éxito*
 
 | Flujo | Vacío | Error típico |
 |-------|-------|----------------|
-| Explorar | “Aún no hay fechas” | Reintentar listado |
+| Explorar | “Aún no hay eventos” | Reintentar listado |
 | Wallet | “No tienes tiquetes” + CTA explorar | Pago pendiente / fallido |
 | Puerta | “Apunta al QR” | Cámara denegada (ajustes del SO) |
 | Métricas | Ceros honestos antes de ventas | `FORBIDDEN` si no es staff |
@@ -244,7 +244,7 @@ Permisos de SO: cámara (scanner), opcional ubicación (centrar mapa; el pin del
 | Sprint | Historias | App |
 |--------|-----------|-----|
 | 1 MVP | RC-001–005, RC-022 | Auth seguro, agenda, detalle, mapa OSM, crear/editar evento + flyer |
-| 2 Comunidad | RC-006–010 | Artistas, lineup, follows, perfil, tracks, invitaciones de miembros |
+| 2 Comunidad | RC-006–010 | Artistas, cartel, follows, perfil, tracks, invitaciones de miembros |
 | 3 Transacciones | RC-011–015 | Orders, wallet QR, scanner multi-dispositivo, métricas de evento, cola admin |
 | 4 Experiencia | RC-016–020 | Filtros/mapa bbox, recomendaciones, pulido UX (editorial aplazado a web) |
 | Backlog | RC-021, RC-023–025 | Reset password, clubes, panel global de usuarios, email |
@@ -255,7 +255,7 @@ Permisos de SO: cámara (scanner), opcional ubicación (centrar mapa; el pin del
 - [ ] Invitado ve Explorar y detalle; no compra ni escanea.
 - [ ] Promoter crea evento con flyer, pin OSM y texto; el detalle público lo muestra.
 - [ ] El mapa no usa Google Maps; solo coordenadas de la API + MapLibre/OSM.
-- [ ] Artista tiene perfil; asistente sigue y ve lineup en el evento.
+- [ ] Artista tiene perfil; asistente sigue y ve artistas en el evento.
 - [ ] Compra `paid` abre la impresión térmica del tiquete ([FEAT-023](../features/feat-023-ticket-print.md)) antes del wallet; el QR es el token firmado; transferir invalida el QR anterior.
 - [ ] Dos usuarios `door` escanean a la vez; el mismo QR no entra dos veces; UI de `duplicate` vs `approved`.
 - [ ] Un `door` no ve ingresos ni edita el evento; `metrics` ve dashboard y no abre cámara.

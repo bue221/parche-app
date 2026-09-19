@@ -11,13 +11,13 @@ El promoter/manager/metrics ve ventas y puerta en agregado. No es el scanner.
 
 ## Quick path
 
-1. Operar → métricas del evento.
+1. Operar → mesa del evento → Métricas.
 2. `GET /v1/events/{id}/metrics`.
 3. Leer: vendidos/reservados/disponibles por tipo, ingresos brutos, check-ins vs vendidos, no-show, scans por `scanner_user_id`, serie por hora.
 
 ## Pantallas
 
-Tablas y cifras B/N. Sin gráficos de colores. `metrics` no tiene CTA de cámara.
+Tablas y cifras B/N. Sin gráficos de colores. `metrics` no tiene CTA de cámara. Sigue abierta cuando el evento ya pasó: es el archivo de ventas y puerta.
 
 Sprint 4: `GET /v1/tenants/{id}/metrics` para owner del colectivo, pantalla aparte `TenantMetrics`.
 

@@ -11,7 +11,7 @@ Un link abre la pantalla correcta, con login en el medio si hace falta, sin perd
 
 ## Quick path
 
-1. Abrir URL / universal link.
+1. Abrir URL / universal link. Desde el detalle, Compartir entrega esa misma ruta (`/event/{id}`).
 2. Si el destino pide cuenta y no hay sesión: [FEAT-003](feat-003-auth-login.md) y retorno.
 3. Empujar el stack correcto.
 
@@ -23,6 +23,7 @@ Un link abre la pantalla correcta, con login en el medio si hace falta, sin perd
 | Artista | [FEAT-014](feat-014-artist-public.md) |
 | Invite token | [FEAT-019](feat-019-invite-accept.md) |
 | Return pago `order_id` | [FEAT-022](feat-022-order-return.md) |
+| Reset de clave `/reset?token=` | [FEAT-003](feat-003-auth-login.md) |
 
 ## Flujo
 

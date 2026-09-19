@@ -12,12 +12,12 @@ Flyers, galería, avatares y audio entran por presign. La app nunca habla con el
 ## Quick path
 
 1. Elegir archivo (cámara/galería o audio).
-2. `POST /v1/uploads` → PUT a URL presignada con `Content-Type` fijo.
-3. Confirmar `POST /v1/events/{id}/assets` o asset de usuario.
+2. `POST /v1/uploads` → PUT a la URL del grant (`/v1/uploads/direct` si MinIO no es alcanzable). `Content-Type` fijo. Nunca reescribir ese PUT por `GET /v1/media`.
+3. Confirmar `POST /v1/events/{id}/assets` (`flyer` o `gallery`) o asset de usuario.
 
 ## Pantallas
 
-No es una ruta propia. Progreso: eligiendo → subiendo → listo / error. Límite visible antes de subir.
+No es una ruta propia. Progreso: eligiendo → subiendo → listo / error. Límite visible antes de subir. El wizard elige **varias** imágenes de galería (`allowsMultipleSelection`); el flyer sigue siendo uno.
 
 | Kind | MIME | Máx |
 |------|------|-----|

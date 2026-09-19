@@ -57,7 +57,7 @@ export default function TicketPrintScreen() {
 
   async function finish() {
     await api.tickets.markPrintSeen(tickets.map((t) => t.id));
-    router.replace('/tickets' as Href);
+    router.replace('/wallet' as Href);
   }
 
   function replay() {
@@ -88,7 +88,7 @@ export default function TicketPrintScreen() {
       <MachineScreen insets={insets}>
         <BackLink />
         <Text className="mt-ds-24 text-center text-paper-white">El tiquete está en camino</Text>
-        <Button className="mt-ds-16 bg-paper-white" onPress={() => router.replace('/tickets' as Href)}>
+        <Button className="mt-ds-16 bg-paper-white" onPress={() => router.replace('/wallet' as Href)}>
           <Text className="text-pitch-black">Ir a Tiquetes</Text>
         </Button>
       </MachineScreen>
@@ -185,7 +185,7 @@ function BackLink() {
     <Pressable
       accessibilityRole="button"
       hitSlop={8}
-      onPress={() => (router.canGoBack() ? router.back() : router.replace('/tickets' as Href))}
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/wallet' as Href))}
       className="min-h-11 self-start items-start justify-center py-ds-8 active:opacity-70">
       <Text className="font-favorit text-caption font-bold uppercase tracking-favorit text-paper-white">
         ← Volver

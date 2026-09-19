@@ -52,12 +52,12 @@ Fuente de producto: [PRD](../product/prd.md). Visual: [design.md](../ui/design.m
 | FEAT-012 | [Perfil personal](feat-012-profile-me.md) | 2 |
 | FEAT-013 | [Editar perfil de artista](feat-013-artist-edit.md) | 2 |
 | FEAT-014 | [Perfil público de artista](feat-014-artist-public.md) | 2 |
-| FEAT-015 | [Lineup](feat-015-event-lineup.md) | 2 |
+| FEAT-015 | [Artistas del evento](feat-015-event-lineup.md) | 2 |
 | FEAT-016 | [Seguir artista](feat-016-artist-follow.md) | 2 |
 | FEAT-017 | [Tracks de audio](feat-017-event-tracks.md) | 2 |
 | FEAT-018 | [Miembros del evento](feat-018-event-members.md) | 2 |
 | FEAT-019 | [Aceptar invitación](feat-019-invite-accept.md) | 2 |
-| FEAT-020 | [Tipos de tiquete](feat-020-ticket-types.md) | 3 |
+| FEAT-020 | [Etapas de boleta](feat-020-ticket-types.md) | 3 |
 | FEAT-021 | [Comprar tiquete](feat-021-ticket-purchase.md) | 3 |
 | FEAT-022 | [Vuelta de pago](feat-022-order-return.md) | 3 |
 | FEAT-023 | [Impresión animada del tiquete](feat-023-ticket-print.md) | 3 |

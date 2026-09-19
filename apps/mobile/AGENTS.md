@@ -29,12 +29,12 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 | [docs/features/feat-012-profile-me.md](docs/features/feat-012-profile-me.md) | Me profile |
 | [docs/features/feat-013-artist-edit.md](docs/features/feat-013-artist-edit.md) | Edit artist |
 | [docs/features/feat-014-artist-public.md](docs/features/feat-014-artist-public.md) | Public artist |
-| [docs/features/feat-015-event-lineup.md](docs/features/feat-015-event-lineup.md) | Lineup |
+| [docs/features/feat-015-event-lineup.md](docs/features/feat-015-event-lineup.md) | Event artists |
 | [docs/features/feat-016-artist-follow.md](docs/features/feat-016-artist-follow.md) | Follow artist |
 | [docs/features/feat-017-event-tracks.md](docs/features/feat-017-event-tracks.md) | Event audio |
 | [docs/features/feat-018-event-members.md](docs/features/feat-018-event-members.md) | Event staff |
 | [docs/features/feat-019-invite-accept.md](docs/features/feat-019-invite-accept.md) | Accept invite |
-| [docs/features/feat-020-ticket-types.md](docs/features/feat-020-ticket-types.md) | Ticket types |
+| [docs/features/feat-020-ticket-types.md](docs/features/feat-020-ticket-types.md) | Ticket stages |
 | [docs/features/feat-021-ticket-purchase.md](docs/features/feat-021-ticket-purchase.md) | Purchase |
 | [docs/features/feat-022-order-return.md](docs/features/feat-022-order-return.md) | Payment return |
 | [docs/features/feat-023-ticket-print.md](docs/features/feat-023-ticket-print.md) | Thermal print animation for ticket issuance |

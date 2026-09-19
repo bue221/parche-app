@@ -9,8 +9,8 @@ import { listingGaps, type ListingGap } from '@/lib/listing-setup';
 const GAP_COPY: Record<ListingGap, { label: string; href: (id: string) => Href }> = {
   flyer: { label: 'Flyer', href: (id) => `/event/${id}/edit` as Href },
   pin: { label: 'Pin en el mapa', href: (id) => `/event/${id}/edit` as Href },
-  tickets: { label: 'Tipos de tiquete', href: (id) => `/event/${id}/tickets` as Href },
-  lineup: { label: 'Lineup', href: (id) => `/event/${id}/lineup` as Href },
+  tickets: { label: 'Etapas', href: (id) => `/event/${id}/tickets` as Href },
+  lineup: { label: 'Artistas', href: (id) => `/event/${id}/lineup` as Href },
 };
 
 const ORDER: ListingGap[] = ['flyer', 'pin', 'tickets', 'lineup'];

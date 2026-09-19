@@ -73,7 +73,7 @@ export function buildFavoriteCollections(input: {
       kind: 'recent',
       title: 'Vistos recientemente',
       subtitle:
-        input.lastViewedAt != null ? formatRelativePast(input.lastViewedAt, input.now) : 'Tus últimas fechas',
+        input.lastViewedAt != null ? formatRelativePast(input.lastViewedAt, input.now) : 'Tus últimos eventos',
       coverUrls: coverUrlsFromEvents(input.recentEvents),
       collage: true,
       eventIds: input.recentEvents.map((event) => event.id),

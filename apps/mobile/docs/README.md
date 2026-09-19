@@ -29,12 +29,12 @@ Do not implement a slice without its spec. Ticket issuance is [FEAT-023](feature
 | [features/feat-012-profile-me.md](features/feat-012-profile-me.md) | Perfil personal |
 | [features/feat-013-artist-edit.md](features/feat-013-artist-edit.md) | Editar artista |
 | [features/feat-014-artist-public.md](features/feat-014-artist-public.md) | Artista público |
-| [features/feat-015-event-lineup.md](features/feat-015-event-lineup.md) | Lineup |
+| [features/feat-015-event-lineup.md](features/feat-015-event-lineup.md) | Artistas del evento |
 | [features/feat-016-artist-follow.md](features/feat-016-artist-follow.md) | Follow |
 | [features/feat-017-event-tracks.md](features/feat-017-event-tracks.md) | Audio del evento |
 | [features/feat-018-event-members.md](features/feat-018-event-members.md) | Staff / miembros |
 | [features/feat-019-invite-accept.md](features/feat-019-invite-accept.md) | Aceptar invitación |
-| [features/feat-020-ticket-types.md](features/feat-020-ticket-types.md) | Tipos de tiquete |
+| [features/feat-020-ticket-types.md](features/feat-020-ticket-types.md) | Etapas de boleta |
 | [features/feat-021-ticket-purchase.md](features/feat-021-ticket-purchase.md) | Compra |
 | [features/feat-022-order-return.md](features/feat-022-order-return.md) | Vuelta de pago |
 | [features/feat-023-ticket-print.md](features/feat-023-ticket-print.md) | Impresión animada del tiquete |

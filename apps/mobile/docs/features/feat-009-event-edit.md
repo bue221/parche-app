@@ -1,6 +1,6 @@
 # FEAT-009: Editar evento
 
-El staff con `event.write` actualiza una fecha ya creada. Mismo wizard que crear, hidratado. No es transferir ownership ni borrar.
+El staff con `event.write` actualiza un evento ya creado. Mismo wizard que crear, hidratado. No es transferir ownership ni borrar.
 
 | Campo | Valor |
 |-------|-------|
@@ -11,21 +11,21 @@ El staff con `event.write` actualiza una fecha ya creada. Mismo wizard que crear
 
 ## Quick path
 
-1. Detalle o Operar → editar.
-2. Mismos 4 pasos: Flyer → Datos → Pin → Review.
-3. `PATCH /v1/events/{id}` → detalle actualizado.
+1. Mesa del evento (Operar) → editar.
+2. Mismos 4 pasos: Fotos → Datos → Pin → Review.
+3. `PATCH /v1/events/{id}` → mesa de ese evento.
 
 ## Pantallas
 
-Idéntica a [FEAT-008](feat-008-event-create.md) con valores hidratados. El flyer ya tiene `event_id`: el paso 1 sube al elegir. `owner` ve peligro (borrar) solo si el API lo permite más adelante; **MVP: no borrar**. `manager` no ve transferir ownership.
+Idéntica a [FEAT-008](feat-008-event-create.md) con valores hidratados (flyer + galería). El flyer ya tiene `event_id`: el paso 1 sube al elegir. Quitar una foto extra llama `DELETE /v1/events/{id}/assets/{assetId}`. `owner` ve peligro (borrar) solo si el API lo permite más adelante; **MVP: no borrar**. `manager` no ve transferir ownership.
 
 ## Flujo
 
-Carga detalle → edita por pasos → patch. Conflicto (`CONFLICT`): recargar y avisar. Tras guardar o enviar, vuelve al detalle (no al checklist de alta).
+Carga detalle → edita por pasos → patch. Conflicto (`CONFLICT`): recargar y avisar. Tras guardar o enviar, vuelve a la mesa de ese evento (no al checklist de alta ni a la ficha pública).
 
 ## Estados
 
-`FORBIDDEN`: salir al detalle. Evento aprobado: editar sigue permitido para copy/media salvo reglas de admin futuras.
+`FORBIDDEN`: salir a la mesa de ese evento. Evento aprobado: editar sigue permitido para copy/media **hasta que la noche termina**. Evento finalizado (`eventHasEnded`: `endsAt` o 12h tras `startsAt`): toast + redirect a la mesa. No se cambia flyer, pin ni copy para no alterar métricas ni ventas.
 
 ## Contrato
 
@@ -33,12 +33,13 @@ Carga detalle → edita por pasos → patch. Conflicto (`CONFLICT`): recargar y 
 
 ## Fuera de alcance
 
-Cambiar tenant. Editar ventas cerradas de tipos (eso es [FEAT-020](feat-020-ticket-types.md)).
+Cambiar tenant. Editar ventas cerradas de etapas (eso es [FEAT-020](feat-020-ticket-types.md)).
 
 ## Checklist
 
 - [ ] `door` no abre editar.
-- [ ] Pin y flyer nuevos se ven en público tras refresh.
+- [ ] Evento finalizado no abre el wizard; vuelve a la mesa.
+- [ ] Pin, flyer y galería nuevos se ven en público tras refresh.
 - [ ] Crear y editar comparten `EventWizard`, no un segundo diseño.
 
 ## Relacionadas

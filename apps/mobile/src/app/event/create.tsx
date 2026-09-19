@@ -15,7 +15,7 @@ export default function EventCreateScreen() {
   if (!isPromoter) {
     return (
       <Screen back>
-        <Text>Solo organizadores pueden crear fechas.</Text>
+        <Text>Solo organizadores pueden crear eventos.</Text>
       </Screen>
     );
   }

@@ -1,6 +1,6 @@
 # FEAT-016: Seguir artista
 
-El asistente sigue DJs para enterarse de fechas. No es un feed social de posts.
+El asistente sigue DJs para enterarse de eventos. No es un feed social de posts.
 
 | Campo | Valor |
 |-------|-------|
@@ -23,7 +23,7 @@ Botón outlined / filled según estado. Lista propia en `/parche/siguiendo` (`GE
 
 ## Flujo
 
-Sin sesión: follow local inmediato ([FEAT-037](feat-037-local-interest.md)). Con sesión: API. Al crear cuenta, sync. Lineup del evento también ofrece Seguir.
+Sin sesión: follow local inmediato ([FEAT-037](feat-037-local-interest.md)). Con sesión: API. Al crear cuenta, sync. El cartel del evento también ofrece Seguir.
 
 ## Estados
 

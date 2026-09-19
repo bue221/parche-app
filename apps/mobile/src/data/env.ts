@@ -15,6 +15,29 @@ function isLoopbackHost(host: string): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host === 'minio' || host === '0.0.0.0';
 }
 
+/**
+ * PUT targets from POST /v1/uploads. Never rewrite through GET /v1/media — that
+ * drops the signature and sends bytes to a read-only proxy.
+ */
+export function rewriteUploadUrl(url: string): string {
+  if (!url) {
+    return url;
+  }
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/')) {
+    return `${API_URL}${trimmed}`;
+  }
+  try {
+    const parsed = new URL(trimmed.replace(/https?:\/\/minio:9000/gi, 'http://localhost:9000'));
+    if (parsed.pathname === '/v1/uploads/direct' || parsed.pathname.startsWith('/v1/uploads/direct/')) {
+      return `${API_URL}${parsed.pathname}${parsed.search}`;
+    }
+    return parsed.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 /** MinIO inside Compose is minio:9000. Phones cannot open that host, so loopback media goes through the API. */
 export function rewriteMediaUrl(url: string): string {
   if (!url) {

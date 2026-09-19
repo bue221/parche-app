@@ -55,7 +55,7 @@ export function MediaPicker({
         mediaTypes: ['images'],
         quality: 0.85,
         base64: true,
-        allowsEditing: kind === 'avatar',
+        allowsEditing: Platform.OS !== 'web' && kind === 'avatar',
         aspect: kind === 'avatar' ? [1, 1] : undefined,
       });
       if (result.canceled || !result.assets[0]) {

@@ -78,7 +78,7 @@ export default function ArtistEditScreen() {
   }
 
   return (
-    <Screen back title="Perfil de artista" lead="Así te ven en lineup y en el perfil público.">
+    <Screen back title="Perfil de artista" lead="Así te ven en los eventos y en el perfil público.">
       <View className="mt-ds-24 gap-ds-32">
         <FormSection title="Vista previa">
           <ArtistPreview stageName={stageName} bio={bio} avatarUrl={avatarUrl} />

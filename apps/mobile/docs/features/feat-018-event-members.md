@@ -25,7 +25,7 @@ Varias personas operan la misma noche. El owner/manager invita por rol; nadie co
 
 No se invita `owner` por este formulario (ownership no se transfiere en MVP).
 
-Revocar: confirmación. El miembro pierde UI de puerta/métricas al fallar el API aunque su JWT viva.
+Revocar: confirmación. El miembro pierde UI de puerta/métricas al fallar el API aunque su JWT viva. Evento finalizado: lista en consulta, sin invitar ni revocar.
 
 ## Flujo
 
@@ -48,6 +48,7 @@ Un usuario/contraseña compartido. Permisos custom por checkbox (se usan roles p
 - [ ] Dos `door` pueden existir a la vez.
 - [ ] `door` no ve esta lista de gestión.
 - [ ] Revocar no espera a que expire el access.
+- [ ] Evento finalizado no invita ni revoca.
 
 ## Relacionadas
 
