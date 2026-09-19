@@ -19,7 +19,7 @@ Parche es el home de identidad. La cuenta se nombra aquí, pero el cuerpo cambia
 
 ## Pantallas
 
-Header **Parche** + mascota del perfil primario (Tucán / Cóndor / Jaguar) y toggle de apariencia a la derecha. Chrome B/N; no hay color de chrome por perfil. Invitado no lleva animal.
+Header **Parche** + mascota del perfil primario (Tucán / Cóndor / Jaguar) y toggle de apariencia a la derecha. El toggle cicla Sistema / Claro / Oscuro; Sistema sigue el tema del teléfono. Chrome B/N; no hay color de chrome por perfil. Invitado no lleva animal.
 
 El cuerpo logueado no es un listado plano: tarjeta de identidad, dos atajos y un CTA, luego filas de cuenta.
 
@@ -29,7 +29,7 @@ El cuerpo logueado no es un listado plano: tarjeta de identidad, dos atajos y un
 | Atajo 1 | Cambia con el primario: Tiquetes → `/wallet` (tab Boletas); Tu vitrina → editar ficha; Tus eventos → Operar |
 | Atajo 2 | Siguiendo → `/parche/siguiendo` |
 | CTA | Una sola: Esta noche (puerta) > activar artista > primer evento > completar perfil |
-| Cuenta | Editar perfil (`/parche/editar`), restablecer contraseña (`/parche/contrasena`), apariencia, ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
+| Cuenta | Editar perfil (`/parche/editar`), restablecer contraseña (`/parche/contrasena`), apariencia (Sistema / Claro / Oscuro), ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
 
 | Primario | Mascota | Atajo 1 |
 |----------|---------|---------|

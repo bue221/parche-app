@@ -1,5 +1,5 @@
 import { useEffect, type PropsWithChildren } from 'react';
-import { Appearance, Platform, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { colorScheme } from 'nativewind';
@@ -12,15 +12,8 @@ import { THEME_VARS } from '@/lib/theme';
 
 function applyNativeScheme(pref: 'system' | 'light' | 'dark') {
   try {
-    // `null` restores OS appearance. The string `'unspecified'` is not a RN ColorSchemeName
-    // and leaves a previously forced light/dark lock in place.
-    Appearance.setColorScheme(pref === 'system' ? null : pref);
-  } catch (err) {
-    debugLog('theme', 'Appearance.setColorScheme failed', {
-      err: err instanceof Error ? err.message : String(err),
-    });
-  }
-  try {
+    // NativeWind maps `system` to Appearance.setColorScheme('unspecified') on RN 0.82+,
+    // which is what lets the app live-follow the device theme.
     colorScheme.set(pref === 'system' ? 'system' : pref);
   } catch (err) {
     debugLog('theme', 'nativewind colorScheme.set failed', {

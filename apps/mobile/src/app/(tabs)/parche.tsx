@@ -31,6 +31,7 @@ import { debugLog } from '@/data/log';
 import { toast } from '@/data/toast-store';
 import { useAuthSnapshot, usePrimaryProfile } from '@/data/session';
 import { useAuthSheet } from '@/data/auth-sheet-store';
+import { THEME_PREF_LABEL, useThemePref } from '@/data/theme-store';
 import type { Artist, Membership, ParcheEvent, User } from '@/data/types';
 import { profileLabel, profileMascot, type PrimaryProfile } from '@/lib/profiles';
 
@@ -92,7 +93,7 @@ export default function ParcheScreen() {
           </Button>
         </View>
         <View className="mt-ds-32 max-w-xl">
-          <SettingsRow icon={<MenuIcon icon={CircleUser} />} label="Apariencia" trailing={<ThemeToggle />} divided={false} />
+          <AppearanceRow icon={CircleUser} />
         </View>
       </Screen>
     );
@@ -220,7 +221,7 @@ export default function ParcheScreen() {
             onPress={() => router.push('/parche/contrasena' as Href)}
             divided={false}
           />
-          <SettingsRow icon={<MenuIcon icon={UserRound} />} label="Apariencia" trailing={<ThemeToggle />} divided={false} />
+          <AppearanceRow icon={UserRound} />
           {hasArtist && artist?.id ? (
             <SettingsRow
               icon={<MenuIcon icon={Users} />}
@@ -401,6 +402,19 @@ function LetterMark({ letter }: { letter: string }) {
         {letter}
       </Text>
     </View>
+  );
+}
+
+function AppearanceRow({ icon }: { icon: typeof CircleUser }) {
+  const pref = useThemePref((s) => s.pref);
+  return (
+    <SettingsRow
+      icon={<MenuIcon icon={icon} />}
+      label="Apariencia"
+      detail={THEME_PREF_LABEL[pref]}
+      trailing={<ThemeToggle />}
+      divided={false}
+    />
   );
 }
 
