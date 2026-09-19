@@ -14,6 +14,7 @@ import { userMessage } from '@/data/errors';
 import { hasPrintSeen } from '@/data/ticket-cache';
 import { ticketScanValue } from '@/lib/code128';
 import { eventWalletTickets, walletCountLabel, walletEventCounts } from '@/lib/ticket-label';
+import { useAuthSnapshot } from '@/data/session';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
@@ -23,15 +24,16 @@ export default function TicketScreen() {
   const compact = useCompactLayout();
   const bleed = Platform.OS !== 'web' || compact ? Spacing.three : 40;
   const ok = useRequireAuth(`/ticket/${ticketId}`);
+  const { user } = useAuthSnapshot();
   const ticketQuery = useQuery({
     queryKey: ['ticket', ticketId],
     queryFn: () => api.tickets.getTicket(ticketId),
     enabled: ok && Boolean(ticketId),
   });
   const walletQuery = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ['wallet', user?.id],
     queryFn: () => api.tickets.mine(),
-    enabled: ok,
+    enabled: ok && Boolean(user?.id),
   });
   const ticket =
     walletQuery.data?.find((item) => item.id === ticketId) ?? ticketQuery.data;

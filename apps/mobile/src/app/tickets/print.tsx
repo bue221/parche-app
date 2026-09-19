@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
+import { useAuthSnapshot } from '@/data/session';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils';
 export default function TicketPrintScreen() {
   const { orderId, ticketId } = useLocalSearchParams<{ orderId?: string; ticketId?: string }>();
   const ok = useRequireAuth('/tickets/print');
+  const { user } = useAuthSnapshot();
   const insets = useSafeAreaInsets();
   const reduce = useReduceMotion();
   const [index, setIndex] = useState(0);
@@ -26,9 +28,9 @@ export default function TicketPrintScreen() {
   const [cycle, setCycle] = useState(0);
 
   const walletQuery = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ['wallet', user?.id],
     queryFn: () => api.tickets.mine(),
-    enabled: ok,
+    enabled: ok && Boolean(user?.id),
   });
 
   const all = walletQuery.data ?? [];

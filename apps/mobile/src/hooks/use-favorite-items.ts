@@ -15,11 +15,13 @@ function present<T>(value: T | null | undefined): value is T {
 }
 
 export function useFavoriteItems() {
-  const { isLoggedIn, hydrated } = useAuthSnapshot();
+  const { isLoggedIn, hydrated, user } = useAuthSnapshot();
   const artistIds = useInterestStore((s) => s.artistIds);
   const eventIds = useInterestStore((s) => s.eventIds);
   const recentEntries = useRecentStore((s) => s.items);
   const recentHydrated = useRecentStore((s) => s.hydrated);
+  const userId = user?.id;
+  const recentsEnabled = Boolean(hydrated && isLoggedIn && userId);
 
   useEffect(() => {
     if (!recentHydrated) {
@@ -28,14 +30,14 @@ export function useFavoriteItems() {
   }, [recentHydrated]);
 
   const savedQuery = useQuery({
-    queryKey: ['saved-events'],
+    queryKey: ['saved-events', userId],
     queryFn: () => api.events.saved(),
-    enabled: hydrated && isLoggedIn,
+    enabled: hydrated && isLoggedIn && Boolean(userId),
   });
   const followingQuery = useQuery({
-    queryKey: ['following'],
+    queryKey: ['following', userId],
     queryFn: () => api.artists.following(),
-    enabled: hydrated && isLoggedIn,
+    enabled: hydrated && isLoggedIn && Boolean(userId),
   });
   const localEvents = useQueries({
     queries: eventIds.map((eventId) => ({
@@ -52,22 +54,26 @@ export function useFavoriteItems() {
     })),
   });
   const recentQueries = useQueries({
-    queries: recentEntries.map((entry) => ({
-      queryKey: ['event', entry.eventId],
-      queryFn: () => api.events.get(entry.eventId),
-      enabled: recentHydrated && recentEntries.length > 0,
-    })),
+    queries: recentsEnabled
+      ? recentEntries.map((entry) => ({
+          queryKey: ['event', entry.eventId],
+          queryFn: () => api.events.get(entry.eventId),
+          enabled: recentHydrated && recentEntries.length > 0,
+        }))
+      : [],
   });
 
   const savedEvents = uniqueById([
-    ...(savedQuery.data ?? []),
+    ...(isLoggedIn ? (savedQuery.data ?? []) : []),
     ...localEvents.map((query) => query.data).filter(present),
   ]);
   const savedArtists = uniqueById([
-    ...(followingQuery.data ?? []),
+    ...(isLoggedIn ? (followingQuery.data ?? []) : []),
     ...localArtists.map((query) => query.data).filter(present),
   ]);
-  const recentEvents = recentEntries.map((_, index) => recentQueries[index]?.data).filter(present);
+  const recentEvents = recentsEnabled
+    ? recentEntries.map((_, index) => recentQueries[index]?.data).filter(present)
+    : [];
 
   const queriesLoading =
     (isLoggedIn && (savedQuery.isLoading || followingQuery.isLoading)) ||
@@ -91,7 +97,7 @@ export function useFavoriteItems() {
     savedEvents,
     savedArtists,
     recentEvents,
-    lastViewedAt: recentEntries[0]?.viewedAt,
+    lastViewedAt: recentsEnabled ? recentEntries[0]?.viewedAt : undefined,
     isLoading: queriesLoading,
     error,
     refetch,

@@ -13,7 +13,7 @@ import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { debugLog } from '@/data/log';
-import { syncLocalInterest } from '@/data/interest-sync';
+import { reconcileInterest } from '@/data/interest-sync';
 import { useResolvedColorScheme, useTheme } from '@/hooks/use-theme';
 import { THEME_VARS } from '@/lib/theme';
 import { controlShadowStyle, controlTone, fieldChromeClassName } from '@/lib/control-chrome';
@@ -60,7 +60,7 @@ export function AuthSheet({
   }
 
   async function finish() {
-    await syncLocalInterest();
+    await reconcileInterest();
     reset();
     onSuccess?.();
     onClose();

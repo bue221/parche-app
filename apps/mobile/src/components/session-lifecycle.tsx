@@ -11,23 +11,11 @@ import { refreshSession, revokeLocalSession } from '@/data/http';
 import { debugLog } from '@/data/log';
 import { hydratePrintSeen } from '@/data/ticket-cache';
 import { useInterestStore } from '@/data/interest-store';
-import { syncLocalInterest } from '@/data/interest-sync';
+import { reconcileInterest } from '@/data/interest-sync';
 import { useRecentStore } from '@/data/recent-store';
 import { getAccessExpiresAt, hasPersistedSession, hydrateRefresh } from '@/data/token-store';
 
 const REFRESH_SKEW_MS = 90 * 1000;
-
-async function hydrateServerInterest(): Promise<void> {
-  try {
-    const [following, saved] = await Promise.all([api.artists.following(), api.events.saved()]);
-    useInterestStore.getState().rememberFromServer(
-      following.map((artist) => artist.id),
-      saved.map((event) => event.id)
-    );
-  } catch {
-    debugLog('interest', 'server interest hydrate skipped');
-  }
-}
 
 function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'UNAUTHORIZED';
@@ -70,16 +58,20 @@ export function SessionLifecycle() {
         await useRecentStore.getState().hydrate();
         const refresh = await hydrateRefresh();
         if (!refresh) {
+          useInterestStore.getState().dropSynced();
+          useRecentStore.getState().adoptOwner(null);
           return;
         }
         const ok = await refreshSession();
         if (!ok) {
+          useInterestStore.getState().dropSynced();
+          useRecentStore.getState().adoptOwner(null);
           return;
         }
         try {
           await api.auth.me();
           useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
-          void hydrateServerInterest().then(() => syncLocalInterest());
+          void reconcileInterest();
         } catch (err) {
           if (isUnauthorized(err)) {
             await revokeLocalSession();

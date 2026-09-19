@@ -12,7 +12,7 @@ import { ApiError, userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
 import { debugLog } from '@/data/log';
 import { takePendingPath } from '@/data/session';
-import { syncLocalInterest } from '@/data/interest-sync';
+import { reconcileInterest } from '@/data/interest-sync';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -33,7 +33,7 @@ export default function RegisterScreen() {
     setFieldErrors({});
     try {
       await api.auth.register({ email, password, displayName, phone, initialProfile: profile });
-      await syncLocalInterest();
+      await reconcileInterest();
       const pending = takePendingPath();
       router.replace((pending ?? '/') as Href);
     } catch (err) {

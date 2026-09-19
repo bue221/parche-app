@@ -40,9 +40,9 @@ export function useAuthSnapshot() {
 export function useTabVisibility() {
   const auth = useAuthSnapshot();
   const invitesQuery = useQuery({
-    queryKey: ['invites'],
+    queryKey: ['invites', auth.user?.id],
     queryFn: () => api.auth.invites(),
-    enabled: auth.isLoggedIn,
+    enabled: auth.isLoggedIn && Boolean(auth.user?.id),
   });
   const tonightQuery = useQuery({
     queryKey: ['events', 'tonight-badge'],

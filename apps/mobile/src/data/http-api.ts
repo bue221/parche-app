@@ -2,11 +2,13 @@ import { useAuthStore } from '@/data/auth-store';
 import { API_URL, rewriteUploadUrl } from '@/data/env';
 import { ApiError } from '@/data/errors';
 import { useInterestStore } from '@/data/interest-store';
+import { useRecentStore } from '@/data/recent-store';
 import { apiFetch, asRecord, mediaUrl, num, refreshSession, revokeLocalSession, str } from '@/data/http';
 import { createId } from '@/data/ids';
 import { mapEvent, mapEventDetail, mapMembership, mapTicketType, mapWalletTicket } from '@/data/mappers';
 import type { EventWithExtras, Me, ParcheApi } from '@/data/mock/api';
 import { markPrintSeen as persistPrintSeen } from '@/data/print-seen';
+import { clearSessionQueries } from '@/lib/query';
 import {
   getWalletTickets,
   hydratePrintSeen,
@@ -96,7 +98,14 @@ function mapMe(raw: unknown): Me {
     platformAdmin,
     memberships,
   };
+  const previousId = useAuthStore.getState().me?.id;
+  if (previousId && previousId !== me.id) {
+    useInterestStore.getState().clearAccount();
+    useAuthStore.getState().setFollowingIds([]);
+    clearSessionQueries();
+  }
   useAuthStore.getState().setMe(me);
+  useRecentStore.getState().adoptOwner(me.id);
   return me;
 }
 

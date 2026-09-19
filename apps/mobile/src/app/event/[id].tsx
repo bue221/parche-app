@@ -144,10 +144,10 @@ export default function EventDetailScreen() {
   });
 
   useEffect(() => {
-    if (event?.id) {
+    if (isLoggedIn && event?.id) {
       useRecentStore.getState().record(event.id);
     }
-  }, [event?.id]);
+  }, [event?.id, isLoggedIn]);
 
   const mapEvents = useMemo(() => (event ? [event] : []), [event]);
   const mapPin = useMemo(

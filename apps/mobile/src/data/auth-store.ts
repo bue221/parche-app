@@ -31,10 +31,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessExpiresAt: 0,
   permissions: { location: 'undetermined', camera: 'undetermined' },
   setMe: (me) =>
-    set({
-      me,
-      memberships: me?.memberships ?? [],
-    }),
+    set(
+      me
+        ? { me, memberships: me.memberships }
+        : { me: null, memberships: [], followingIds: [], tenantId: null }
+    ),
   setTenantId: (tenantId) => set({ tenantId }),
   setFollowingIds: (followingIds) => set({ followingIds }),
   setPendingPath: (pendingPath) => set({ pendingPath }),

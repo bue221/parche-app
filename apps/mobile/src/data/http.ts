@@ -3,7 +3,10 @@ import { Platform } from 'react-native';
 import { useAuthStore } from '@/data/auth-store';
 import { ApiError, type ApiErrorCode } from '@/data/errors';
 import { API_URL, rewriteMediaUrl } from '@/data/env';
+import { useInterestStore } from '@/data/interest-store';
+import { useRecentStore } from '@/data/recent-store';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens, usesCookieRefresh } from '@/data/token-store';
+import { clearSessionQueries } from '@/lib/query';
 
 type Json = Record<string, unknown> | unknown[] | null;
 
@@ -57,6 +60,9 @@ export async function revokeLocalSession(): Promise<void> {
   await clearTokens();
   useAuthStore.getState().setMe(null);
   useAuthStore.getState().setAccessExpiresAt(0);
+  useInterestStore.getState().clearAccount();
+  useRecentStore.getState().adoptOwner(null);
+  clearSessionQueries();
 }
 
 function fetchCredentials(): RequestCredentials | undefined {

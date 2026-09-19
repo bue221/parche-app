@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { debugLog } from '@/data/log';
+
 const KEY = 'parche.interest.v1';
 
 type InterestState = {
@@ -19,6 +21,8 @@ type InterestState = {
   pending: () => { artistIds: string[]; eventIds: string[] };
   markSynced: (artists: string[], events: string[]) => void;
   rememberFromServer: (artists: string[], events: string[]) => void;
+  clearAccount: () => void;
+  dropSynced: () => void;
 };
 
 type PersistShape = {
@@ -28,17 +32,17 @@ type PersistShape = {
   lastSyncedEvents: string[];
 };
 
-function persist(state: PersistShape) {
-  void AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => undefined);
-}
-
-function snapshot(get: () => InterestState): PersistShape {
-  return {
-    artistIds: get().artistIds,
-    eventIds: get().eventIds,
-    lastSyncedArtists: get().lastSyncedArtists,
-    lastSyncedEvents: get().lastSyncedEvents,
-  };
+function persistPending(get: () => InterestState) {
+  const pending = get().pending();
+  void AsyncStorage.setItem(
+    KEY,
+    JSON.stringify({
+      artistIds: pending.artistIds,
+      eventIds: pending.eventIds,
+      lastSyncedArtists: [],
+      lastSyncedEvents: [],
+    } satisfies PersistShape)
+  ).catch(() => undefined);
 }
 
 export const useInterestStore = create<InterestState>((set, get) => ({
@@ -52,13 +56,22 @@ export const useInterestStore = create<InterestState>((set, get) => ({
       const raw = await AsyncStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<PersistShape>;
+        const lastSyncedArtists = Array.isArray(parsed.lastSyncedArtists) ? parsed.lastSyncedArtists : [];
+        const lastSyncedEvents = Array.isArray(parsed.lastSyncedEvents) ? parsed.lastSyncedEvents : [];
+        const artistIds = (Array.isArray(parsed.artistIds) ? parsed.artistIds : []).filter(
+          (id) => !lastSyncedArtists.includes(id)
+        );
+        const eventIds = (Array.isArray(parsed.eventIds) ? parsed.eventIds : []).filter(
+          (id) => !lastSyncedEvents.includes(id)
+        );
         set({
-          artistIds: Array.isArray(parsed.artistIds) ? parsed.artistIds : [],
-          eventIds: Array.isArray(parsed.eventIds) ? parsed.eventIds : [],
-          lastSyncedArtists: Array.isArray(parsed.lastSyncedArtists) ? parsed.lastSyncedArtists : [],
-          lastSyncedEvents: Array.isArray(parsed.lastSyncedEvents) ? parsed.lastSyncedEvents : [],
+          artistIds,
+          eventIds,
+          lastSyncedArtists: [],
+          lastSyncedEvents: [],
           hydrated: true,
         });
+        persistPending(get);
         return;
       }
     } catch {
@@ -68,25 +81,25 @@ export const useInterestStore = create<InterestState>((set, get) => ({
   },
   followLocal: (artistId) => {
     set({ artistIds: [...new Set([...get().artistIds, artistId])] });
-    persist(snapshot(get));
+    persistPending(get);
   },
   unfollowLocal: (artistId) => {
     set({
       artistIds: get().artistIds.filter((id) => id !== artistId),
       lastSyncedArtists: get().lastSyncedArtists.filter((id) => id !== artistId),
     });
-    persist(snapshot(get));
+    persistPending(get);
   },
   saveEvent: (eventId) => {
     set({ eventIds: [...new Set([...get().eventIds, eventId])] });
-    persist(snapshot(get));
+    persistPending(get);
   },
   unsaveEvent: (eventId) => {
     set({
       eventIds: get().eventIds.filter((id) => id !== eventId),
       lastSyncedEvents: get().lastSyncedEvents.filter((id) => id !== eventId),
     });
-    persist(snapshot(get));
+    persistPending(get);
   },
   isFollowing: (artistId) => get().artistIds.includes(artistId),
   isSaved: (eventId) => get().eventIds.includes(eventId),
@@ -99,15 +112,40 @@ export const useInterestStore = create<InterestState>((set, get) => ({
       lastSyncedArtists: [...new Set([...get().lastSyncedArtists, ...artists])],
       lastSyncedEvents: [...new Set([...get().lastSyncedEvents, ...events])],
     });
-    persist(snapshot(get));
+    persistPending(get);
   },
   rememberFromServer: (artists, events) => {
+    const pending = get().pending();
     set({
-      artistIds: [...new Set([...get().artistIds, ...artists])],
-      eventIds: [...new Set([...get().eventIds, ...events])],
-      lastSyncedArtists: [...new Set([...get().lastSyncedArtists, ...artists])],
-      lastSyncedEvents: [...new Set([...get().lastSyncedEvents, ...events])],
+      artistIds: [...new Set([...pending.artistIds, ...artists])],
+      eventIds: [...new Set([...pending.eventIds, ...events])],
+      lastSyncedArtists: [...new Set(artists)],
+      lastSyncedEvents: [...new Set(events)],
     });
-    persist(snapshot(get));
+    persistPending(get);
+  },
+  clearAccount: () => {
+    set({
+      artistIds: [],
+      eventIds: [],
+      lastSyncedArtists: [],
+      lastSyncedEvents: [],
+    });
+    persistPending(get);
+    debugLog('interest', 'account interest cleared');
+  },
+  dropSynced: () => {
+    const pending = get().pending();
+    set({
+      artistIds: pending.artistIds,
+      eventIds: pending.eventIds,
+      lastSyncedArtists: [],
+      lastSyncedEvents: [],
+    });
+    persistPending(get);
+    debugLog('interest', 'synced interest dropped', {
+      pendingArtists: pending.artistIds.length,
+      pendingEvents: pending.eventIds.length,
+    });
   },
 }));

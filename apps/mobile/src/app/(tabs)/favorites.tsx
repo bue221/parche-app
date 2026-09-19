@@ -100,7 +100,11 @@ export default function FavoritesScreen() {
         {!hasContent && !isLoading ? (
           <EmptyState
             title="Nada guardado aún"
-            lead="Guarda un evento o sigue un artista. También aparecen aquí los eventos que visitaste."
+            lead={
+              isLoggedIn
+                ? 'Guarda un evento o sigue un artista. También aparecen aquí los eventos que visitaste.'
+                : 'Guarda un evento o sigue un artista. Entra para ver lo que visitaste.'
+            }
             actionLabel="Explorar"
             onAction={() => router.push('/' as Href)}
           />

@@ -43,19 +43,19 @@ export default function ParcheScreen() {
   const openAuth = useAuthSheet((s) => s.open);
   const [activating, setActivating] = useState(false);
   const followingQuery = useQuery({
-    queryKey: ['following'],
+    queryKey: ['following', user?.id],
     queryFn: () => api.artists.following(),
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && Boolean(user?.id),
   });
   const artistQuery = useQuery({
-    queryKey: ['artist', 'mine'],
+    queryKey: ['artist', 'mine', user?.id],
     queryFn: () => api.artists.mine(),
     enabled: isLoggedIn && Boolean(user?.profiles.includes('artist')),
   });
   const ticketsQuery = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ['wallet', user?.id],
     queryFn: () => api.tickets.mine(),
-    enabled: isLoggedIn,
+    enabled: isLoggedIn && Boolean(user?.id),
   });
   const following: Artist[] = followingQuery.data ?? [];
   const tickets = (ticketsQuery.data ?? []).filter((ticket) => ticket.status !== 'cancelled');

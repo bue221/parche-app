@@ -9,15 +9,17 @@ import { Screen } from '@/components/screen';
 import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { useInterestStore } from '@/data/interest-store';
+import { useAuthSnapshot } from '@/data/session';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export default function FollowingScreen() {
   const ok = useRequireAuth('/parche/siguiendo');
+  const { user } = useAuthSnapshot();
   const artistIds = useInterestStore((s) => s.artistIds);
   const followingQuery = useQuery({
-    queryKey: ['following'],
+    queryKey: ['following', user?.id],
     queryFn: () => api.artists.following(),
-    enabled: ok,
+    enabled: ok && Boolean(user?.id),
   });
   const localArtists = useQueries({
     queries: artistIds.map((artistId) => ({

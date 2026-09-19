@@ -26,11 +26,12 @@ export default function WalletScreen() {
   const bleed = Platform.OS !== 'web' || compact ? Spacing.three : 40;
   const redirectedPrint = useRef(false);
 
-  const { data: tickets = [], error, refetch, isLoading } = useQuery({
-    queryKey: ['wallet'],
+  const { data, error, refetch, isLoading } = useQuery({
+    queryKey: ['wallet', user?.id],
     queryFn: () => api.tickets.mine(),
-    enabled: hydrated && isLoggedIn,
+    enabled: hydrated && isLoggedIn && Boolean(user?.id),
   });
+  const tickets = isLoggedIn ? (data ?? []) : [];
 
   const visible = tickets.filter((t) => t.status !== 'cancelled');
   const events = groupWalletEvents(visible);
