@@ -17,19 +17,19 @@ Lista de lo que el asistente puede mostrar en puerta. Es el archivo, no la celeb
 
 ## Pantallas
 
-Cards tipo pase (foto cuadrada + estado + Mostrar) en la **misma grilla de 2 columnas** que Explorar. En web desktop, 168–220px (el flyer no estira a `MaxContentWidth`). Pull-to-refresh. Agrupar por estado; no mezclar válidas con usadas.
+Cards compactas (~168px) en un riel **full-bleed** hasta el borde de la pantalla: **un card por evento**. Tap abre las boletas de ese evento ([FEAT-025](feat-025-ticket-qr.md)). Bajo el flyer: recuento `3 disponibles · 0 usadas` (y pendiente/cedida si aplica). Sin CTA Mostrar. Lead de la tab: el mismo recuento global. Pull-to-refresh.
 
 | Estado ticket | Lista |
 |---------------|-------|
-| valid | Sección **Para mostrar**. Primario; CTA Mostrar |
-| reserved | Sección **Pago pendiente**. Tag amber |
-| used | Sección **Usadas y cedidas**. Flyer en gris, título tachado, tag muted, sin Mostrar |
-| transferred | Misma sección archivo. Tag “Cedido” |
+| valid | Cuenta como **disponible** en el card del evento |
+| reserved | Cuenta como **pendiente** |
+| used | Cuenta como **usada**; el card se archiva (gris) solo si no queda ninguna disponible |
+| transferred | Cuenta como **cedida** |
 | cancelled | Ocultar |
 
 ## Flujo
 
-`GET /v1/me/tickets`. Vacío autenticado: “Tu primera fecha” + CTA Explorar. Invitado: Surface con CTA "Entrar" para login.
+`GET /v1/me/tickets`. Vacío autenticado: “Tu primer evento” + CTA Explorar. Invitado: Surface con CTA "Entrar" para login.
 
 ## Estados
 
@@ -48,6 +48,7 @@ Reventa marketplace. Apple Wallet pass (backlog). La animación de emisión (023
 - [ ] Tab Boletas visible sin sesión; CTA suave para login, no muro.
 - [ ] Primera compra no salta la impresión.
 - [ ] Used no parece válido.
+- [ ] Un card por evento, compacto, riel al borde, recuento disponibles/usadas, tap abre las boletas.
 
 ## Relacionadas
 

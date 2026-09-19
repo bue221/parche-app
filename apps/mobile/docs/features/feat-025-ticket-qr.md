@@ -11,13 +11,13 @@ En la puerta el asistente enseña el token firmado a pantalla completa, brillo a
 
 ## Quick path
 
-1. Desde wallet (impresión ya vista).
-2. Pantalla completa: QR + evento + tipo.
+1. Desde wallet (impresión ya vista): un card por evento.
+2. Pantalla completa: QR + evento + etapa. Si hay varias boletas de ese evento, deslizar a los lados (`2 de 3`).
 3. Staff escanea con [FEAT-028](feat-028-door-scanner.md).
 
 ## Pantallas
 
-Papel/contraste máximo. Botón transferir (026). Brillo: subir al entrar, restaurar al salir (si el SO lo permite).
+Papel/contraste máximo. Botón transferir (026). Brillo: subir al entrar, restaurar al salir (si el SO lo permite). Varias boletas del mismo evento: un pase a la vez, snap horizontal, puntos + `N de M`.
 
 `used`: QR atenuado + “Ya ingresaste”. `transferred`: no mostrar código vivo.
 

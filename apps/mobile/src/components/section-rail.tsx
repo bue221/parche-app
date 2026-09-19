@@ -11,9 +11,9 @@ import { useTheme } from '@/hooks/use-theme';
 const RAIL_GAP = 12;
 const RAIL_PEEK = 40;
 
-function railCardWidth(contentWidth: number) {
-  const viewport = contentWidth + Spacing.three * 2;
-  return Math.min(200, Math.max(144, Math.round((viewport - RAIL_GAP - RAIL_PEEK) / 2)));
+function railCardWidth(contentWidth: number, bleed: number) {
+  const viewport = contentWidth + bleed * 2;
+  return Math.min(168, Math.max(144, Math.round((viewport - RAIL_GAP - RAIL_PEEK) / 2)));
 }
 
 function railItems(children: ReactNode) {
@@ -25,15 +25,18 @@ export function SectionRail({
   onSeeAll,
   children,
   empty,
+  bleed = Spacing.three,
 }: {
   title: string;
   onSeeAll?: () => void;
   children?: ReactNode;
   empty?: { title: string; lead?: string };
+  /** Pull the row to the screen edge. Defaults to page pad 16. */
+  bleed?: number;
 }) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
-  const cardWidth = width > 0 ? railCardWidth(width) : 168;
+  const cardWidth = width > 0 ? railCardWidth(width, bleed) : 168;
   const items = railItems(children);
   const showEmpty = items.length === 0 && empty;
 
@@ -61,7 +64,7 @@ export function SectionRail({
       {showEmpty ? (
         <EmptyState compact title={empty.title} lead={empty.lead} />
       ) : (
-        <View style={{ marginHorizontal: -Spacing.three, overflow: 'visible' }}>
+        <View style={{ marginHorizontal: -bleed, overflow: 'visible' }}>
           <ScrollView
             horizontal
             nestedScrollEnabled
@@ -69,7 +72,7 @@ export function SectionRail({
             style={{ flexGrow: 0 }}
             contentContainerStyle={{
               gap: RAIL_GAP,
-              paddingHorizontal: Spacing.three,
+              paddingHorizontal: bleed,
             }}>
             {items.map((child, index) => (
               <View
