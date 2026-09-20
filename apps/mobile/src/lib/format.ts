@@ -269,6 +269,23 @@ export function formatMoney(cents: number, currency = 'COP'): string {
   }).format(cents);
 }
 
+export function formatPercent(rate: number): string {
+  if (!Number.isFinite(rate)) return '0%';
+  return `${Math.round(rate * 100)}%`;
+}
+
+/** Clock in Bogotá: "22:00". */
+export function formatClock(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString('es-CO', {
+    timeZone: BOGOTA_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+}
+
 export function statusLabel(status: string): string {
   const map: Record<string, string> = {
     draft: 'Borrador',

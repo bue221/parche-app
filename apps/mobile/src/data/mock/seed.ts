@@ -1,5 +1,5 @@
 import { issueTicketToken } from '@/data/tokens';
-import type { MockSnapshot, Ticket } from '@/data/types';
+import type { CheckInCode, MockSnapshot, ScanLog, Ticket } from '@/data/types';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -16,6 +16,22 @@ function atBogota(year: number, month: number, day: number, hour = 21): string {
 /** Portrait flyer from Unsplash (stable photo ids, 800×1000 crop). */
 function flyer(photoId: string): string {
   return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=800&h=1000&q=80`;
+}
+
+function seedDoorLogs(): ScanLog[] {
+  const night = Date.now() - 14 * DAY;
+  return Array.from({ length: 42 }, (_, i) => {
+    const result: CheckInCode =
+      i % 9 === 0 ? 'duplicate' : i % 15 === 0 ? 'invalid' : i % 21 === 0 ? 'wrong_event' : 'approved';
+    return {
+      id: `scan_selva03_${i}`,
+      eventId: IDS.eventSelva03,
+      ticketId: result === 'approved' || result === 'duplicate' ? `ticket_selva03_${i}` : undefined,
+      result,
+      scannerUserId: i % 4 === 0 ? IDS.promoter : IDS.door,
+      at: new Date(night + HOUR + i * 8 * 60 * 1000).toISOString(),
+    };
+  });
 }
 
 function seedTicket(
@@ -867,7 +883,7 @@ export function createSeed(): MockSnapshot {
     ],
     follows: [{ userId: IDS.attendee, artistId: IDS.artistLuna }],
     eventSaves: [],
-    scans: [],
+    scans: seedDoorLogs(),
     galleries: [
       { eventId: IDS.eventSelva, id: 'gal_selva_1', url: FLYERS.bodega },
       { eventId: IDS.eventSelva, id: 'gal_selva_2', url: FLYERS.neonGarden },

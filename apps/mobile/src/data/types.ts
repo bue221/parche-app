@@ -94,9 +94,47 @@ export type Membership = {
   eventId: string;
   userId?: string;
   email: string;
+  displayName?: string;
+  avatarUrl?: string;
   role: MembershipRole;
   status: MembershipStatus;
   inviteToken?: string;
+};
+
+export type UserHit = {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+};
+
+export type EventMetrics = {
+  byType: {
+    name: string;
+    sold: number;
+    reserved: number;
+    available: number;
+    capacity: number;
+    revenueCents: number;
+  }[];
+  checkIns: number;
+  sold: number;
+  noShow: number;
+  noShowRate: number;
+  grossCents: number;
+  currency: string;
+  valid: number;
+  used: number;
+  cancelled: number;
+  scansByScanner: { userId: string; displayName: string; approved: number; duplicate: number }[];
+  hourly: { hour: string; approved: number }[];
+};
+
+export type DoorLive = {
+  checkIns: number;
+  sold: number;
+  capacity: number;
+  recent: ScanLog[];
 };
 
 export type TicketType = {
@@ -151,6 +189,8 @@ export type ScanLog = {
   ticketId?: string;
   result: CheckInCode;
   scannerUserId: string;
+  scannerDisplayName?: string;
+  guestName?: string;
   at: string;
 };
 

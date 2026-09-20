@@ -116,11 +116,14 @@ export function mapTicketType(raw: unknown): TicketType {
 
 export function mapMembership(raw: unknown, eventId: string): Membership {
   const m = asRecord(raw);
+  const displayName = str(m.display_name) || undefined;
+  const email = str(m.email);
   return {
-    id: `${eventId}:${str(m.user_id)}`,
+    id: `${eventId}:${str(m.user_id) || str(m.id)}`,
     eventId,
     userId: str(m.user_id) || undefined,
-    email: str(m.email) || str(m.display_name),
+    email: email || displayName || '',
+    displayName,
     role: str(m.role) as MembershipRole,
     status: (str(m.status) || 'active') as MembershipStatus,
   };

@@ -5,7 +5,7 @@ import { debugLog } from '@/data/log';
 import { wait } from '@/data/mock/delay';
 import { compactTicketCode } from '@/lib/code128';
 import { ENDED_EVENT_COPY, eventHasEnded } from '@/lib/format';
-import { DEMO_PASSWORD } from '@/data/mock/seed';
+import { DEMO_PASSWORD, IDS } from '@/data/mock/seed';
 import { getSession, getSnapshot, useMockStore } from '@/data/mock/store';
 import {
   issueAccessToken,
@@ -31,12 +31,14 @@ import type {
   OrderItem,
   ParcheEvent,
   ProfileKind,
-  ScanLog,
   Session,
   Ticket,
   TicketType,
   Upload,
   User,
+  UserHit,
+  EventMetrics,
+  DoorLive,
 } from '@/data/types';
 
 const ACCESS_TTL_MS = 12 * 60 * 1000;
@@ -774,20 +776,53 @@ export const mockApi = {
     async list(eventId: string): Promise<Membership[]> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.members.manage');
-      return getSnapshot().memberships.filter((m) => m.eventId === eventId);
+      const users = getSnapshot().users;
+      return getSnapshot()
+        .memberships.filter((m) => m.eventId === eventId)
+        .map((m) => {
+          const user = users.find((u) => u.id === m.userId);
+          return {
+            ...m,
+            displayName: m.displayName ?? user?.displayName,
+            avatarUrl: m.avatarUrl ?? user?.avatarUrl,
+          };
+        });
     },
 
-    async invite(eventId: string, email: string, role: Exclude<MembershipRole, 'owner'>): Promise<Membership> {
+    async invite(
+      eventId: string,
+      email: string,
+      role: Exclude<MembershipRole, 'owner'>,
+      userId?: string
+    ): Promise<Membership> {
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.members.manage');
       requireWritableEvent(eventId);
       const token = createId('invite');
-      const user = getSnapshot().users.find((u) => u.email === email.trim().toLowerCase());
+      const users = getSnapshot().users;
+      const user = userId
+        ? users.find((u) => u.id === userId)
+        : users.find((u) => u.email === email.trim().toLowerCase());
+      const normalized = (user?.email ?? email).trim().toLowerCase();
+      if (!normalized) {
+        throw new ApiError('VALIDATION_ERROR', 'Escribe un email o elige a alguien', { email: 'required' });
+      }
+      const already = getSnapshot().memberships.find(
+        (m) =>
+          m.eventId === eventId &&
+          m.status !== 'revoked' &&
+          (m.email === normalized || (user && m.userId === user.id))
+      );
+      if (already) {
+        throw new ApiError('CONFLICT', 'Esa persona ya está en el equipo');
+      }
       const membership: Membership = {
         id: createId('mem'),
         eventId,
         userId: undefined,
-        email: email.trim().toLowerCase(),
+        email: normalized,
+        displayName: user?.displayName,
+        avatarUrl: user?.avatarUrl,
         role,
         status: 'pending',
         inviteToken: token,
@@ -1136,55 +1171,112 @@ export const mockApi = {
       return getSnapshot().scans.filter((s) => s.eventId === eventId && s.result === 'approved').length;
     },
 
-    async live(eventId: string): Promise<{ checkIns: number; sold: number; recent: ScanLog[] }> {
+    async live(eventId: string): Promise<DoorLive> {
       await wait(60);
       const session = requireSession();
       if (!can(session.userId, eventId, 'event.door.live') && !can(session.userId, eventId, 'event.metrics.read')) {
         throw new ApiError('FORBIDDEN', 'No puedes ver el aforo');
       }
-      const sold = getSnapshot()
-        .ticketTypes.filter((t) => t.eventId === eventId)
-        .reduce((sum, t) => sum + t.sold, 0);
+      const types = getSnapshot().ticketTypes.filter((t) => t.eventId === eventId);
+      const sold = types.reduce((sum, t) => sum + t.sold, 0);
+      const capacity = types.reduce((sum, t) => sum + t.capacity, 0);
+      const includeGuest = can(session.userId, eventId, 'event.metrics.read');
+      const attendeeName = getSnapshot().users.find((u) => u.id === IDS.attendee)?.displayName;
       const recent = getSnapshot()
         .scans.filter((s) => s.eventId === eventId)
-        .slice(-12)
-        .reverse();
-      return { checkIns: this.occupancy(eventId), sold, recent };
+        .slice(-20)
+        .reverse()
+        .map((scan) => ({
+          ...scan,
+          scannerDisplayName: getSnapshot().users.find((u) => u.id === scan.scannerUserId)?.displayName,
+          guestName: includeGuest && scan.result === 'approved' ? attendeeName : undefined,
+        }));
+      return { checkIns: this.occupancy(eventId), sold, capacity, recent };
     },
 
-    async metrics(eventId: string): Promise<{
-      byType: { name: string; sold: number; reserved: number; available: number; revenueCents: number }[];
-      checkIns: number;
-      sold: number;
-      noShow: number;
-      scansByScanner: { userId: string; displayName: string; count: number }[];
-    }> {
+    async metrics(eventId: string): Promise<EventMetrics> {
       await wait();
       const session = requireSession();
       requirePerm(session.userId, eventId, 'event.metrics.read');
       const types = getSnapshot().ticketTypes.filter((t) => t.eventId === eventId);
       const checkIns = this.occupancy(eventId);
       const sold = types.reduce((sum, t) => sum + t.sold, 0);
-      const scans = getSnapshot().scans.filter((s) => s.eventId === eventId && s.result === 'approved');
-      const byScanner = new Map<string, number>();
-      scans.forEach((s) => byScanner.set(s.scannerUserId, (byScanner.get(s.scannerUserId) ?? 0) + 1));
+      const scans = getSnapshot().scans.filter((s) => s.eventId === eventId);
+      const byScanner = new Map<string, { approved: number; duplicate: number }>();
+      const hourly = new Map<string, number>();
+      scans.forEach((s) => {
+        const row = byScanner.get(s.scannerUserId) ?? { approved: 0, duplicate: 0 };
+        if (s.result === 'approved') row.approved += 1;
+        if (s.result === 'duplicate') row.duplicate += 1;
+        byScanner.set(s.scannerUserId, row);
+        if (s.result === 'approved') {
+          const hour = new Date(s.at);
+          hour.setMinutes(0, 0, 0);
+          hour.setMilliseconds(0);
+          const key = hour.toISOString();
+          hourly.set(key, (hourly.get(key) ?? 0) + 1);
+        }
+      });
+      const byType = types.map((t) => ({
+        name: t.name,
+        sold: t.sold,
+        reserved: t.reserved,
+        available: available(t),
+        capacity: t.capacity,
+        revenueCents: t.sold * t.priceCents,
+      }));
+      const grossCents = byType.reduce((sum, t) => sum + t.revenueCents, 0);
+      const event = getSnapshot().events.find((e) => e.id === eventId);
+      const ended = event ? eventHasEnded(event) : false;
+      const noShow = Math.max(0, sold - checkIns);
       return {
-        byType: types.map((t) => ({
-          name: t.name,
-          sold: t.sold,
-          reserved: t.reserved,
-          available: available(t),
-          revenueCents: t.sold * t.priceCents,
-        })),
+        byType,
         checkIns,
         sold,
-        noShow: Math.max(0, sold - checkIns),
-        scansByScanner: [...byScanner.entries()].map(([userId, count]) => ({
+        noShow,
+        noShowRate: ended && sold > 0 ? noShow / sold : 0,
+        grossCents,
+        currency: types[0]?.currency ?? 'COP',
+        valid: Math.max(0, sold - checkIns),
+        used: checkIns,
+        cancelled: 0,
+        scansByScanner: [...byScanner.entries()].map(([userId, counts]) => ({
           userId,
           displayName: getSnapshot().users.find((u) => u.id === userId)?.displayName ?? userId,
-          count,
+          approved: counts.approved,
+          duplicate: counts.duplicate,
         })),
+        hourly: [...hourly.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([hour, approved]) => ({ hour, approved })),
       };
+    },
+  },
+
+  users: {
+    async search(q: string): Promise<UserHit[]> {
+      await wait(80);
+      requireSession();
+      const query = q.trim().toLowerCase();
+      return getSnapshot()
+        .users.filter((u) => {
+          if (!query) return true;
+          return u.displayName.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+        })
+        .slice(0, 8)
+        .map((u) => ({
+          id: u.id,
+          email: u.email,
+          displayName: u.displayName,
+          avatarUrl: u.avatarUrl,
+        }));
+    },
+
+    async profile(id: string): Promise<UserHit | null> {
+      await wait(40);
+      const user = getSnapshot().users.find((u) => u.id === id);
+      if (!user) return null;
+      return { id: user.id, email: user.email, displayName: user.displayName, avatarUrl: user.avatarUrl };
     },
   },
 

@@ -17,16 +17,10 @@ import { useAuthSnapshot } from '@/data/session';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import type { CheckInCode, EventWithExtras } from '@/data/types';
 import { eventHasEnded } from '@/lib/format';
+import { CHECK_IN_STAMP } from '@/lib/check-in';
 import { createScanHold, SCAN_RESUME_MS } from '@/lib/scan-hold';
 
-const COPY: Record<CheckInCode, string> = {
-  approved: 'PASA',
-  duplicate: 'YA USADO',
-  invalid: 'INVÁLIDO',
-  wrong_event: 'OTRO EVENTO',
-  expired: 'VENCIDO',
-  forbidden: 'SIN PERMISO',
-};
+const COPY = CHECK_IN_STAMP;
 
 const SCAN_TYPES = ['qr', 'code128'] as const;
 const CAMERA_BLOCKED =

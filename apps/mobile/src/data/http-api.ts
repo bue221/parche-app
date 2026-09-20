@@ -38,6 +38,7 @@ import type {
   Ticket,
   TicketType,
   Upload,
+  UserHit,
 } from '@/data/types';
 
 const BOGOTA = { lat: 4.711, lng: -74.072 };
@@ -639,18 +640,20 @@ export const httpApi: ParcheApi = {
       const body = await apiFetch(`/v1/events/${eventId}/members`, { auth: true });
       return itemsOf(body).map((row) => mapMembership(row, eventId));
     },
-    async invite(eventId, email, role) {
+    async invite(eventId, email, role, userId) {
+      const normalized = email.trim().toLowerCase();
       const created = asRecord(
         await apiFetch(`/v1/events/${eventId}/members`, {
           method: 'POST',
           auth: true,
-          body: JSON.stringify({ email: email.trim().toLowerCase(), role }),
+          body: JSON.stringify(userId ? { user_id: userId, role } : { email: normalized, role }),
         })
       );
       return {
         id: str(created.id),
         eventId,
-        email: email.trim().toLowerCase(),
+        userId,
+        email: normalized,
         role,
         status: 'pending',
         inviteToken: undefined,
@@ -858,11 +861,17 @@ export const httpApi: ParcheApi = {
       return 0;
     },
     async live(eventId) {
-      const raw = asRecord(await apiFetch(`/v1/events/${eventId}/door/live`, { auth: true }));
+      const me = useAuthStore.getState().me;
+      const includeGuest = me ? can(me.id, eventId, 'event.metrics.read') : false;
+      const path = includeGuest
+        ? `/v1/events/${eventId}/door/live?include=guest_name`
+        : `/v1/events/${eventId}/door/live`;
+      const raw = asRecord(await apiFetch(path, { auth: true }));
       const recent = Array.isArray(raw.recent) ? raw.recent : [];
       return {
         checkIns: num(raw.inside) || num(raw.used),
         sold: num(raw.sold),
+        capacity: num(raw.capacity),
         recent: recent.map((row, i) => {
           const s = asRecord(row);
           return {
@@ -870,6 +879,7 @@ export const httpApi: ParcheApi = {
             eventId,
             result: (str(s.result) || 'invalid') as CheckInCode,
             scannerUserId: str(s.scanner_user_id),
+            guestName: str(s.guest_name) || undefined,
             at: str(s.ts),
           };
         }),
@@ -879,28 +889,102 @@ export const httpApi: ParcheApi = {
       const raw = asRecord(await apiFetch(`/v1/events/${eventId}/metrics`, { auth: true }));
       const byType = Array.isArray(raw.by_type) ? raw.by_type : [];
       const split = asRecord(raw.sold_valid_used);
-      const sold = num(split.valid) + num(split.used) || byType.reduce((sum, row) => sum + num(asRecord(row).sold), 0);
+      const mappedTypes = byType.map((row) => {
+        const t = asRecord(row);
+        const soldCount = num(t.sold);
+        const reserved = num(t.reserved);
+        const capacity = num(t.capacity);
+        return {
+          name: str(t.name),
+          sold: soldCount,
+          reserved,
+          available: Math.max(0, capacity - soldCount - reserved),
+          capacity,
+          revenueCents: num(t.gross_cents),
+        };
+      });
+      const sold = num(split.valid) + num(split.used) || mappedTypes.reduce((sum, row) => sum + row.sold, 0);
       const checkIns = num(raw.checkins);
       const scanners = Array.isArray(raw.by_scanner) ? raw.by_scanner : [];
+      const hourly = Array.isArray(raw.hourly) ? raw.hourly : [];
+      const noShow = Math.max(0, sold - checkIns);
       return {
-        byType: byType.map((row) => {
-          const t = asRecord(row);
-          return {
-            name: str(t.name),
-            sold: num(t.sold),
-            reserved: num(t.reserved),
-            available: Math.max(0, num(t.capacity) - num(t.sold) - num(t.reserved)),
-            revenueCents: num(t.gross_cents),
-          };
-        }),
+        byType: mappedTypes,
         checkIns,
         sold,
-        noShow: Math.max(0, sold - checkIns),
+        noShow,
+        noShowRate: Number(raw.no_show_rate) || (sold > 0 ? noShow / sold : 0),
+        grossCents: num(raw.gross_cents) || mappedTypes.reduce((sum, row) => sum + row.revenueCents, 0),
+        currency: str(raw.currency) || 'COP',
+        valid: num(split.valid),
+        used: num(split.used) || checkIns,
+        cancelled: num(split.cancelled),
         scansByScanner: scanners.map((row) => {
           const s = asRecord(row);
-          return { userId: str(s.user_id) || str(s.scanner_user_id), displayName: str(s.display_name) || 'Scanner', count: num(s.count) };
+          return {
+            userId: str(s.user_id) || str(s.scanner_user_id),
+            displayName: str(s.display_name) || 'Puerta',
+            approved: num(s.approved) || num(s.count),
+            duplicate: num(s.duplicate),
+          };
+        }),
+        hourly: hourly.map((row) => {
+          const h = asRecord(row);
+          return { hour: str(h.hour), approved: num(h.approved) };
         }),
       };
+    },
+  },
+
+  users: {
+    async search(q: string): Promise<UserHit[]> {
+      const query = q.trim().toLowerCase();
+      const tenantId = useAuthStore.getState().tenantId;
+      if (!tenantId) return [];
+      try {
+        const body = await apiFetch(`/v1/tenants/${tenantId}/members`, { auth: true });
+        return itemsOf(body)
+          .map((row) => {
+            const u = asRecord(row);
+            return {
+              id: str(u.user_id) || str(u.id),
+              email: str(u.email),
+              displayName: str(u.display_name) || str(u.email),
+              avatarUrl: mediaUrl(u.avatar_url),
+            } satisfies UserHit;
+          })
+          .filter((u) => {
+            if (!query) return Boolean(u.id);
+            return (
+              u.displayName.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
+            );
+          })
+          .filter((u) => Boolean(u.id))
+          .slice(0, 8);
+      } catch (err) {
+        if (err instanceof ApiError && (err.code === 'FORBIDDEN' || err.code === 'NOT_FOUND')) {
+          return [];
+        }
+        throw err;
+      }
+    },
+
+    async profile(id: string): Promise<UserHit | null> {
+      if (!id) return null;
+      try {
+        const raw = asRecord(await apiFetch(`/v1/users/${id}`, { auth: true }));
+        return {
+          id: str(raw.id) || id,
+          email: '',
+          displayName: str(raw.display_name) || 'Puerta',
+          avatarUrl: mediaUrl(raw.avatar_url),
+        };
+      } catch (err) {
+        if (err instanceof ApiError && (err.code === 'NOT_FOUND' || err.code === 'FORBIDDEN')) {
+          return null;
+        }
+        throw err;
+      }
     },
   },
 

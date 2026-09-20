@@ -53,3 +53,9 @@ export function membershipRoleLabel(role: MembershipRole): string {
   if (role === 'door') return 'Puerta';
   return 'Métricas';
 }
+
+export function membershipRoleHint(role: Exclude<MembershipRole, 'owner'>): string {
+  if (role === 'manager') return 'Editar, métricas e invitar a puerta.';
+  if (role === 'door') return 'Scan y aforo.';
+  return 'Solo el dashboard.';
+}
