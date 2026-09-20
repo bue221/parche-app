@@ -8,6 +8,8 @@ Product and engineering rules for Parche live in this folder. Agents and humans 
 | [features/README.md](features/README.md) | Index of atomic feature specs (screens and flows). Read the matching `feat-xxx` before building that slice |
 | [ui/design.md](ui/design.md) | Building or restyling UI: light/dark tokens, type, radii, components, icons |
 | [ui/ux.md](ui/ux.md) | Motion, cards, forms, feedback, shell hit targets |
+| [ops/release.md](ops/release.md) | Build config, EAS profiles, env vars, universal links setup |
+| [ops/testing.md](ops/testing.md) | Jest setup, what is covered, how to write a test |
 
 ### Feature specs
 

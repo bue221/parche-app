@@ -58,3 +58,5 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 | [docs/features/feat-041-complete-profile.md](docs/features/feat-041-complete-profile.md) | Optional complete profile |
 | [docs/ui/design.md](docs/ui/design.md) | Visual system: light/dark tokens, type, components, assets |
 | [docs/ui/ux.md](docs/ui/ux.md) | Motion, cards, forms, feedback, shell hit targets |
+| [docs/ops/release.md](docs/ops/release.md) | Build config, EAS profiles, env vars, universal links setup |
+| [docs/ops/testing.md](docs/ops/testing.md) | Jest setup, coverage map, how to write a test |
