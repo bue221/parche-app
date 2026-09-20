@@ -16,9 +16,11 @@ import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cardShadowStyle } from '@/lib/card-shadow';
+import { mapSheetRowIndex } from '@/lib/map-sheet-layout';
 
 const SPRING = { damping: 22, stiffness: 220, mass: 0.85 };
 const HANDLE_BODY = 58;
+const LIST_COLUMNS = 2;
 
 export type MapSheetSnap = 'collapsed' | 'peek' | 'expanded';
 
@@ -109,10 +111,11 @@ export function MapSheet({
   useEffect(() => {
     if (!selectedId) return;
     if (snapRef.current === 'collapsed') applySnap('peek');
-    const index = events.findIndex((event) => event.id === selectedId);
-    if (index < 0) return;
+    const itemIndex = events.findIndex((event) => event.id === selectedId);
+    const rowIndex = mapSheetRowIndex(itemIndex, events.length);
+    if (rowIndex < 0) return;
     requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
+      listRef.current?.scrollToIndex({ index: rowIndex, viewPosition: 0, animated: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, events]);
@@ -248,9 +251,16 @@ export function MapSheet({
             onScrollBeginDrag={() => {
               if (snap !== 'expanded') applySnap('expanded');
             }}
-            onScrollToIndexFailed={({ index }) => {
+            onScrollToIndexFailed={({ index, averageItemLength }) => {
+              const maxRow = Math.max(0, Math.ceil(events.length / LIST_COLUMNS) - 1);
+              if (index < 0) return;
+              const safeIndex = Math.min(index, maxRow);
+              listRef.current?.scrollToOffset({
+                offset: Math.max(0, averageItemLength * safeIndex),
+                animated: true,
+              });
               setTimeout(() => {
-                listRef.current?.scrollToIndex({ index, viewPosition: 0, animated: true });
+                listRef.current?.scrollToIndex({ index: safeIndex, viewPosition: 0, animated: true });
               }, 120);
             }}
             contentContainerStyle={{
@@ -258,7 +268,7 @@ export function MapSheet({
               paddingTop: 16,
               paddingBottom: snap === 'expanded' ? 72 : 16,
             }}
-            numColumns={2}
+            numColumns={LIST_COLUMNS}
             columnWrapperStyle={{ justifyContent: 'space-between', gap: 12, marginBottom: 16 }}
             renderItem={({ item }) => (
               <View style={{ flex: 1, maxWidth: '48.2%' }}>
