@@ -92,7 +92,7 @@ export function walletCountLabel(counts: WalletEventCounts) {
   return [
     counts.available === 1 ? '1 disponible' : `${counts.available} disponibles`,
     countPhrase(counts.pending, 'pendiente', 'pendientes'),
-    counts.used === 1 ? '1 usada' : `${counts.used} usadas`,
+    countPhrase(counts.used, 'usada', 'usadas'),
     countPhrase(counts.transferred, 'cedida', 'cedidas'),
   ]
     .filter(Boolean)
