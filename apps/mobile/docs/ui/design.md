@@ -4,7 +4,7 @@ Parche is a **consumer, photo-first** UI on the same canvas as the marketing web
 
 Inter stands in for Favorit (UI + screen titles). Antonio stands in for Foggy on onboarding, auth hero, and success beats (print / door PASA) only.
 
-The OS appearance drives the default scheme (`userInterfaceStyle: automatic`). `ThemeToggle` cycles `system` → `light` → `dark`; `system` live-follows the device. Forced prefs persist in `theme-store`. Stage primitives stay fixed. Semantic tokens (`background`, `foreground`, `surface`, `primary`, `border`) invert. Pigments (`aurora`, `neon`, `volt`, `amber`, `danger`) **do not invert**.
+The OS appearance drives the default scheme (`userInterfaceStyle: automatic`). `ThemeToggle` cycles `system` → `light` → `dark`; `system` live-follows the device, including Control Center, without re-locking `Appearance`. Forced prefs persist in `theme-store`. Stage primitives stay fixed. Semantic tokens (`background`, `foreground`, `surface`, `primary`, `border`) invert. Pigments (`aurora`, `neon`, `volt`, `amber`, `danger`) **do not invert**.
 
 Aligned with `web-frontend/docs/ui/design.md` — same hex roles, same primary/aurora split.
 

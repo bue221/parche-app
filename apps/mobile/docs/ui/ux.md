@@ -29,7 +29,7 @@ Motion, cards, forms, and screen chrome for the Expo app. Visual tokens stay in 
 | Forms | Caption uppercase label (aurora when focused, danger when invalid), optional helper, error = danger border + `shadow-error` + helper text. Focus = aurora border + `shadow-focus`. Multiline `minHeight` 96. Hit targets ≥44px. Wizard validates per step. `Screen` scrolls the focused field above the keyboard; `StickyCta` stays visible. |
 | Feedback | Skeleton matches card shape. Empty = `EmptyState` (title + optional lead + action) with role voice. Rails use `compact` so Esta noche / Para ti keep their title when there are no cards. Errors = `ErrorState` with retry on reads. Saving = disable CTA + “Guardando…”. |
 | Shell | `Screen` owns the safe band + `BackBar` / `PageHeader` (see [design.md](design.md) Screen chrome). Mobile tabs: equal-width `TabBar` cells, 26px glyphs in a 32px well, Inter 12. Guest launch: AuthSheet page modal (X to skip). Guest Cuenta: value card + AuthSheet CTA + theme. Password login remains a dismissible modal for existing accounts. |
-| Theme | `ThemeToggle` cycles system → light → dark. Default and `system` live-follow the device. Always resolve via `useResolvedColorScheme()` — never raw `Appearance` alone for chrome colors. |
+| Theme | `ThemeToggle` cycles system → light → dark. Default and `system` live-follow the iPhone/Android appearance (Control Center included). Do not re-apply `Appearance.setColorScheme` on every scheme change. Always resolve via `useResolvedColorScheme()`. |
 
 ## Checklist
 

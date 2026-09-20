@@ -1,5 +1,5 @@
 import { useEffect, type PropsWithChildren } from 'react';
-import { Platform, View } from 'react-native';
+import { Appearance, Platform, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { colorScheme } from 'nativewind';
@@ -7,13 +7,19 @@ import { colorScheme } from 'nativewind';
 import { useResolvedColorScheme, useTheme } from '@/hooks/use-theme';
 import { useOnboarding } from '@/data/onboarding-store';
 import { debugLog } from '@/data/log';
-import { useThemePref } from '@/data/theme-store';
+import { useThemePref, type ThemePref } from '@/data/theme-store';
 import { THEME_VARS } from '@/lib/theme';
 
-function applyNativeScheme(pref: 'system' | 'light' | 'dark') {
+function applyNativeScheme(pref: ThemePref) {
   try {
-    // NativeWind maps `system` to Appearance.setColorScheme('unspecified') on RN 0.82+,
-    // which is what lets the app live-follow the device theme.
+    // `unspecified` removes an app-level lock so iOS appearance changes reach JS.
+    Appearance.setColorScheme(pref === 'system' ? 'unspecified' : pref);
+  } catch (err) {
+    debugLog('theme', 'Appearance.setColorScheme failed', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+  try {
     colorScheme.set(pref === 'system' ? 'system' : pref);
   } catch (err) {
     debugLog('theme', 'nativewind colorScheme.set failed', {
@@ -34,8 +40,13 @@ export function ThemeRoot({ children }: PropsWithChildren) {
     void hydrateOnboarding();
   }, [hydrateTheme, hydrateOnboarding]);
 
+  // Only when the user preference changes. Re-running this on every OS scheme
+  // change re-applies `unspecified` and RN reports that as light.
   useEffect(() => {
     applyNativeScheme(pref);
+  }, [pref]);
+
+  useEffect(() => {
     void SystemUI.setBackgroundColorAsync(theme.background);
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -43,7 +54,7 @@ export function ThemeRoot({ children }: PropsWithChildren) {
       document.documentElement.classList.toggle('light', scheme === 'light');
       document.documentElement.style.backgroundColor = theme.background;
     }
-  }, [pref, scheme, theme.background]);
+  }, [scheme, theme.background]);
 
   // Plain View + vars(): a NativeWind className here wraps Expo Router's Stack, and
   // css-interop stringifies those children when CSS variables upgrade after hydrate.

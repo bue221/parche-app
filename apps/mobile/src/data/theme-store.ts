@@ -16,6 +16,7 @@ export function nextThemePref(pref: ThemePref): ThemePref {
 }
 
 const KEY = 'parche.theme';
+const FOLLOW_OS_MIGRATION = 'parche.theme.follow-os.v1';
 
 type ThemeState = {
   pref: ThemePref;
@@ -33,6 +34,14 @@ export const useThemePref = create<ThemeState>((set) => ({
   },
   hydrate: async () => {
     try {
+      const migrated = await AsyncStorage.getItem(FOLLOW_OS_MIGRATION);
+      if (migrated !== '1') {
+        // The old 2-way toggle persisted light/dark and ignored the iPhone setting.
+        await AsyncStorage.setItem(KEY, 'system');
+        await AsyncStorage.setItem(FOLLOW_OS_MIGRATION, '1');
+        set({ pref: 'system', hydrated: true });
+        return;
+      }
       const raw = await AsyncStorage.getItem(KEY);
       if (raw === 'light' || raw === 'dark' || raw === 'system') {
         set({ pref: raw, hydrated: true });
