@@ -1,4 +1,4 @@
-import { API_URL, rewriteMediaUrl, rewritePreviewUrl, rewriteUploadUrl } from '@/data/env';
+import { API_URL, rewriteMediaUrl, rewritePreviewUrl, rewriteUploadUrl, webLink } from '@/data/env';
 
 /**
  * These rewrites decide whether a presigned signature survives the trip. Assertions hang off
@@ -7,6 +7,22 @@ import { API_URL, rewriteMediaUrl, rewritePreviewUrl, rewriteUploadUrl } from '@
 describe('API_URL', () => {
   test('never carries a trailing slash, so path concatenation cannot double up', () => {
     expect(API_URL.endsWith('/')).toBe(false);
+  });
+});
+
+describe('webLink', () => {
+  const origin = 'https://parche.test';
+
+  test('builds a shareable https link', () => {
+    expect(webLink('/event/evt_1', origin)).toBe('https://parche.test/event/evt_1');
+  });
+
+  test('tolerates a trailing slash on the origin and a missing one on the path', () => {
+    expect(webLink('event/evt_1', 'https://parche.test/')).toBe('https://parche.test/event/evt_1');
+  });
+
+  test.each(['', '   '])('returns null for the origin %p so callers fall back to the custom scheme', (value) => {
+    expect(webLink('/event/evt_1', value)).toBeNull();
   });
 });
 

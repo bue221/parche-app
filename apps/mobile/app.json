@@ -8,20 +8,15 @@
     "scheme": "parche",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "userInterfaceStyle": "automatic",
       "icon": {
         "dark": "./assets/images/icon.png",
         "light": "./assets/images/icon-light.png",
         "tinted": "./assets/images/icon-tinted.png"
-      },
-      "infoPlist": {
-        "NSAppTransportSecurity": {
-          "NSAllowsLocalNetworking": true
-        }
       }
     },
     "android": {
       "userInterfaceStyle": "automatic",
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

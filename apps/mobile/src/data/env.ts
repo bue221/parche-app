@@ -1,5 +1,20 @@
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 
+/**
+ * Public web origin that universal links resolve to. Empty until a domain is configured;
+ * app.config.ts reads the same variable to decide whether to claim those links natively.
+ */
+export const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL ?? '').trim().replace(/\/$/, '');
+
+/** Shareable https link, or null when no web domain is set and the custom scheme must do. */
+export function webLink(path: string, origin: string = WEB_URL): string | null {
+  const base = origin.trim().replace(/\/$/, '');
+  if (!base) {
+    return null;
+  }
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export const DEMO_PASSWORD = 'parche1234';
 
 export const DEMO_ACCOUNTS = [

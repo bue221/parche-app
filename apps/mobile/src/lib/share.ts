@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import { Platform, Share } from 'react-native';
 
+import { webLink } from '@/data/env';
 import { debugLog } from '@/data/log';
 import { toast } from '@/data/toast-store';
 
@@ -14,7 +15,8 @@ export function eventShareUrl(eventId: string): string {
   if (Platform.OS === 'web' && globalThis.location?.origin) {
     return `${globalThis.location.origin}/event/${eventId}`;
   }
-  return Linking.createURL(`/event/${eventId}`);
+  // A parche:// link is useless to someone without the app, so prefer the web origin when it exists.
+  return webLink(`/event/${eventId}`) ?? Linking.createURL(`/event/${eventId}`);
 }
 
 function copyUrl(url: string): boolean {
