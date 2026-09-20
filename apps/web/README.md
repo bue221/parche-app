@@ -2,7 +2,7 @@
 
 Sitio público de Parche en [Next.js 16](https://nextjs.org/docs). Landing de eventos en vivo + el mismo sistema visual que `app-frontend`: flyer blanco y negro, claro/oscuro del sistema, verde solo en confirmación.
 
-Repo: [github.com/bue221/web-parche-app](https://github.com/bue221/web-parche-app). Wiki: [github.com/bue221/web-parche-app/wiki](https://github.com/bue221/web-parche-app/wiki).
+Repo: [github.com/bue221/web-parche-app](https://github.com/bue221/web-parche-app). Wiki: [github.com/bue221/parche-web-wiki](https://github.com/bue221/parche-web-wiki).
 
 ## Quick path
 
