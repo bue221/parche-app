@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 function mediaRemotePatterns(): NonNullable<
-  NextConfig["images"]
->["remotePatterns"] {
+  NonNullable<NextConfig["images"]>["remotePatterns"]
+> {
   const entries = new Set(
     (process.env.MEDIA_HOSTS ?? "localhost:9000")
       .split(",")

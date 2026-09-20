@@ -63,11 +63,11 @@ function Hero({ events }: { events: readonly PublicEventCard[] }) {
             <span className="text-aurora">hoy</span> en tu ciudad?
           </h1>
           <p className="mt-ds-12 max-w-md text-body-sm text-muted-foreground animate-parche-rise sm:mt-ds-16 sm:text-body">
-            Descubre eventos, artistas y lugares. Escoge la noche y confirma
-            que vas.
+            Flyers, artistas y boletas en un solo parche. Escoge la noche y
+            compra antes de que se agote.
           </p>
           <div className="mt-ds-20 w-full min-w-0 animate-parche-rise sm:mt-ds-24" style={{ animationDelay: "120ms" }}>
-            <HeroSearch actionHref={appHref} defaultCity={DEFAULT_CITY.slug} />
+            <HeroSearch actionHref="/explorar" defaultCity={DEFAULT_CITY.slug} />
           </div>
           <ul className="-mx-ds-16 mt-ds-20 flex w-[calc(100%+2rem)] min-w-0 max-w-none gap-ds-12 overflow-x-auto px-ds-16 pb-ds-4 scrollbar-none sm:mx-0 sm:mt-ds-24 sm:w-full sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
             {LANDING_CATEGORIES.map((category) => {
@@ -108,9 +108,9 @@ function Hero({ events }: { events: readonly PublicEventCard[] }) {
             ) : null}
             <p className="min-w-0 flex-1 text-body-sm leading-snug text-muted-foreground">
               {events.length === 1
-                ? "1 evento publicado. El parche ya está armado."
+                ? "1 evento a la venta. El parche ya está armado."
                 : events.length > 1
-                  ? `${events.length} eventos publicados. El parche ya está armado.`
+                  ? `${events.length} eventos a la venta. El parche ya está armado.`
                   : "El parche se está armando en tu ciudad."}
             </p>
           </div>

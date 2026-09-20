@@ -15,6 +15,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: absoluteUrl("/explorar"),
+      lastModified: new Date(),
+      changeFrequency: "hourly",
+      priority: 0.9,
+    },
     ...events.map((event) => ({
       url: absoluteUrl(eventPath(event.id)),
       lastModified: event.updatedAt ? new Date(event.updatedAt) : new Date(event.startsAt),

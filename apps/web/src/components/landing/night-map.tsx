@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Container, Section, Stack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/text";
 import type { PublicEventCard } from "@/lib/events";
-import { appWebHref } from "@/lib/site";
 
 type LocatedEvent = PublicEventCard & { lat: number; lng: number };
 
@@ -16,8 +15,6 @@ function locatedEvents(events: readonly PublicEventCard[]): LocatedEvent[] {
 function NightMap({ events }: { events: readonly PublicEventCard[] }) {
   const pins = locatedEvents(events);
   if (pins.length === 0) return null;
-
-  const exploreHref = appWebHref("/explore") ?? "#eventos";
 
   return (
     <Section id="mapa" aria-labelledby="mapa-heading">
@@ -33,7 +30,7 @@ function NightMap({ events }: { events: readonly PublicEventCard[] }) {
             Qué pasa cerca, en tiempo real. Cada pin es un evento con su crew y
             sus boletos.
           </Text>
-          <Button href={exploreHref} variant="outline">
+          <Button href="/explorar?v=map" variant="outline">
             Abrir mapa
           </Button>
         </Stack>

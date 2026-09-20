@@ -9,8 +9,8 @@ import { appWebHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/#eventos", label: "Descubre" },
-  { href: "/#mapa", label: "Mapa" },
+  { href: "/explorar", label: "Descubre" },
+  { href: "/explorar?v=map", label: "Mapa" },
   { href: "/#como", label: "Cómo funciona" },
   { href: "/#descarga", label: "Organiza" },
 ] as const;
@@ -77,7 +77,7 @@ function SiteHeader() {
             </ul>
             <div className="mt-ds-4 flex items-center justify-between gap-ds-8 border-t border-border pt-ds-12 sm:hidden">
               <Link
-                href="#buscar"
+                href="/explorar"
                 className="inline-flex items-center gap-ds-8 rounded-buttons px-ds-12 py-ds-8 font-favorit text-body-sm text-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-aurora"
               >
                 <Icon as={Search} size={16} className="text-current" />
@@ -89,7 +89,7 @@ function SiteHeader() {
         </details>
 
         <Link
-          href="#buscar"
+          href="/explorar"
           aria-label="Buscar eventos"
           className="hidden size-10 items-center justify-center rounded-full text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-aurora sm:inline-flex"
         >

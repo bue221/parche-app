@@ -56,6 +56,17 @@ export type PublicEventCard = {
   updatedAt?: string;
 };
 
+export type PublicTicketType = {
+  id: string;
+  name: string;
+  priceCents: number;
+  currency: string;
+  capacity: number;
+  soldCount: number;
+  reservedCount: number;
+  status: string;
+};
+
 export type PublicEvent = PublicEventCard & {
   slug: string;
   status: EventStatus;
@@ -67,6 +78,7 @@ export type PublicEvent = PublicEventCard & {
   lineup: EventLineupSlot[];
   tracks: EventTrack[];
   gallery: EventImage[];
+  ticketTypes: PublicTicketType[];
 };
 
 export function isEventId(value: string): boolean {
@@ -89,14 +101,52 @@ export function isIndexableEvent(event: PublicEvent): boolean {
   return event.status === "published";
 }
 
-export async function listPublishedEvents(): Promise<PublicEventCard[]> {
+export type EventListFilters = {
+  q?: string;
+  from?: string;
+  to?: string;
+  genre?: string;
+  artistId?: string;
+  minLat?: number;
+  minLng?: number;
+  maxLat?: number;
+  maxLng?: number;
+  /** When true, stop after the first page (limit 50). Default: paginate all. */
+  firstPageOnly?: boolean;
+};
+
+export function explorePath(filters?: EventListFilters, view?: "list" | "map"): string {
+  const params = new URLSearchParams();
+  if (filters?.q?.trim()) params.set("q", filters.q.trim());
+  if (filters?.genre) params.set("genre", filters.genre);
+  if (filters?.from) params.set("from", filters.from);
+  if (filters?.to) params.set("to", filters.to);
+  if (filters?.artistId) params.set("artist_id", filters.artistId);
+  if (view === "map") params.set("v", "map");
+  const qs = params.toString();
+  return qs ? `/explorar?${qs}` : "/explorar";
+}
+
+export async function listEvents(
+  filters: EventListFilters = {},
+): Promise<PublicEventCard[]> {
   const items: PublicEventCard[] = [];
   let cursor: string | undefined;
+  const maxPages = filters.firstPageOnly ? 1 : LIST_MAX_PAGES;
 
   try {
-    for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
+    for (let page = 0; page < maxPages; page += 1) {
       const query = new URLSearchParams({ limit: String(LIST_PAGE_SIZE) });
       if (cursor) query.set("cursor", cursor);
+      if (filters.q?.trim()) query.set("q", filters.q.trim());
+      if (filters.from) query.set("from", filters.from);
+      if (filters.to) query.set("to", filters.to);
+      if (filters.genre) query.set("genre", filters.genre);
+      if (filters.artistId) query.set("artist_id", filters.artistId);
+      if (filters.minLat != null) query.set("min_lat", String(filters.minLat));
+      if (filters.minLng != null) query.set("min_lng", String(filters.minLng));
+      if (filters.maxLat != null) query.set("max_lat", String(filters.maxLat));
+      if (filters.maxLng != null) query.set("max_lng", String(filters.maxLng));
 
       const body = await apiGet<unknown>(`/v1/events?${query.toString()}`);
       const rec = asRecord(body);
@@ -118,11 +168,19 @@ export async function listPublishedEvents(): Promise<PublicEventCard[]> {
   return items;
 }
 
+export async function listPublishedEvents(): Promise<PublicEventCard[]> {
+  return listEvents();
+}
+
 export async function getEvent(id: string): Promise<PublicEvent | null> {
   if (!isEventId(id)) return null;
 
   try {
-    return mapEvent(await apiGet<unknown>(`/v1/events/${id}`));
+    const [raw, tickets] = await Promise.all([
+      apiGet<unknown>(`/v1/events/${id}`),
+      listEventTicketTypes(id),
+    ]);
+    return { ...mapEvent(raw), ticketTypes: tickets };
   } catch (error) {
     if (
       error instanceof ApiRequestError &&
@@ -132,6 +190,45 @@ export async function getEvent(id: string): Promise<PublicEvent | null> {
     }
     throw error;
   }
+}
+
+export async function listEventTicketTypes(
+  id: string,
+): Promise<PublicTicketType[]> {
+  if (!isEventId(id)) return [];
+
+  try {
+    const body = await apiGet<unknown>(`/v1/events/${id}/ticket-types`);
+    const rec = asRecord(body);
+    const rows = Array.isArray(rec.items) ? rec.items : [];
+    const types: PublicTicketType[] = [];
+    for (const row of rows) {
+      const type = mapTicketType(row);
+      if (type) types.push(type);
+    }
+    return types;
+  } catch (error) {
+    console.error("[events] ticket types failed", error);
+    return [];
+  }
+}
+
+export function ticketLeft(type: PublicTicketType): number {
+  return Math.max(0, type.capacity - type.soldCount - type.reservedCount);
+}
+
+export function ticketOnSale(type: PublicTicketType): boolean {
+  return type.status === "on_sale" && ticketLeft(type) > 0;
+}
+
+export function lowestOnSale(
+  types: readonly PublicTicketType[],
+): PublicTicketType | undefined {
+  const onSale = types.filter(ticketOnSale);
+  if (onSale.length === 0) return undefined;
+  return onSale.reduce((min, type) =>
+    type.priceCents < min.priceCents ? type : min,
+  );
 }
 
 export async function getSimilarEvents(id: string): Promise<PublicEventCard[]> {
@@ -213,6 +310,24 @@ function mapEvent(raw: unknown): PublicEvent {
     lineup: card.lineup,
     tracks,
     gallery,
+    ticketTypes: [],
+  };
+}
+
+function mapTicketType(raw: unknown): PublicTicketType | null {
+  const rec = asRecord(raw);
+  const id = str(rec.id);
+  const name = str(rec.name);
+  if (!id || !name) return null;
+  return {
+    id,
+    name,
+    priceCents: num(rec.price_cents) ?? 0,
+    currency: optionalStr(rec.currency) ?? "COP",
+    capacity: num(rec.capacity) ?? 0,
+    soldCount: num(rec.sold_count) ?? 0,
+    reservedCount: num(rec.reserved_count) ?? 0,
+    status: optionalStr(rec.status) ?? "on_sale",
   };
 }
 

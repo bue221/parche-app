@@ -42,7 +42,7 @@ function Reveal({
 
   return (
     <Comp
-      ref={(el) => {
+      ref={(el: HTMLElement | null) => {
         ref.current = el;
       }}
       className={cn("reveal", className)}

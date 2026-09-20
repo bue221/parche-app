@@ -17,6 +17,7 @@ Tokens y reglas visuales: [`docs/ui/design.md`](docs/ui/design.md). Catálogo in
 | Pieza | Dónde |
 |-------|--------|
 | Landing | `src/app/page.tsx` + `src/components/landing/` |
+| Explorar | `src/app/explorar/page.tsx` + `src/components/explore/` |
 | Eventos ISR | `src/app/eventos/[id]/page.tsx` + `src/lib/events.ts` |
 | Tokens | `src/app/globals.css` |
 | Primitivos | `src/components/ui/` |
@@ -27,10 +28,11 @@ Tokens y reglas visuales: [`docs/ui/design.md`](docs/ui/design.md). Catálogo in
 
 - `metadataBase`, title template, Open Graph, Twitter, canonical y `es-CO`
 - `sitemap.ts` / `robots.ts` / `manifest.ts`
-- JSON-LD: Organization, WebSite, WebPage, SoftwareApplication, FAQPage, **Event** en `/eventos/{id}`
+- JSON-LD: Organization, WebSite, WebPage, SoftwareApplication, FAQPage, **Event** en `/eventos/{id}`, **ItemList** en `/explorar`
 - Imagen OG generada con Antonio (flyer)
 - `/sistema` queda fuera del índice
 - Eventos publicados se prerenderizan (ISR 120s); cancelados se ven y no se indexan
+- `/explorar` lista + mapa con filtros en URL; `noindex` si hay `q` libre
 
 ## Env
 

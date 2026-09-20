@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 
 import { FAQS } from "@/constants/faqs";
-import { eventPath } from "@/lib/events";
+import {
+  eventPath,
+  explorePath,
+  lowestOnSale,
+  ticketOnSale,
+  type EventListFilters,
+  type PublicEventCard,
+  type PublicTicketType,
+} from "@/lib/events";
+import { formatEventWhen } from "@/lib/format";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
 export const defaultMetadata: Metadata = {
@@ -125,9 +134,12 @@ export function eventJsonLd(event: {
   status: string;
   lat?: number;
   lng?: number;
+  ticketTypes?: PublicTicketType[];
 }) {
   const url = absoluteUrl(eventPath(event.id));
   const cancelled = event.status === "cancelled";
+  const onSale = (event.ticketTypes ?? []).filter(ticketOnSale);
+  const lowest = lowestOnSale(onSale);
 
   return {
     "@context": "https://schema.org",
@@ -162,6 +174,20 @@ export function eventJsonLd(event: {
       name: siteConfig.name,
       url: absoluteUrl("/"),
     },
+    ...(lowest
+      ? {
+          offers: {
+            "@type": "AggregateOffer",
+            url: siteConfig.appWebUrl
+              ? `${siteConfig.appWebUrl.replace(/\/$/, "")}/event/${event.id}`
+              : url,
+            priceCurrency: lowest.currency,
+            lowPrice: lowest.priceCents,
+            offerCount: onSale.length,
+            availability: "https://schema.org/InStock",
+          },
+        }
+      : {}),
   };
 }
 
@@ -174,9 +200,126 @@ function eventDescription(event: {
 }): string {
   if (event.description) return event.description.slice(0, 160);
   const place = event.venueName || event.addressText;
+  const when = formatEventWhen(event.startsAt);
   return place
-    ? `${event.title} en ${place}. Descubre la fecha en Parche.`
-    : `${event.title} en Parche. Descubre la noche y confirma que vas.`;
+    ? `${event.title} · ${when} · ${place}. Compra tu boleta en Parche.`
+    : `${event.title} · ${when}. Compra tu boleta en Parche.`;
+}
+
+export function exploreMetadata(filters: EventListFilters = {}): Metadata {
+  const hasQuery = Boolean(filters.q?.trim());
+  const path = explorePath(filters);
+  const { title, description } = exploreCopy(filters);
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: path,
+      languages: {
+        "es-CO": path,
+        es: path,
+      },
+    },
+    openGraph: {
+      type: "website",
+      locale: siteConfig.locale,
+      url: absoluteUrl(path),
+      siteName: siteConfig.name,
+      title: `${title} — ${siteConfig.name}`,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — ${siteConfig.name}`,
+      description,
+      creator: siteConfig.creator,
+    },
+    robots: hasQuery
+      ? { index: false, follow: true }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+          },
+        },
+  };
+}
+
+export function exploreJsonLd(
+  events: readonly PublicEventCard[],
+  filters: EventListFilters = {},
+) {
+  const path = explorePath(filters);
+  const url = absoluteUrl(path);
+  const { title, description } = exploreCopy(filters);
+  const items = events.slice(0, 50).map((event, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    url: absoluteUrl(eventPath(event.id)),
+    name: event.title,
+  }));
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${url}#webpage`,
+        url,
+        name: title,
+        description,
+        inLanguage: "es-CO",
+        isPartOf: { "@id": `${absoluteUrl("/")}#website` },
+      },
+      {
+        "@type": "ItemList",
+        "@id": `${url}#itemlist`,
+        name: title,
+        numberOfItems: events.length,
+        itemListElement: items,
+      },
+    ],
+  };
+}
+
+function exploreCopy(filters: EventListFilters): {
+  title: string;
+  description: string;
+} {
+  const genre = filters.genre?.trim();
+  const q = filters.q?.trim();
+
+  if (q) {
+    return {
+      title: `Buscar “${q}” en Bogotá`,
+      description: `Resultados de “${q}” en la agenda de Parche. Descubre eventos en vivo en Bogotá.`,
+    };
+  }
+  if (genre) {
+    const label = genre.charAt(0).toUpperCase() + genre.slice(1);
+    return {
+      title: `${label} en Bogotá`,
+      description: `Agenda de ${label} en Bogotá: flyers, fechas y mapa. Explora en Parche.`,
+    };
+  }
+  if (filters.from || filters.to) {
+    return {
+      title: "Eventos en Bogotá",
+      description:
+        "Agenda filtrada de eventos en vivo en Bogotá. Mira fechas, venues y mapa en Parche.",
+    };
+  }
+  return {
+    title: "Explorar eventos en Bogotá",
+    description:
+      "Descubre fiestas, conciertos y la noche en Bogotá. Lista y mapa de eventos publicados en Parche.",
+  };
 }
 
 export function landingJsonLd() {

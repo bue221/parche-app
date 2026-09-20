@@ -1,11 +1,11 @@
 export const FAQS = [
   {
     q: "¿Qué es Parche?",
-    a: "Parche es la app para descubrir eventos en vivo en tu ciudad: conciertos, rumba, teatro y festivales. Ves qué hay esta noche y confirmas que vas.",
+    a: "Parche es la app para descubrir eventos en vivo en tu ciudad: conciertos, rumba, teatro y festivales. Ves el cartel, el precio y compras la boleta.",
   },
   {
     q: "¿Parche vende entradas?",
-    a: "Esta web es la vitrina: quién toca, a qué hora y en qué lugar. El checkout, el QR y la puerta viven en la app.",
+    a: "Sí. En esta web ves quién toca, a qué hora y desde cuánto. El checkout, el QR y la puerta viven en la app para que el pago quede cerrado.",
   },
   {
     q: "¿Puedo gestionar mis eventos desde el navegador?",

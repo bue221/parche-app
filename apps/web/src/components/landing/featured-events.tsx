@@ -6,9 +6,15 @@ import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Container, EmptyPanel, Section, SectionHeading } from "@/components/ui/layout";
 import { Tag } from "@/components/ui/tag";
-import { eventPath, type PublicEventCard } from "@/lib/events";
-import { ageLabel, formatEventPosterBadge } from "@/lib/format";
-import { firstGenre, flyerSrc, placeLine } from "@/lib/landing";
+import {
+  eventPath,
+  listEventTicketTypes,
+  lowestOnSale,
+  type PublicEventCard,
+  type PublicTicketType,
+} from "@/lib/events";
+import { ageLabel, formatEventLongDate, formatEventPosterBadge, formatEventTime, formatMoney } from "@/lib/format";
+import { firstGenre, flyerSrc, lineupNames, placeLine } from "@/lib/landing";
 import { appWebHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +90,7 @@ function EventCard({
           <div className="flex flex-wrap gap-ds-8">
             {genre ? <Tag tone="glass">{genre}</Tag> : null}
             {age ? <Tag tone="glass">{age}</Tag> : null}
+            <Tag tone="glass">Comprar</Tag>
           </div>
         </div>
       </Link>
@@ -91,8 +98,87 @@ function EventCard({
   );
 }
 
-function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
+function SpotlightEvent({
+  event,
+  tickets,
+}: {
+  event: PublicEventCard;
+  tickets: readonly PublicTicketType[];
+}) {
+  const flyer = flyerSrc(event);
+  const place = placeLine(event);
+  const genre = firstGenre(event);
+  const lineup = lineupNames(event.lineup);
+  const lowest = lowestOnSale(tickets);
+  const detailHref = eventPath(event.id);
+  const buyHref = appWebHref(`/event/${event.id}`) ?? detailHref;
+
+  return (
+    <article className="overflow-hidden rounded-cards border border-border bg-surface shadow-card md:grid md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <Link
+        href={detailHref}
+        className="relative block min-h-80 overflow-hidden bg-muted outline-none focus-visible:ring-2 focus-visible:ring-aurora md:min-h-[28rem]"
+      >
+        {flyer ? (
+          <Image
+            src={flyer}
+            alt={`Flyer de ${event.title}`}
+            fill
+            priority
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover"
+          />
+        ) : null}
+        <div className="card-photo-scrim absolute inset-0 md:hidden" />
+        <DateBadge iso={event.startsAt} />
+      </Link>
+      <div className="flex flex-col justify-center gap-ds-16 p-ds-24 sm:p-ds-32">
+        <div className="flex flex-wrap gap-ds-8">
+          {genre ? <Tag tone="aurora">{genre}</Tag> : null}
+          <Tag tone="muted">Destacado</Tag>
+        </div>
+        <div className="flex flex-col gap-ds-8">
+          <h3 className="font-favorit text-[clamp(1.5rem,3vw,2rem)] font-bold tracking-tight text-foreground">
+            <Link href={detailHref} className="outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora">
+              {event.title}
+            </Link>
+          </h3>
+          <p className="text-body text-muted-foreground">
+            {formatEventLongDate(event.startsAt)} · {formatEventTime(event.startsAt)}
+          </p>
+          {place ? <p className="text-body-sm text-muted-foreground">{place}</p> : null}
+          {lineup ? (
+            <p className="line-clamp-2 text-body-sm text-muted-foreground">{lineup}</p>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-ds-16">
+          <div>
+            <p className="font-favorit text-caption font-bold tracking-favorit text-muted-foreground uppercase">
+              {lowest ? "Desde" : "Boleta"}
+            </p>
+            <p className="font-favorit text-heading-sm font-bold tracking-tight text-foreground">
+              {lowest ? formatMoney(lowest.priceCents, lowest.currency) : "Ver ficha"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-ds-8">
+            <Button href={detailHref} variant="outline" size="sm">
+              Ver evento
+            </Button>
+            <Button href={buyHref} size="sm">
+              Comprar boletas
+            </Button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+async function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
   const featured = events.slice(0, 8);
+  const lead = featured[0];
+  const rest = featured.slice(1);
+  const tickets = lead ? await listEventTicketTypes(lead.id) : [];
   const allHref = appWebHref("/") ?? "#descarga";
 
   return (
@@ -100,8 +186,9 @@ function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
       <Container>
         <SectionHeading
           id="eventos-heading"
-          title="Eventos destacados"
-          description="No te pierdas lo mejor que viene."
+          eyebrow="Agenda"
+          title="Lo que se vive ahora"
+          description="Cartel, hora y precio. Entra a la ficha y compra la boleta."
           action={
             events.length > 0 ? (
               <a
@@ -116,7 +203,7 @@ function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
         {featured.length === 0 ? (
           <EmptyPanel
             title="Aún no hay fechas publicadas"
-            body="Cuando salga el próximo cartel, aparece aquí. Entra a la app para armar el parche o crear una fecha."
+            body="Cuando salga el próximo cartel, aparece aquí. Entra a la app para comprar o crear una fecha."
             action={
               <Button href={allHref} size="sm">
                 Entrar a la app
@@ -124,10 +211,15 @@ function FeaturedEvents({ events }: { events: readonly PublicEventCard[] }) {
             }
           />
         ) : (
-          <div className="grid gap-ds-16 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map((event, index) => (
-              <EventCard key={event.id} event={event} delayMs={index * 70} />
-            ))}
+          <div className="flex flex-col gap-ds-24">
+            {lead ? <SpotlightEvent event={lead} tickets={tickets} /> : null}
+            {rest.length > 0 ? (
+              <div className="grid gap-ds-16 sm:grid-cols-2 lg:grid-cols-3">
+                {rest.map((event, index) => (
+                  <EventCard key={event.id} event={event} delayMs={index * 70} />
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
       </Container>

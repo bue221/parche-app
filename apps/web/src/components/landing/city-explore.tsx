@@ -7,12 +7,10 @@ import { Icon } from "@/components/ui/icon";
 import { Container, Section, SectionHeading } from "@/components/ui/layout";
 import type { PublicEventCard } from "@/lib/events";
 import { cityExploreItems } from "@/lib/landing";
-import { appWebHref } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 function CityExplore({ events }: { events: readonly PublicEventCard[] }) {
   const cities = cityExploreItems(events);
-  const mapHref = appWebHref("/explore") ?? "#mapa";
 
   return (
     <Section id="ciudades" aria-labelledby="ciudades-heading">
@@ -23,7 +21,7 @@ function CityExplore({ events }: { events: readonly PublicEventCard[] }) {
           description="La música también se vive cerca."
           action={
             <a
-              href={mapHref}
+              href="/explorar?v=map"
               className="font-favorit text-body-sm text-muted-foreground outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora"
             >
               Ver mapa
@@ -36,7 +34,7 @@ function CityExplore({ events }: { events: readonly PublicEventCard[] }) {
             return (
               <Reveal as="li" key={city.slug} delayMs={index * 70}>
                 <Link
-                  href={empty ? "#descarga" : "#eventos"}
+                  href={empty ? "/#descarga" : "/explorar"}
                   className="group relative flex aspect-4/5 overflow-hidden rounded-cards bg-muted shadow-card outline-none focus-visible:ring-2 focus-visible:ring-aurora"
                 >
                   <Image

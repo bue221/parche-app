@@ -570,3 +570,78 @@ html.dark .night-map-scene {
     transform: rotate(-12deg);
   }
 }
+
+/* Leaflet explore map pins (HOT tiles) */
+.parche-pin-wrap {
+  background: none !important;
+  border: none !important;
+}
+
+.parche-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #0b0b12;
+  font: 700 11px/1 var(--font-inter), Inter, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid rgb(11 11 18 / 0.08);
+  box-shadow: 0 8px 22px rgb(11 11 18 / 0.16);
+}
+
+.parche-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  flex: none;
+}
+
+.parche-pill.neon .dot {
+  background: #3ddcff;
+}
+
+.parche-pill.volt .dot {
+  background: #7ffeb1;
+}
+
+.parche-pill.amber .dot {
+  background: #ffc44d;
+}
+
+.parche-pill.on {
+  background: #b8a4ff;
+  border-color: #0b0b12;
+  box-shadow:
+    0 0 0 3px rgb(184 164 255 / 0.4),
+    0 10px 24px rgb(11 11 18 / 0.2);
+}
+
+.explore-leaflet .leaflet-tile-pane {
+  filter: saturate(1.65) contrast(1.12) brightness(1.04);
+}
+
+html.dark .explore-leaflet .leaflet-tile-pane {
+  filter: saturate(1.7) brightness(0.7) contrast(1.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light) .explore-leaflet .leaflet-tile-pane {
+    filter: saturate(1.7) brightness(0.7) contrast(1.16);
+  }
+}
+
+/* Airbnb-style explore: hide site footer while map/list fill the viewport */
+body:has([data-explore-layout]) > div > footer {
+  display: none;
+}
+
+/* Map mode: no document scrollbar */
+html[data-explore-map="1"],
+html[data-explore-map="1"] body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}

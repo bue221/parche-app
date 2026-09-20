@@ -6,9 +6,9 @@ function optionalUrl(value: string | undefined): string | undefined {
 export const siteConfig = {
   name: "Parche",
   shortName: "Parche",
-  tagline: "Descubre la noche. Confirma que vas.",
+  tagline: "Descubre la noche. Compra tu boleta.",
   description:
-    "Parche es la app para descubrir conciertos, rumba, teatro y festivales en tu ciudad. Mira qué hay esta noche y confirma que vas.",
+    "Parche es la app para descubrir conciertos, rumba, teatro y festivales en tu ciudad. Mira qué hay esta noche y compra tu boleta.",
   locale: "es_CO",
   language: "es",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://parche.app",

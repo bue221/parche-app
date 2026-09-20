@@ -109,13 +109,17 @@ Display Inter mixed-case. No usar Antonio bajo ~80px salvo sellos. Eyebrows de s
 - Easing: `--ease-parche` = `cubic-bezier(0.16, 1, 0.3, 1)`.
 - Utilidad `glass-panel`: `bg-glass` + `shadow-glass` + `backdrop-blur(22px)` + border.
 
+## Event detail (`/eventos/{id}`)
+
+Ficha de conversión, no un dump de copy. Flyer 4:5 con scrim + género glass. Hechos en tres cards (cuándo / dónde / edad). Panel **Boletas** con etapas y precio. Sticky: “Desde $X” + **Comprar boletas** (abre la app). El checkout no vive aquí.
+
 ## Cards
 
 Hay dos familias. No mezclar meta debajo de la foto en listing foto-primero.
 
 ### 1. Poster / evento (foto-primero)
 
-UsEventCard` en `featured-events.tsx` y tiles en `city-explore.tsx`:
+`EventCard` en `events/event-card.tsx` (landing, explorar, similares) y tiles en `city-explore.tsx`:
 
 - Contenedor: `aspect-4/5`, `rounded-cards`, `bg-surface`, `shadow-card`, overflow hidden.
 - Foto full-bleed; hover scale `1.05` con `motion-safe` + `ease-parche`.
@@ -187,6 +191,7 @@ Animaciones: `parche-stamp`, `parche-rise`, `parche-fade`, `parche-blink`, `parc
 - [ ] UI nueva usa tokens Parche (`background`, `surface`, `aurora`, `primary`, `glass`)
 - [ ] Botón default es inverse; `variant="signal"` es aurora
 - [ ] Cards de evento: poster 4:5 + scrim + meta on-photo; cards de contenido: surface + border + `shadow-card`
+- [ ] Ficha SEO muestra etapas/precio cuando el API las trae; CTA sticky = Comprar boletas
 - [ ] Display Inter mixed-case; caption uppercase solo en labels/chips/botones
 - [ ] Claro y oscuro siguen siendo legibles; search pill permanece claro
 - [ ] Landing hero / ticket respetan `prefers-reduced-motion`

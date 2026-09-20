@@ -61,7 +61,7 @@ function SiteFooter() {
       <Container className="mt-ds-32 flex flex-col gap-ds-8 md:flex-row md:items-center md:justify-between">
         <Text variant="helper">
           © {new Date().getFullYear()} {siteConfig.name}. Descubre la noche.
-          Confirma que vas.
+          Compra tu boleta.
         </Text>
         <Text variant="helper">
           Fotos de ciudades: Wikimedia Commons.

@@ -5,18 +5,18 @@ import { Text } from "@/components/ui/text";
 const STEPS = [
   {
     n: "01",
-    title: "Abre Parche",
-    body: "Mira qué hay hoy en tu ciudad: conciertos, rumba, teatro y festivales.",
+    title: "Mira qué hay hoy",
+    body: "Flyers, horarios y lugares de conciertos, rumba, teatro y festivales.",
   },
   {
     n: "02",
     title: "Escoge la noche",
-    body: "Filtra por lugar, hora y género. Cada evento te dice quién toca y dónde queda.",
+    body: "Filtra por barrio, hora y género. Cada ficha te dice quién toca y cuánto vale.",
   },
   {
     n: "03",
-    title: "Confirma que vas",
-    body: "Un toque y el parche queda armado. Tus amigos ven que estás dentro.",
+    title: "Compra tu boleta",
+    body: "Pagas en un toque. El QR queda en tu wallet y en puerta solo lo muestran.",
   },
 ] as const;
 
@@ -27,7 +27,7 @@ function HowItWorks() {
         <SectionHeading
           id="como-heading"
           title="De la app a la noche"
-          description="Tres pasos. Sin ruido. El plan queda listo."
+          description="Tres pasos. Ves el cartel, eliges etapa y pagas."
         />
         <ol className="grid gap-ds-16 md:grid-cols-3">
           {STEPS.map((step, index) => (
