@@ -4,7 +4,13 @@ import { cn } from '@/lib/utils';
 
 export type ControlTone = 'idle' | 'focus' | 'error';
 
-const NATIVE_SHADOW: Record<ControlTone, ViewStyle> = {
+/** Shadow-only slice, so the same style can sit on a View or on a TextInput. */
+export type ControlShadowStyle = Pick<
+  ViewStyle,
+  'shadowColor' | 'shadowOffset' | 'shadowOpacity' | 'shadowRadius' | 'elevation'
+>;
+
+const NATIVE_SHADOW: Record<ControlTone, ControlShadowStyle> = {
   idle: {
     shadowColor: '#0b0b12',
     shadowOffset: { width: 0, height: 4 },
@@ -34,7 +40,7 @@ export function controlTone(opts: { focused?: boolean; error?: boolean }): Contr
   return 'idle';
 }
 
-export function controlShadowStyle(tone: ControlTone): ViewStyle {
+export function controlShadowStyle(tone: ControlTone): ControlShadowStyle {
   if (Platform.OS === 'web') {
     return {};
   }

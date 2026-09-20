@@ -106,9 +106,12 @@ function nativeButtonShadow(color: string, opacity: number, radius: number, heig
   };
 }
 
-type ButtonProps = React.ComponentProps<typeof Pressable> &
+/** Children render inside an Animated.View, which rules out Pressable's render-prop form. */
+type ButtonProps = Omit<React.ComponentProps<typeof Pressable>, 'children'> &
   React.RefAttributes<typeof Pressable> &
-  VariantProps<typeof buttonVariants>;
+  VariantProps<typeof buttonVariants> & {
+    children?: React.ReactNode;
+  };
 
 function Button({
   className,
