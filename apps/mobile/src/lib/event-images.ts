@@ -20,3 +20,15 @@ export function eventDetailImages(event: {
   }
   return images;
 }
+
+export function lightboxPageSize(width: number, height: number) {
+  return {
+    width: Math.max(0, Math.round(width)),
+    height: Math.max(0, Math.round(height)),
+  };
+}
+
+/** Paging needs a real box. A 0-height stage (web flex row + items-center) must not enter this path. */
+export function lightboxCanPage(count: number, page: { width: number; height: number }) {
+  return count > 1 && page.width > 0 && page.height > 0;
+}

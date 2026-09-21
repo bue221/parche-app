@@ -17,6 +17,7 @@ import { Text } from '@/components/ui/text';
 import type { EventGalleryImage } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { lightboxCanPage, lightboxPageSize } from '@/lib/event-images';
 import { cn } from '@/lib/utils';
 
 const PAPER = '#F5F5F8';
@@ -42,7 +43,8 @@ export function EventImageLightbox({
   const start = Math.max(0, Math.min(count - 1, initialIndex));
   const [index, setIndex] = useState(start);
   const [page, setPage] = useState({ width: 0, height: 0 });
-  const paged = count > 1 && page.width > 0 && page.height > 0;
+  const paged = lightboxCanPage(count, page);
+  const current = images[index] ?? images[start] ?? images[0];
 
   useLayoutEffect(() => {
     if (!visible) return;
@@ -69,8 +71,15 @@ export function EventImageLightbox({
   }
 
   return (
-    <Modal visible={visible} animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 bg-pitch-black" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View
+        className="flex-1 bg-pitch-black"
+        style={{
+          flex: 1,
+          height: Platform.OS === 'web' ? '100%' : undefined,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        }}>
         <View className="z-10 flex-row items-center justify-between px-ds-16 py-ds-8">
           <View className="size-11" />
           <Text variant="bodySm" className="font-bold text-paper-white">
@@ -86,10 +95,12 @@ export function EventImageLightbox({
           </Pressable>
         </View>
 
-        <View className="min-h-0 flex-1 flex-row items-center">
+        {/* Stretch the photo stage. items-center on this row zeroes its height on web. */}
+        <View className="min-h-0 flex-1 flex-row">
           {!compact && count > 1 ? (
             <PressScale
               fit
+              className="self-center"
               disabled={index === 0}
               onPress={() => scrollTo(index - 1)}
               accessibilityLabel="Foto anterior">
@@ -100,12 +111,9 @@ export function EventImageLightbox({
           ) : null}
 
           <View
-            className="min-h-0 min-w-0 flex-1"
+            className="min-h-0 min-w-0 flex-1 self-stretch"
             onLayout={(event) => {
-              const next = {
-                width: Math.round(event.nativeEvent.layout.width),
-                height: Math.round(event.nativeEvent.layout.height),
-              };
+              const next = lightboxPageSize(event.nativeEvent.layout.width, event.nativeEvent.layout.height);
               if (next.width > 0 && next.height > 0 && (next.width !== page.width || next.height !== page.height)) {
                 setPage(next);
               }
@@ -133,27 +141,26 @@ export function EventImageLightbox({
                 {images.map((image) => (
                   <View
                     key={image.id}
-                    className="items-center justify-center px-ds-8"
+                    className="items-center justify-center"
                     style={[
                       { width: page.width, height: page.height },
                       Platform.OS === 'web'
                         ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as object)
                         : undefined,
                     ]}>
-                    <FlyerImage uri={image.url} className="h-full w-full" contentFit="contain" />
+                    <LightboxPhoto uri={image.url} width={page.width} height={page.height} />
                   </View>
                 ))}
               </ScrollView>
-            ) : images[start] ?? images[0] ? (
-              <View className="h-full w-full px-ds-8">
-                <FlyerImage uri={(images[start] ?? images[0]).url} className="h-full w-full" contentFit="contain" />
-              </View>
+            ) : current ? (
+              <LightboxPhoto uri={current.url} width={page.width} height={page.height} />
             ) : null}
           </View>
 
           {!compact && count > 1 ? (
             <PressScale
               fit
+              className="self-center"
               disabled={index === count - 1}
               onPress={() => scrollTo(index + 1)}
               accessibilityLabel="Foto siguiente">
@@ -165,5 +172,17 @@ export function EventImageLightbox({
         </View>
       </View>
     </Modal>
+  );
+}
+
+function LightboxPhoto({ uri, width, height }: { uri: string; width: number; height: number }) {
+  const sized = width > 0 && height > 0;
+  return (
+    <FlyerImage
+      uri={uri}
+      className="h-full w-full bg-pitch-black"
+      contentFit="contain"
+      style={sized ? { width, height } : { flex: 1, width: '100%', height: '100%' }}
+    />
   );
 }

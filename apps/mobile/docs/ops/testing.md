@@ -43,6 +43,7 @@ src/lib/__tests__/ticket-label-test.ts
 | `lib/explore-dates` | Grilla del calendario Explorar, label del rango, y `from`/`to` de un día local |
 | `lib/rail-layout` | Ancho de cards en rieles: 2+peek en teléfono, fila llena en desktop |
 | `lib/event-detail-layout` | Tope de la hoja blanca sobre el flyer fijo: docks bajo el chrome, nunca por encima |
+| `lib/event-images` | Flyer + galería sin duplicar URL; el visor no pagina si el recuadro mide 0 |
 | `lib/map-sheet-layout` | Índice de fila para FlatList de 2 columnas en el sheet del mapa |
 | `lib/favorite-collections` | Agrupación de guardados por ciudad y año |
 | `data/env` | Reescritura de URLs de media y subida: qué firma sobrevive y qué nunca pasa por el proxy de lectura |
