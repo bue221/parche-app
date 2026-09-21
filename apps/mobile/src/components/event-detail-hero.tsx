@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Platform, Pressable, View, type ViewStyle } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
+import { SafeBlurBand } from '@/components/safe-blur-band';
 import { Text } from '@/components/ui/text';
 import type { ParcheEvent } from '@/data/types';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ export function EventDetailHero({
   onShare,
   onPlay,
   onOpenImages,
+  showChrome = true,
 }: {
   event: ParcheEvent;
   saved: boolean;
@@ -47,6 +49,7 @@ export function EventDetailHero({
   onShare: () => void;
   onPlay?: () => void;
   onOpenImages?: () => void;
+  showChrome?: boolean;
 }) {
   const art = event.flyerUrl ? (
     <FlyerImage uri={event.flyerUrl} className="h-full w-full" />
@@ -71,32 +74,22 @@ export function EventDetailHero({
       ) : (
         art
       )}
-      <View pointerEvents="none" className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-pitch-black/55 to-transparent" />
+      {compact ? (
+        <SafeBlurBand height={topInset} />
+      ) : (
+        <View pointerEvents="none" className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-pitch-black/55 to-transparent" />
+      )}
       <View pointerEvents="none" className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-pitch-black/50 to-transparent" />
 
-      <View
-        className="absolute inset-x-0 top-0 z-10 flex-row items-center justify-between px-ds-16"
-        style={{ paddingTop: topInset }}>
-        {showBack ? (
-          <HeroChromeButton
-            accessibilityLabel="Volver"
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
-            <ChevronLeft size={22} color={INK} strokeWidth={2.2} />
-          </HeroChromeButton>
-        ) : (
-          <View className="size-11" />
-        )}
-        <View className="flex-row items-center gap-ds-8">
-          <HeroChromeButton accessibilityLabel="Compartir evento" onPress={onShare}>
-            <Share2 size={18} color={INK} strokeWidth={2.2} />
-          </HeroChromeButton>
-          <HeroChromeButton
-            accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar evento'}
-            onPress={onSave}>
-            <Heart size={18} color={INK} fill={saved ? INK : 'transparent'} strokeWidth={2.2} />
-          </HeroChromeButton>
-        </View>
-      </View>
+      {showChrome !== false ? (
+        <EventDetailHeroChrome
+          topInset={topInset}
+          saved={saved}
+          showBack={showBack}
+          onSave={onSave}
+          onShare={onShare}
+        />
+      ) : null}
 
       {onPlay ? (
         <View className="absolute inset-x-0 bottom-ds-48 items-center">
@@ -125,6 +118,47 @@ export function EventDetailHero({
           </View>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+export function EventDetailHeroChrome({
+  topInset,
+  saved,
+  showBack,
+  onSave,
+  onShare,
+}: {
+  topInset: number;
+  saved: boolean;
+  showBack?: boolean;
+  onSave: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <View
+      pointerEvents="box-none"
+      className="absolute inset-x-0 top-0 z-30 flex-row items-center justify-between px-ds-16"
+      style={{ paddingTop: topInset }}>
+      {showBack ? (
+        <HeroChromeButton
+          accessibilityLabel="Volver"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
+          <ChevronLeft size={22} color={INK} strokeWidth={2.2} />
+        </HeroChromeButton>
+      ) : (
+        <View className="size-11" />
+      )}
+      <View className="flex-row items-center gap-ds-8">
+        <HeroChromeButton accessibilityLabel="Compartir evento" onPress={onShare}>
+          <Share2 size={18} color={INK} strokeWidth={2.2} />
+        </HeroChromeButton>
+        <HeroChromeButton
+          accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar evento'}
+          onPress={onSave}>
+          <Heart size={18} color={INK} fill={saved ? INK : 'transparent'} strokeWidth={2.2} />
+        </HeroChromeButton>
+      </View>
     </View>
   );
 }

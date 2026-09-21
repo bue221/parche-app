@@ -20,6 +20,7 @@
     "expo": "~57.0.20",
     "expo-audio": "^57.0.5",
     "expo-auth-session": "~57.0.12",
+    "expo-blur": "~57.0.3",
     "expo-camera": "~57.0.5",
     "expo-constants": "~57.0.17",
     "expo-device": "~57.0.1",

@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams, type Href } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Clock, MapPin } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
@@ -8,7 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArtistRow } from '@/components/artist-row';
 import { EventCard } from '@/components/event-card';
-import { EventDetailHero } from '@/components/event-detail-hero';
+import { EventDetailHero, EventDetailHeroChrome } from '@/components/event-detail-hero';
+import { EventDetailSheet } from '@/components/event-detail-sheet';
 import { EventImageLightbox } from '@/components/event-image-lightbox';
 import { canOperateEvent, eventOperateHref } from '@/components/event-staff-actions';
 import { EventTrackPlayer } from '@/components/event-track-player';
@@ -46,6 +48,15 @@ import {
 } from '@/lib/format';
 import { shareEvent } from '@/lib/share';
 import { eventDetailImages } from '@/lib/event-images';
+import { eventDetailSheetLayout } from '@/lib/event-detail-layout';
+import {
+  buyCtaLabel,
+  buyPriceCaption,
+  lowestPriced,
+  saleRemaining,
+  ticketRemaining,
+  ticketsScarce,
+} from '@/lib/ticket-offer';
 
 const ABOUT_PREVIEW = 160;
 
@@ -54,26 +65,35 @@ function BuyRow({
   onSale,
   lowest,
   emptyTickets,
+  remaining,
   onBuy,
 }: {
   ended: boolean;
   onSale: EventWithExtras['ticketTypes'];
   lowest?: EventWithExtras['ticketTypes'][number];
   emptyTickets: boolean;
+  remaining: number;
   onBuy: () => void;
 }) {
+  const canBuy = !ended && onSale.length > 0;
+  const scarce = ticketsScarce(remaining);
   return (
     <View className="flex-row items-center gap-ds-12">
       <View className="min-w-0 flex-1">
         <Text variant="caption" className="uppercase text-muted-foreground">
-          {ended ? 'Cerrado' : onSale.length > 0 ? 'Desde' : emptyTickets ? 'Boleta' : 'Pronto'}
+          {buyPriceCaption(ended, onSale.length, emptyTickets)}
         </Text>
-        <Text variant="subheading" numberOfLines={1}>
+        <Text variant="headingSm" numberOfLines={1}>
           {ended ? 'Finalizado' : lowest ? formatMoney(lowest.priceCents, lowest.currency) : 'Sin venta'}
         </Text>
+        {scarce ? (
+          <Text variant="helper" className="text-amber">
+            {remaining} {remaining === 1 ? 'boleta' : 'boletas'}
+          </Text>
+        ) : null}
       </View>
-      <Button disabled={ended || onSale.length === 0} onPress={onBuy}>
-        <Text>{ended ? 'Finalizado' : onSale.length > 0 ? 'Comprar' : 'Pronto'}</Text>
+      <Button disabled={!canBuy} onPress={onBuy}>
+        <Text>{buyCtaLabel(ended, onSale.length)}</Text>
       </Button>
     </View>
   );
@@ -124,6 +144,7 @@ export default function EventDetailScreen() {
   const compact = useCompactLayout();
   const wide = Platform.OS === 'web' && !compact;
   const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const { isLoggedIn, user } = useAuthSnapshot();
   const saved = useInterestStore((s) => (id ? s.eventIds.includes(id) : false));
@@ -157,8 +178,10 @@ export default function EventDetailScreen() {
   const genres = event?.genres?.length ? event.genres : event?.genre ? [event.genre] : [];
   const similar = similarQuery.data ?? [];
   const heroHeight = compact
-    ? Math.round(Math.min(windowWidth * 0.98, windowHeight * 0.42, 420))
+    ? Math.round(Math.min(windowWidth, windowHeight * 0.56, 520))
     : undefined;
+  const sheetLayout = eventDetailSheetLayout(heroHeight ?? 0, insets.top);
+  const statusStyle = compact && focused ? 'light' : undefined;
 
   if (error && !event) {
     return (
@@ -185,7 +208,8 @@ export default function EventDetailScreen() {
   const ended = eventHasEnded(event);
   const onSale = ended ? [] : event.ticketTypes.filter((t) => api.helpers.typeOnSale(t));
   const staff = user ? canOperateEvent(user.id, event.id) : false;
-  const lowest = onSale[0];
+  const lowest = lowestPriced(onSale);
+  const remaining = saleRemaining(onSale);
   const { venue, city } = eventVenueParts(event.venueName, event.addressText);
   const going = event.ticketTypes.reduce((sum, type) => sum + type.sold, 0);
   const description = event.description?.trim() ?? '';
@@ -226,6 +250,7 @@ export default function EventDetailScreen() {
       onShare={onShare}
       onPlay={event.tracks.length > 0 ? () => setPlayNonce((n) => n + 1) : undefined}
       onOpenImages={photos.length > 0 ? () => setPhotoIndex(0) : undefined}
+      showChrome={!compact}
     />
   );
 
@@ -252,7 +277,7 @@ export default function EventDetailScreen() {
     ) : null;
 
   const identity = (
-    <View className="gap-ds-12">
+    <View className="gap-ds-16">
       {event.status !== 'published' ? (
         <Tag tone={event.status === 'rejected' ? 'danger' : 'muted'}>{statusLabel(event.status)}</Tag>
       ) : null}
@@ -262,17 +287,27 @@ export default function EventDetailScreen() {
         </Text>
       ) : null}
       <Text variant="heading">{event.name}</Text>
-      <View className="flex-row flex-wrap items-center gap-x-ds-16 gap-y-ds-8">
-        <View className="min-w-0 flex-row items-center gap-ds-8">
-          <MetaIcon icon={MapPin} />
-          <Text variant="muted" numberOfLines={1} className="min-w-0 shrink">
-            {venue}
-            {city ? `, ${city}` : ''}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-ds-8">
+      <View className="flex-row flex-wrap gap-ds-12">
+        <View className="min-w-[44%] flex-1 flex-row items-start gap-ds-8 rounded-cards border border-border bg-muted px-ds-12 py-ds-12">
           <MetaIcon icon={Clock} />
-          <Text variant="muted">{timeLabel}</Text>
+          <View className="min-w-0 flex-1">
+            <Text variant="caption" className="uppercase text-muted-foreground">
+              Cuándo
+            </Text>
+            <Text numberOfLines={2}>{timeLabel}</Text>
+          </View>
+        </View>
+        <View className="min-w-[44%] flex-1 flex-row items-start gap-ds-8 rounded-cards border border-border bg-muted px-ds-12 py-ds-12">
+          <MetaIcon icon={MapPin} />
+          <View className="min-w-0 flex-1">
+            <Text variant="caption" className="uppercase text-muted-foreground">
+              Dónde
+            </Text>
+            <Text numberOfLines={2}>
+              {venue}
+              {city ? `, ${city}` : ''}
+            </Text>
+          </View>
         </View>
       </View>
       {event.agePolicy ? <Text variant="helper">{event.agePolicy}</Text> : null}
@@ -366,21 +401,41 @@ export default function EventDetailScreen() {
 
   const tickets = (
     <View className="gap-ds-12">
-      <Text variant="subheading">Etapas</Text>
-      <Surface muted className="gap-ds-12">
-        {onSale.length > 0 ? (
-          onSale.map((type) => (
-            <View key={type.id} className="flex-row items-baseline justify-between gap-ds-8">
-              <Text>{type.name}</Text>
-              <Text variant="muted">
-                {formatMoney(type.priceCents, type.currency)} · {api.helpers.available(type)} disponibles
-              </Text>
-            </View>
-          ))
-        ) : (
-          <Text variant="muted">{event.ticketTypes.length === 0 ? 'Aún no hay boletas a la venta' : 'Pronto'}</Text>
-        )}
-      </Surface>
+      <Text variant="subheading">Boletas</Text>
+      {onSale.length > 0 ? (
+        <View className="gap-ds-8">
+          {onSale.map((type) => {
+            const left = ticketRemaining(type);
+            return (
+              <Surface
+                key={type.id}
+                elevated
+                onPress={goCheckout}
+                accessibilityLabel={`Comprar ${type.name}`}>
+                <View className="flex-row items-center gap-ds-12">
+                  <View className="min-w-0 flex-1 gap-ds-4">
+                    <Text className="font-bold">{type.name}</Text>
+                    <Text variant="muted">
+                      {left} {left === 1 ? 'disponible' : 'disponibles'}
+                    </Text>
+                  </View>
+                  <Text variant="subheading">{formatMoney(type.priceCents, type.currency)}</Text>
+                </View>
+              </Surface>
+            );
+          })}
+        </View>
+      ) : (
+        <Surface muted>
+          <Text variant="muted">
+            {ended
+              ? 'La venta ya cerró'
+              : event.ticketTypes.length === 0
+                ? 'Aún no hay boletas a la venta'
+                : 'Pronto'}
+          </Text>
+        </Surface>
+      )}
     </View>
   );
 
@@ -419,8 +474,22 @@ export default function EventDetailScreen() {
       </SectionRail>
     ) : null;
 
+  const buyCard = (
+    <Surface elevated className="gap-ds-8">
+      <BuyRow
+        ended={ended}
+        onSale={onSale}
+        lowest={lowest}
+        emptyTickets={event.ticketTypes.length === 0}
+        remaining={remaining}
+        onBuy={goCheckout}
+      />
+    </Surface>
+  );
+
   const sheet = (
     <View className="gap-ds-24">
+      {wide ? buyCard : null}
       {identity}
       {lineupPreview}
       {compact ? gallery : null}
@@ -430,17 +499,6 @@ export default function EventDetailScreen() {
       {address}
       {tickets}
       {staffRow}
-      {wide ? (
-        <Surface elevated className="gap-ds-4">
-          <BuyRow
-            ended={ended}
-            onSale={onSale}
-            lowest={lowest}
-            emptyTickets={event.ticketTypes.length === 0}
-            onBuy={goCheckout}
-          />
-        </Surface>
-      ) : null}
       {similarRail}
     </View>
   );
@@ -458,11 +516,13 @@ export default function EventDetailScreen() {
   if (compact) {
     return (
       <>
+        {statusStyle ? <StatusBar style={statusStyle} /> : null}
         <Screen
+          scroll={false}
           flush
           padded={false}
           width="full"
-          className="bg-surface"
+          className="bg-muted"
           headTitle={event.name}
           headDescription={
             event.description?.trim() ||
@@ -476,13 +536,28 @@ export default function EventDetailScreen() {
                 onSale={onSale}
                 lowest={lowest}
                 emptyTickets={event.ticketTypes.length === 0}
+                remaining={remaining}
                 onBuy={goCheckout}
               />
             </StickyCta>
           }>
-          {hero}
-          <View className="relative z-10 -mt-ds-32 rounded-t-navelements bg-surface px-ds-16 pb-ds-32 pt-ds-24">
-            {sheet}
+          <View className="flex-1">
+            <View
+              pointerEvents="box-none"
+              className="absolute inset-x-0 top-0"
+              style={{ height: heroHeight }}>
+              {hero}
+            </View>
+            <EventDetailSheet dockTop={sheetLayout.dockTop} spacer={sheetLayout.spacer}>
+              {sheet}
+            </EventDetailSheet>
+            <EventDetailHeroChrome
+              topInset={Math.max(insets.top, 12)}
+              saved={saved}
+              showBack
+              onSave={onSave}
+              onShare={onShare}
+            />
           </View>
         </Screen>
         {lightbox}
