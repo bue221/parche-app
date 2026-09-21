@@ -20,6 +20,8 @@ Una sola pantalla cuenta el evento **para el público**: flyer a sangre con chro
 
 En compacto el flyer es **flush** y **fijo**. La hoja `surface` (radio superior `navelements`) se superpone al arte y es lo único que scrollea: sube hasta pegar con el chrome (Volver / compartir / guardar), sin hueco, y conserva el redondeado al dockar. Sobre el arte va una viñeta oscura (blur suave + scrim `pitch-black`) que se disuelve hacia la foto. Círculos `paper-white` sobre la foto: Volver, Compartir, corazón Guardar. Tocar el arte abre un visor a pantalla completa (`contain`, fondo `pitch-black`, contador `N de M`). Si hay más de una foto, pill **N fotos** sobre el flyer y riel **Fotos** en la hoja. Si hay tracks, pill **Escuchar** en el flyer. El copy vive en esa hoja: género aurora, título Inter, cards Cuándo/Dónde, avatares de artistas, sobre el evento (Leer más), dirección + Ver en mapa, pin, audio, etapas como cards de precio, CTA sticky **Comprar boletas**. No hay listado público de asistentes ni contacto de organizer; el stack social es el cartel real. Compartir usa el sheet del OS o copia el link en web.
 
+En **web desktop** la ficha copia el sitio de marketing: poster 4:5 a la izquierda (tag de género glass, miniaturas debajo) y copy a la derecha. Badge **Boletas a la venta**, título Inter grande, tres cards Cuándo / Dónde / Edad, **Cómo llegar** si hay pin, panel de boletas con etapas, sobre el evento, artistas y audio. Abajo, **Sigue el parche** (hasta 4 cards listing). La barra sticky es **Desde $X** + “Pago en la app. El QR queda en tu wallet.” + Comprar, a ancho de página. Guardar y compartir van junto al badge. El mapa embebido queda en compacto.
+
 | Bloque | Sprint | Spec |
 |--------|--------|------|
 | Flyer + datos | 1 | este |
@@ -54,6 +56,7 @@ Editor inline de todo el evento (usa [FEAT-009](feat-009-event-edit.md)). Scanne
 - [ ] `door` no ve ingresos en esta ficha; entra a la mesa y de ahí al scanner.
 - [ ] Pin coincide con Mapa.
 - [ ] Staff no ve Editar/Más sobre la ficha de compra.
+- [ ] En desktop web la ficha muestra poster 4:5, tres facts y barra sticky Comprar.
 - [ ] Evento finalizado muestra CTA Finalizado, no Comprar.
 
 ## Relacionadas

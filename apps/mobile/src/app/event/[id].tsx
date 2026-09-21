@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArtistRow } from '@/components/artist-row';
 import { EventCard } from '@/components/event-card';
+import { EventDetailDesktop } from '@/components/event-detail-desktop';
 import { EventDetailHero, EventDetailHeroChrome } from '@/components/event-detail-hero';
 import { EventDetailSheet } from '@/components/event-detail-sheet';
 import { EventImageLightbox } from '@/components/event-image-lightbox';
@@ -47,6 +48,7 @@ import {
   statusLabel,
 } from '@/lib/format';
 import { shareEvent } from '@/lib/share';
+import { stickyBuyLead } from '@/lib/event-detail-copy';
 import { eventDetailImages } from '@/lib/event-images';
 import { eventDetailSheetLayout } from '@/lib/event-detail-layout';
 import {
@@ -93,6 +95,48 @@ function BuyRow({
         ) : null}
       </View>
       <Button disabled={!canBuy} onPress={onBuy}>
+        <Text>{buyCtaLabel(ended, onSale.length)}</Text>
+      </Button>
+    </View>
+  );
+}
+
+function DesktopBuyBar({
+  ended,
+  onSale,
+  lowest,
+  emptyTickets,
+  remaining,
+  onBuy,
+}: {
+  ended: boolean;
+  onSale: EventWithExtras['ticketTypes'];
+  lowest?: EventWithExtras['ticketTypes'][number];
+  emptyTickets: boolean;
+  remaining: number;
+  onBuy: () => void;
+}) {
+  const canBuy = !ended && onSale.length > 0;
+  const scarce = ticketsScarce(remaining);
+  return (
+    <View className="flex-row flex-wrap items-center justify-between gap-ds-12">
+      <View className="min-w-0">
+        <Text variant="caption" className="uppercase text-muted-foreground">
+          {buyPriceCaption(ended, onSale.length, emptyTickets)}
+        </Text>
+        <Text variant="headingSm">
+          {ended ? 'Finalizado' : lowest ? formatMoney(lowest.priceCents, lowest.currency) : 'Sin venta'}
+        </Text>
+        <Text variant="helper" className="mt-ds-4 max-w-sm normal-case">
+          {stickyBuyLead({ ended, onSale: onSale.length > 0 })}
+        </Text>
+        {scarce ? (
+          <Text variant="helper" className="text-amber">
+            {remaining} {remaining === 1 ? 'boleta' : 'boletas'}
+          </Text>
+        ) : null}
+      </View>
+      <Button disabled={!canBuy} size="lg" onPress={onBuy}>
         <Text>{buyCtaLabel(ended, onSale.length)}</Text>
       </Button>
     </View>
@@ -193,8 +237,8 @@ export default function EventDetailScreen() {
   if (!event || isLoading) {
     return (
       <Screen back headTitle="Evento">
-        <View className={wide ? 'flex-row items-start gap-ds-40' : 'gap-ds-16'}>
-          <Skeleton className={wide ? 'aspect-[4/5] w-[42%] max-w-[480px]' : 'h-80 w-full'} />
+        <View className={wide ? 'flex-row items-start gap-ds-48' : 'gap-ds-16'}>
+          <Skeleton className={wide ? 'aspect-[4/5] w-[42%] max-w-[26rem]' : 'h-80 w-full'} />
           <View className={wide ? 'flex-1 gap-ds-12' : undefined}>
             <Skeleton className="h-8 w-2/3" />
             <Skeleton className="mt-ds-8 h-4 w-1/2" />
@@ -450,7 +494,7 @@ export default function EventDetailScreen() {
         {event.venueName}
         {event.addressText ? `\n${event.addressText}` : ''}
       </Text>
-      {mapPin ? <OsmMap pin={mapPin} events={mapEvents} className={wide ? 'h-72' : undefined} /> : null}
+      {mapPin ? <OsmMap pin={mapPin} events={mapEvents} /> : null}
     </View>
   );
 
@@ -474,22 +518,8 @@ export default function EventDetailScreen() {
       </SectionRail>
     ) : null;
 
-  const buyCard = (
-    <Surface elevated className="gap-ds-8">
-      <BuyRow
-        ended={ended}
-        onSale={onSale}
-        lowest={lowest}
-        emptyTickets={event.ticketTypes.length === 0}
-        remaining={remaining}
-        onBuy={goCheckout}
-      />
-    </Surface>
-  );
-
   const sheet = (
     <View className="gap-ds-24">
-      {wide ? buyCard : null}
       {identity}
       {lineupPreview}
       {compact ? gallery : null}
@@ -574,14 +604,35 @@ export default function EventDetailScreen() {
           event.description?.trim() ||
           [event.venueName, formatWhenRange(event.startsAt, event.endsAt)].filter(Boolean).join(' · ')
         }
-        headImage={event.flyerUrl}>
-        <View className="flex-row items-start gap-ds-40">
-          <View className="w-[42%] max-w-[480px] shrink-0 gap-ds-12">
-            {hero}
-            {gallery}
-          </View>
-          <View className="min-w-0 flex-1 gap-ds-20">{sheet}</View>
-        </View>
+        headImage={event.flyerUrl}
+        footer={
+          <StickyCta width="page" className="bg-glass-strong">
+            <DesktopBuyBar
+              ended={ended}
+              onSale={onSale}
+              lowest={lowest}
+              emptyTickets={event.ticketTypes.length === 0}
+              remaining={remaining}
+              onBuy={goCheckout}
+            />
+          </StickyCta>
+        }>
+        <EventDetailDesktop
+          event={event}
+          saved={saved}
+          similar={similar}
+          followedArtists={followedArtists}
+          isLoggedIn={isLoggedIn}
+          staff={staff}
+          photos={photos}
+          playNonce={playNonce}
+          onSave={onSave}
+          onShare={onShare}
+          onBuy={goCheckout}
+          onOpenPhoto={setPhotoIndex}
+          onOpenMaps={mapPin ? () => void openEventPin(mapPin.lat, mapPin.lng, pinLabel) : undefined}
+          onRefreshTracks={refreshTracks}
+        />
       </Screen>
       {lightbox}
     </>

@@ -192,6 +192,36 @@ export function formatTime(iso: string): string {
   });
 }
 
+/** Long calendar line in Bogotá: "Sábado, 19 de junio". */
+export function formatEventLongDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const raw = date.toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: BOGOTA_TZ,
+  });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/** Wall-clock in Bogotá with es-CO day parts: "11:00 p. m.". */
+export function formatEventTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: BOGOTA_TZ,
+  });
+}
+
+export function formatEventTimeRange(startsAt: string, endsAt?: string): string {
+  const start = formatEventTime(startsAt);
+  if (!endsAt) return start;
+  return `${start} – ${formatEventTime(endsAt)}`;
+}
+
 export const ENDED_EVENT_COPY =
   'Este evento ya finalizó. Los datos quedan en consulta para no alterar métricas ni ventas.';
 

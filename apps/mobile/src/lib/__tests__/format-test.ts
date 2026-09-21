@@ -13,6 +13,9 @@ import {
   listingPlaceLine,
   formatClock,
   formatDuration,
+  formatEventLongDate,
+  formatEventTime,
+  formatEventTimeRange,
   formatListingDate,
   formatPercent,
   formatPinDay,
@@ -54,11 +57,17 @@ describe('Bogotá-pinned date formatting', () => {
     expect(formatClock(NIGHT_ISO)).toBe('22:00');
   });
 
+  test('the desktop ficha uses a long Bogotá date and 12h clock', () => {
+    expect(formatEventLongDate(NIGHT_ISO)).toMatch(/^Miércoles, 16 de septiembre$/i);
+    expect(formatEventTime(NIGHT_ISO)).toMatch(/10:00/);
+    expect(formatEventTimeRange(NIGHT_ISO, '2026-09-17T12:00:00.000Z')).toContain(' – ');
+  });
+
   test('eventYear rolls back for a night that is next year in UTC', () => {
     expect(eventYear('2026-01-01T02:00:00.000Z')).toBe(2025);
   });
 
-  test.each([formatCardDate, formatCardDayShort, formatListingDate, formatClock])(
+  test.each([formatCardDate, formatCardDayShort, formatListingDate, formatClock, formatEventLongDate, formatEventTime])(
     'invalid input passes through untouched',
     (format) => {
       expect(format('not-a-date')).toBe('not-a-date');
