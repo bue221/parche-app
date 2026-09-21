@@ -87,6 +87,7 @@ func registerAuthRoutes(mux *http.ServeMux, routes Routes) {
 	mux.HandleFunc("POST /v1/me/email/confirm", h.confirmEmail)
 	mux.HandleFunc("GET /v1/users/{id}", h.publicUser)
 	mux.HandleFunc("POST /v1/me/profiles/artist", h.addArtist)
+	mux.HandleFunc("POST /v1/me/profiles/promoter", h.addPromoter)
 	mux.HandleFunc("GET /v1/me/sessions", h.sessions)
 	mux.HandleFunc("DELETE /v1/me/sessions", h.logoutAll)
 	mux.HandleFunc("POST /v1/tenants", h.createTenant)

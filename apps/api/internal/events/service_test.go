@@ -9,6 +9,7 @@ import (
 
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/geo"
+	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/venues"
 )
 
@@ -189,6 +190,34 @@ func TestCachedPublicJSONRoundTrip(t *testing.T) {
 	})
 	if err != nil || string(body) != `{"items":[]}` || calls != 1 {
 		t.Fatalf("hit=%s calls=%d err=%v", body, calls, err)
+	}
+}
+
+func TestCreateRequiresMercadoPagoSeller(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 18, 0, 0, 0, time.UTC)
+	authStore := auth.NewMemory()
+	vmem := venues.NewMemory()
+	svc := NewService(NewMemory(), authStore, venues.NewService(vmem, authStore), vmem, NewMemoryCache())
+	svc.Now = func() time.Time { return now }
+	svc.Payments = payments.MercadoPago{PlatformToken: "APP-TOKEN"}
+	sellers := &payments.MemoryAccounts{}
+	svc.Sellers = sellers
+	svc.RequireMPSeller = true
+	owner := mustUser(t, authStore, "payout@example.com", "promoter")
+	tenant := mustTenant(t, authStore, owner)
+	in := CreateInput{
+		TenantID: tenant, Title: "Norte", StartsAt: now.Add(time.Hour), EndsAt: now.Add(2 * time.Hour),
+		Pin: &PinInput{Name: "Video", Lat: 4.65, Lng: -74.06},
+	}
+	if _, err := svc.Create(ctx, owner, in); !errors.Is(err, payments.ErrPayoutRequired) {
+		t.Fatalf("err=%v", err)
+	}
+	if err := sellers.Upsert(ctx, payments.Account{TenantID: tenant, AccessToken: "seller-token", MPUserID: "123"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(ctx, owner, in); err != nil {
+		t.Fatal(err)
 	}
 }
 

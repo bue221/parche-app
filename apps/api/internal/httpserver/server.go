@@ -46,6 +46,11 @@ type Routes struct {
 	Recs          *recs.Service
 	Payments      payments.Provider
 	WebhookSecret string
+	MPWebhook     string
+	MPAccessToken string
+	MPOAuth       *payments.OAuth
+	MPAccounts    payments.Accounts
+	AppOrigin     string
 	AppEnv        string
 	Audit         admin.Auditor
 	CORSOrigins   []string
@@ -142,6 +147,8 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		venueSvc = venues.NewService(venues.NewPG(pool), sessions.Store)
 	}
 	var eventSvc *events.Service
+	var mpAccounts payments.Accounts
+	var mpOAuth *payments.OAuth
 	if sessions != nil && venueSvc != nil {
 		vpg := venues.NewPG(pool)
 		var cache events.Cache
@@ -160,10 +167,27 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 			eventSvc.Tickets = keys
 		}
 		sessions.EventRoles = eventSvc
+		tokenKey := []byte(strings.TrimSpace(cfg.MPTokenKey))
+		if len(tokenKey) == 0 {
+			tokenKey = []byte(cfg.JWTRefreshSecret)
+		}
+		acc := payments.NewPGAccounts(pool, tokenKey)
+		mpOAuth = &payments.OAuth{
+			ClientID:     cfg.MPClientID,
+			ClientSecret: cfg.MPClientSecret,
+			RedirectURL:  cfg.MPRedirectURL,
+			StateKey:     tokenKey,
+		}
+		acc.Refresher = mpOAuth
+		mpAccounts = acc
+		eventSvc.Sellers = mpAccounts
 		if pay, err := payments.New(cfg); err != nil {
 			log.Error("payment provider", "err", err)
 		} else {
 			eventSvc.Payments = pay
+		}
+		if mpOAuth.Enabled() && eventSvc.Payments != nil && eventSvc.Payments.Name() == "mercadopago" {
+			eventSvc.RequireMPSeller = true
 		}
 	}
 	var artistSvc *artists.Service
@@ -254,6 +278,11 @@ func Run(ctx context.Context, cfg config.Config, log *applog.Logger) error {
 		Recs:          recSvc,
 		Payments:      pay,
 		WebhookSecret: cfg.PaymentWebhookSecret,
+		MPWebhook:     cfg.MPWebhookSecret,
+		MPAccessToken: cfg.MPAccessToken,
+		MPOAuth:       mpOAuth,
+		MPAccounts:    mpAccounts,
+		AppOrigin:     cfg.AppOrigin,
 		AppEnv:        cfg.AppEnv,
 		Audit:         admin.PG{Pool: pool},
 	})

@@ -77,3 +77,44 @@ func TestLoadDoesNotLogEnvFile(t *testing.T) {
 		t.Skip("env example not reachable from test cwd")
 	}
 }
+
+func TestLoadMercadoPagoDefaultsFromCredentialsCard(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://parche:secret@postgres:5432/parche")
+	t.Setenv("JWT_ACCESS_SECRET", "parche-dev-jwt-access-secret-32b")
+	t.Setenv("JWT_REFRESH_SECRET", "parche-dev-jwt-refresh-secret-32")
+	t.Setenv("TICKET_SIGNING_KEY", "ticket-signing-key-32-bytes-min!!")
+	t.Setenv("MP_ACCESS_TOKEN", "APP-TOKEN")
+	t.Setenv("MP_PUBLIC_KEY", "APP-PUB")
+	t.Setenv("MP_APPLICATION_ID", "396538344466862")
+	t.Setenv("MP_CLIENT_ID", "")
+	t.Setenv("MP_CLIENT_SECRET", "")
+	t.Setenv("MP_OAUTH_REDIRECT_URL", "")
+	t.Setenv("MP_NOTIFICATION_URL", "")
+	t.Setenv("MP_BACK_URL_BASE", "")
+	t.Setenv("MP_TOKEN_KEY", "")
+	t.Setenv("API_PUBLIC_URL", "")
+	t.Setenv("APP_ORIGIN", "http://localhost:8081")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MPClientID != "396538344466862" {
+		t.Fatalf("application number alias: %s", cfg.MPClientID)
+	}
+	if cfg.MPRedirectURL != "http://localhost:8080/v1/payments/mercadopago/oauth/callback" {
+		t.Fatalf("redirect=%s", cfg.MPRedirectURL)
+	}
+	if cfg.MPNotificationURL != "http://localhost:8080/v1/payments/webhook" {
+		t.Fatalf("notify=%s", cfg.MPNotificationURL)
+	}
+	if cfg.MPBackURLBase != "http://localhost:8081" {
+		t.Fatalf("back=%s", cfg.MPBackURLBase)
+	}
+	if cfg.MPTokenKey != cfg.JWTRefreshSecret {
+		t.Fatal("token key should default to refresh secret")
+	}
+	if cfg.MPClientSecret != "" {
+		t.Fatal("do not invent a client secret from the access token")
+	}
+}

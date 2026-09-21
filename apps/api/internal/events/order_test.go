@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mercadopago/sdk-go/pkg/preference"
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/payments"
 	"github.com/parche-app/backend/internal/ticketsign"
@@ -22,6 +23,9 @@ func TestCreateOrderReservesAndWebhookSells(t *testing.T) {
 	}
 	if created.Status != OrderPending || created.CheckoutURL != "/v1/dev/pay/"+created.OrderID {
 		t.Fatalf("%+v", created)
+	}
+	if created.AmountCents != 100000 || created.ChargeCents != 111900 || created.FeeCents != 11900 {
+		t.Fatalf("buyer charge=%+v", created)
 	}
 	types, err := svc.ListTicketTypes(ctx, buyer, eventID)
 	if err != nil {
@@ -61,6 +65,9 @@ func TestCreateOrderReservesAndWebhookSells(t *testing.T) {
 	view, err := svc.GetOrder(ctx, buyer, created.OrderID)
 	if err != nil || view.Status != OrderPaid || len(view.Tickets) != 2 {
 		t.Fatalf("view=%+v %v", view, err)
+	}
+	if view.AmountCents != 100000 || view.ChargeCents != 111900 {
+		t.Fatalf("view charge=%+v", view)
 	}
 	for _, tk := range view.Tickets {
 		if tk.Status != TicketValid {
@@ -209,6 +216,49 @@ func TestCreateOrderMaxEight(t *testing.T) {
 	})
 	if !errors.Is(err, auth.ErrValidation) {
 		t.Fatalf("max=%v", err)
+	}
+}
+
+func TestCreateOrderMercadoPagoNeedsSellerOrPlatform(t *testing.T) {
+	ctx, svc, buyer, eventID, typeID := checkoutFixture(t)
+	svc.Payments = payments.MercadoPago{}
+	_, err := svc.CreateOrder(ctx, buyer, eventID, "idem-mp-1", []OrderItemInput{
+		{TicketTypeID: typeID, Quantity: 1},
+	})
+	if !errors.Is(err, payments.ErrNotConnected) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestCreateOrderMercadoPagoUsesPlatformToken(t *testing.T) {
+	ctx, svc, buyer, eventID, typeID := checkoutFixture(t)
+	svc.Payments = payments.MercadoPago{
+		PlatformToken: "APP-TOKEN",
+		CreatePref: func(_ context.Context, token string, req preference.Request) (*preference.Response, error) {
+			if token != "APP-TOKEN" {
+				t.Fatalf("token=%s", token)
+			}
+			if req.MarketplaceFee != 0 {
+				t.Fatalf("fee=%v", req.MarketplaceFee)
+			}
+			last := req.Items[len(req.Items)-1]
+			if last.ID != "parche-fee" || last.UnitPrice != 5950 {
+				t.Fatalf("surcharge=%+v", req.Items)
+			}
+			return &preference.Response{
+				ID:        "pref-plat",
+				InitPoint: "https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=pref-plat",
+			}, nil
+		},
+	}
+	created, err := svc.CreateOrder(ctx, buyer, eventID, "idem-mp-plat", []OrderItemInput{
+		{TicketTypeID: typeID, Quantity: 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.CheckoutURL != "https://www.mercadopago.com.co/checkout/v1/redirect?pref_id=pref-plat" {
+		t.Fatalf("checkout=%s", created.CheckoutURL)
 	}
 }
 

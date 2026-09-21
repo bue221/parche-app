@@ -293,7 +293,7 @@ Caché Redis en listados públicos. Invalidar al publicar o cambiar flyer/ubicac
 | GET | `/v1/me/tickets` | attendee | 3 |
 | POST | `/v1/tickets/{id}/transfer` | dueño | 3 |
 
-Flujo de compra: order `pending` + ticket `reserved` → URL pasarela → webhook → ticket `valid` + **token QR firmado** (no un id plano). Reserva se libera si el pago falla o expira.
+Flujo de compra: order `pending` + ticket `reserved` → Checkout Pro `init_point` → webhook → ticket `valid` + **token QR firmado** (no un id plano). Reserva se libera si el pago falla o expira. Credenciales mínimas: Access Token + Public Key + número de aplicación. El comprador paga el precio publicado + 10% de comisión + IVA 19% sobre esa comisión. Con OAuth del promoter el dinero de las boletas cae en su cuenta y Parche retiene la comisión+IVA (`marketplace_fee`). Sin OAuth cobra la cuenta de la app.
 
 ### Check-in QR (RC-013)
 

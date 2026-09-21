@@ -57,6 +57,42 @@ func TestAttendeeCannotCreateTenantOrEvents(t *testing.T) {
 	}
 }
 
+func TestAttendeeCanSelfServePromoterWithTenant(t *testing.T) {
+	svc, _ := testService(t)
+	ctx := context.Background()
+	sess, err := svc.Register(ctx, RegisterInput{
+		Email: "ada@example.com", Password: "correct-horse", DisplayName: "Ada", Profile: "attendee",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := svc.AddPromoterProfile(ctx, sess.User.ID, "Pez Alado")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Name != "Pez Alado" {
+		t.Fatalf("tenant=%+v", first)
+	}
+	again, err := svc.AddPromoterProfile(ctx, sess.User.ID, "Otro Nombre")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ID != first.ID {
+		t.Fatalf("idempotent tenant %s vs %s", again.ID, first.ID)
+	}
+	me, err := svc.Me(ctx, sess.User.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasProfile(me.Profiles, ProfilePromoter) || len(me.Tenants) != 1 {
+		t.Fatalf("me=%+v", me)
+	}
+	ok, err := svc.CanCreateEvents(ctx, sess.User.ID)
+	if err != nil || !ok {
+		t.Fatalf("promoter should create events, ok=%v err=%v", ok, err)
+	}
+}
+
 func TestArtistProfileIdempotentAndNoTenant(t *testing.T) {
 	svc, _ := testService(t)
 	ctx := context.Background()

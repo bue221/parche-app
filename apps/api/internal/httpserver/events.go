@@ -10,6 +10,7 @@ import (
 	"github.com/parche-app/backend/internal/auth"
 	"github.com/parche-app/backend/internal/events"
 	"github.com/parche-app/backend/internal/geo"
+	"github.com/parche-app/backend/internal/payments"
 )
 
 type createEventBody struct {
@@ -328,6 +329,10 @@ func parsePin(w http.ResponseWriter, r *http.Request, pin *eventPinBody) (*event
 }
 
 func writeEventErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, payments.ErrPayoutRequired) {
+		apierr.Write(w, r, apierr.Conflict, "Conecta Mercado Pago antes de crear un evento", nil)
+		return
+	}
 	var inv auth.Invalid
 	if errors.As(err, &inv) {
 		for _, f := range inv.Fields {

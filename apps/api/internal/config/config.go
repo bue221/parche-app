@@ -51,6 +51,19 @@ type Config struct {
 	PaymentProvider        string
 	PaymentCheckoutBaseURL string
 	GoogleOAuthClientIDs   []string
+
+	APIPublicURL string
+
+	MPAccessToken     string
+	MPPublicKey       string
+	MPClientID        string
+	MPClientSecret    string
+	MPWebhookSecret   string
+	MPRedirectURL     string
+	MPNotificationURL string
+	MPBackURLBase     string
+	MPTokenKey        string
+	MPMarketplaceFee  float64
 }
 
 // Load reads and validates required environment variables.
@@ -90,12 +103,45 @@ func Load() (Config, error) {
 		PaymentProvider:          getenv("PAYMENT_PROVIDER", "fake"),
 		PaymentCheckoutBaseURL:   os.Getenv("PAYMENT_CHECKOUT_BASE_URL"),
 		GoogleOAuthClientIDs:     splitCSV(os.Getenv("GOOGLE_OAUTH_CLIENT_ID")),
+		APIPublicURL:             os.Getenv("API_PUBLIC_URL"),
+		MPAccessToken:            os.Getenv("MP_ACCESS_TOKEN"),
+		MPPublicKey:              os.Getenv("MP_PUBLIC_KEY"),
+		MPClientID:               firstEnv("MP_CLIENT_ID", "MP_APPLICATION_ID"),
+		MPClientSecret:           os.Getenv("MP_CLIENT_SECRET"),
+		MPWebhookSecret:          os.Getenv("MP_WEBHOOK_SECRET"),
+		MPRedirectURL:            os.Getenv("MP_OAUTH_REDIRECT_URL"),
+		MPNotificationURL:        os.Getenv("MP_NOTIFICATION_URL"),
+		MPBackURLBase:            os.Getenv("MP_BACK_URL_BASE"),
+		MPTokenKey:               os.Getenv("MP_TOKEN_KEY"),
+		MPMarketplaceFee:         getenvFloat("MP_MARKETPLACE_FEE", 0),
 	}
+	cfg.applyMPDefaults()
 
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// applyMPDefaults fills URLs and aliases Mercado Pago does not print on the credentials card.
+func (c *Config) applyMPDefaults() {
+	public := strings.TrimRight(strings.TrimSpace(c.APIPublicURL), "/")
+	if public == "" {
+		public = "http://localhost:8080"
+	}
+	c.APIPublicURL = public
+	if strings.TrimSpace(c.MPRedirectURL) == "" {
+		c.MPRedirectURL = public + "/v1/payments/mercadopago/oauth/callback"
+	}
+	if strings.TrimSpace(c.MPNotificationURL) == "" {
+		c.MPNotificationURL = public + "/v1/payments/webhook"
+	}
+	if strings.TrimSpace(c.MPBackURLBase) == "" {
+		c.MPBackURLBase = strings.TrimRight(strings.TrimSpace(c.AppOrigin), "/")
+	}
+	if strings.TrimSpace(c.MPTokenKey) == "" {
+		c.MPTokenKey = c.JWTRefreshSecret
+	}
 }
 
 // Validate checks required secrets and connection URLs.
@@ -153,6 +199,27 @@ func getenv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func getenvFloat(key string, fallback float64) float64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return fallback
+	}
+	return f
 }
 
 func getenvBool(key string, fallback bool) bool {

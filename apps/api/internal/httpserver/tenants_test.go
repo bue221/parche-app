@@ -116,6 +116,18 @@ func TestTenantsAndArtistProfileHTTP(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/v1/me/profiles/promoter", strings.NewReader(`{"name":"Selva"}`))
+	req.Header.Set("Authorization", "Bearer "+attendee.AccessToken)
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("promoter=%d %s", rr.Code, rr.Body.String())
+	}
+	var created auth.Tenant
+	if err := json.Unmarshal(rr.Body.Bytes(), &created); err != nil || created.Name != "Selva" {
+		t.Fatalf("promoter tenant=%s %v", rr.Body.String(), err)
+	}
+
+	rr = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/v1/me/profiles/artist", nil)
 	req.Header.Set("Authorization", "Bearer "+attendee.AccessToken)
 	mux.ServeHTTP(rr, req)

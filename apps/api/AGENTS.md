@@ -22,6 +22,7 @@ Local stack: [README.md](README.md). Build with `COMPOSE_PARALLEL_LIMIT=1` so ap
 - Authorize door and metrics by **event membership + permission**, not a single global staff role. Several people can check in the same night.
 - Store event coordinates (WGS84) and render maps with OSM/MapLibre. Do not require Google Maps.
 - Talk to object storage through one `ObjectStore` port: local/MinIO in dev, S3 in prod.
+- Talk to Mercado Pago through one `PaymentProvider` port (Checkout Pro `init_point`); keep the `fake` driver for tests.
 - Serve QR check-in from in-memory signature verify + Redis `SETNX`; persist to Postgres asynchronously.
 - Keep session JWTs short-lived and rotate refresh tokens; sign ticket QR with a **separate** key.
 - Return user-facing errors in JSON (`code`, `message`); log request id and cause server-side.

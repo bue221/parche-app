@@ -38,10 +38,13 @@ type Service struct {
 	AppOrigin string
 	Pepper    []byte
 	Payments  payments.Provider
-	Tickets   ticketsign.Keys
-	Publisher Queue
-	Followers ArtistFollowers
-	Now       func() time.Time
+	Sellers   payments.Accounts
+	// RequireMPSeller blocks Create until the tenant connected Mercado Pago OAuth.
+	RequireMPSeller bool
+	Tickets         ticketsign.Keys
+	Publisher       Queue
+	Followers       ArtistFollowers
+	Now             func() time.Time
 }
 
 func NewService(store Store, tenancy Tenancy, v Venues, lookup VenueLookup, cache Cache) *Service {
@@ -67,6 +70,9 @@ func (s *Service) Create(ctx context.Context, userID string, in CreateInput) (Ev
 		return Event{}, err
 	}
 	if err := s.requireTenantMember(ctx, in.TenantID, userID); err != nil {
+		return Event{}, err
+	}
+	if err := s.requirePayoutAccount(ctx, in.TenantID); err != nil {
 		return Event{}, err
 	}
 	title := strings.TrimSpace(in.Title)
@@ -575,6 +581,20 @@ func (s *Service) resolveVenue(ctx context.Context, userID, tenantID, venueID st
 		return "", auth.ErrNotFound
 	}
 	return v.ID, nil
+}
+
+func (s *Service) requirePayoutAccount(ctx context.Context, tenantID string) error {
+	if !s.RequireMPSeller || s.Sellers == nil {
+		return nil
+	}
+	_, err := s.Sellers.AccessToken(ctx, tenantID)
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, payments.ErrNotConnected) {
+		return payments.ErrPayoutRequired
+	}
+	return err
 }
 
 func (s *Service) requireCanCreate(ctx context.Context, userID string) error {

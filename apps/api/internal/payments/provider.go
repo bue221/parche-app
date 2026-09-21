@@ -11,10 +11,12 @@ import (
 
 // CheckoutRequest is the portable order slice a provider needs. No PAN, no secrets.
 type CheckoutRequest struct {
-	OrderID     string
-	AmountCents int
-	Currency    string
-	ExpiresAt   string
+	OrderID           string
+	AmountCents       int
+	Currency          string
+	ExpiresAt         string
+	SellerAccessToken string
+	Items             []CheckoutItem
 }
 
 // Session is the redirect the attendee follows. Handlers never build provider URLs.
@@ -44,6 +46,22 @@ func New(cfg config.Config) (Provider, error) {
 			return nil, fmt.Errorf("PAYMENT_CHECKOUT_BASE_URL is required for PAYMENT_PROVIDER=%s", name)
 		}
 		return Redirect{Driver: name, BaseURL: base}, nil
+	case "mercadopago", "mp":
+		if strings.TrimSpace(cfg.MPAccessToken) == "" {
+			return nil, fmt.Errorf("MP_ACCESS_TOKEN is required for PAYMENT_PROVIDER=mercadopago")
+		}
+		back := strings.TrimRight(strings.TrimSpace(cfg.MPBackURLBase), "/")
+		if back == "" {
+			back = strings.TrimRight(strings.TrimSpace(cfg.AppOrigin), "/")
+		}
+		return MercadoPago{
+			CreatePref:      sdkCreatePreference,
+			GetPay:          sdkGetPayment,
+			PlatformToken:   cfg.MPAccessToken,
+			NotificationURL: strings.TrimSpace(cfg.MPNotificationURL),
+			BackURLBase:     back,
+			Marketplace:     strings.TrimSpace(cfg.MPClientID),
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown PAYMENT_PROVIDER %q", cfg.PaymentProvider)
 	}

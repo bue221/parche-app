@@ -99,6 +99,15 @@ func TestCheckoutHTTP(t *testing.T) {
 	}
 
 	rr = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/v1/orders/"+checkout.OrderID, nil)
+	req.Header.Set("Authorization", "Bearer "+attendee.AccessToken)
+	req.Host = "api.parche.test"
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), checkout.CheckoutURL) {
+		t.Fatalf("get pending order=%d %s", rr.Code, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/v1/events/"+id+"/orders", strings.NewReader(orderBody))
 	req.Header.Set("Authorization", "Bearer "+attendee.AccessToken)
 	req.Header.Set("Idempotency-Key", "checkout-key-1")

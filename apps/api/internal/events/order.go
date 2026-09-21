@@ -93,22 +93,33 @@ type PaymentTx struct {
 
 // CheckoutCreated is the 201 body for POST orders.
 type CheckoutCreated struct {
-	OrderID     string    `json:"order_id"`
-	Status      string    `json:"status"`
-	CheckoutURL string    `json:"checkout_url"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	OrderID         string    `json:"order_id"`
+	Status          string    `json:"status"`
+	CheckoutURL     string    `json:"checkout_url"`
+	ExpiresAt       time.Time `json:"expires_at"`
+	AmountCents     int       `json:"amount_cents"`
+	CommissionCents int       `json:"commission_cents"`
+	IVACents        int       `json:"iva_cents"`
+	FeeCents        int       `json:"fee_cents"`
+	ChargeCents     int       `json:"charge_cents"`
+	Currency        string    `json:"currency"`
 }
 
 // OrderView is GET /v1/orders/{id}. No PAN, no QR.
 type OrderView struct {
-	ID          string      `json:"id"`
-	EventID     string      `json:"event_id"`
-	Status      string      `json:"status"`
-	AmountCents int         `json:"amount_cents"`
-	Currency    string      `json:"currency"`
-	ExpiresAt   time.Time   `json:"expires_at"`
-	Items       []OrderItem `json:"items"`
-	Tickets     []TicketRef `json:"tickets"`
+	ID              string      `json:"id"`
+	EventID         string      `json:"event_id"`
+	Status          string      `json:"status"`
+	AmountCents     int         `json:"amount_cents"`
+	CommissionCents int         `json:"commission_cents"`
+	IVACents        int         `json:"iva_cents"`
+	FeeCents        int         `json:"fee_cents"`
+	ChargeCents     int         `json:"charge_cents"`
+	Currency        string      `json:"currency"`
+	ExpiresAt       time.Time   `json:"expires_at"`
+	CheckoutURL     string      `json:"checkout_url,omitempty"`
+	Items           []OrderItem `json:"items"`
+	Tickets         []TicketRef `json:"tickets"`
 }
 
 // TicketRef is inventory status without a QR payload.
@@ -222,12 +233,22 @@ func (s *Service) CreateOrder(ctx context.Context, userID, eventID, idemKey stri
 	expires := now.Add(orderReserveTTL)
 	checkoutURL := ""
 	if s.Payments != nil {
-		sess, err := s.Payments.CreateCheckout(ctx, payments.CheckoutRequest{
+		req := payments.CheckoutRequest{
 			OrderID:     orderID,
 			AmountCents: amount,
 			Currency:    currency,
 			ExpiresAt:   expires.Format(time.RFC3339),
-		})
+			Items:       checkoutLines(e.Title, currency, orderItems, byID),
+		}
+		if s.Payments.Name() == "mercadopago" && s.Sellers != nil {
+			tok, err := s.Sellers.AccessToken(ctx, e.TenantID)
+			if err == nil {
+				req.SellerAccessToken = tok
+			} else if !errors.Is(err, payments.ErrNotConnected) {
+				return CheckoutCreated{}, err
+			}
+		}
+		sess, err := s.Payments.CreateCheckout(ctx, req)
 		if err != nil {
 			return CheckoutCreated{}, err
 		}
@@ -292,10 +313,12 @@ func (s *Service) GetOrder(ctx context.Context, userID, orderID string) (OrderVi
 	for _, t := range tix {
 		refs = append(refs, TicketRef{ID: t.ID, TicketTypeID: t.TicketTypeID, Status: t.Status})
 	}
+	split := payments.SplitFee(o.AmountCents)
 	return OrderView{
 		ID: o.ID, EventID: o.EventID, Status: o.Status,
-		AmountCents: o.AmountCents, Currency: o.Currency, ExpiresAt: o.ExpiresAt,
-		Items: items, Tickets: refs,
+		AmountCents: split.Amount, CommissionCents: split.Commission, IVACents: split.IVA,
+		FeeCents: split.Fee, ChargeCents: split.Charge, Currency: o.Currency, ExpiresAt: o.ExpiresAt,
+		CheckoutURL: o.CheckoutURL, Items: items, Tickets: refs,
 	}, nil
 }
 
@@ -419,9 +442,34 @@ func hashOrderRequest(eventID string, items []OrderItemInput) string {
 }
 
 func toCheckout(o Order) CheckoutCreated {
+	split := payments.SplitFee(o.AmountCents)
 	return CheckoutCreated{
 		OrderID: o.ID, Status: o.Status, CheckoutURL: o.CheckoutURL, ExpiresAt: o.ExpiresAt,
+		AmountCents: split.Amount, CommissionCents: split.Commission, IVACents: split.IVA,
+		FeeCents: split.Fee, ChargeCents: split.Charge, Currency: o.Currency,
 	}
+}
+
+func checkoutLines(eventTitle, currency string, items []OrderItem, types map[string]TicketType) []payments.CheckoutItem {
+	out := make([]payments.CheckoutItem, 0, len(items))
+	for _, it := range items {
+		title := strings.TrimSpace(types[it.TicketTypeID].Name)
+		if title == "" {
+			title = strings.TrimSpace(eventTitle)
+		}
+		if title == "" {
+			title = "Tiquete"
+		}
+		out = append(out, payments.CheckoutItem{
+			ID:          it.TicketTypeID,
+			Title:       title,
+			Description: strings.TrimSpace(eventTitle),
+			Quantity:    it.Quantity,
+			UnitPrice:   float64(it.UnitPriceCents),
+			Currency:    currency,
+		})
+	}
+	return out
 }
 
 func idemCacheKey(userID, eventID, key string) string {

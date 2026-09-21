@@ -34,6 +34,30 @@ func (s *Service) AddArtistProfile(ctx context.Context, userID string) error {
 	return s.Store.InsertProfile(ctx, userID, ProfileArtist)
 }
 
+// AddPromoterProfile is POST /v1/me/profiles/promoter. Idempotent: adds the
+// profile and creates a tenant if the user still has none (F06, cobros).
+func (s *Service) AddPromoterProfile(ctx context.Context, userID string, tenantName string) (Tenant, error) {
+	u, err := s.requireActive(ctx, userID)
+	if err != nil {
+		return Tenant{}, err
+	}
+	if err := s.Store.InsertProfile(ctx, userID, ProfilePromoter); err != nil {
+		return Tenant{}, err
+	}
+	tenants, err := s.Store.TenantsForUser(ctx, userID)
+	if err != nil {
+		return Tenant{}, err
+	}
+	if len(tenants) > 0 {
+		return s.Store.TenantByID(ctx, tenants[0].ID)
+	}
+	name := normalizeDisplayName(tenantName)
+	if name == "" {
+		name = normalizeDisplayName(u.DisplayName)
+	}
+	return s.CreateTenant(ctx, userID, CreateTenantInput{Name: name})
+}
+
 // SelfAssignProfile is the self-serve profile gate. platform_admin is F27-only.
 func (s *Service) SelfAssignProfile(ctx context.Context, userID, profile string) error {
 	switch profile {
@@ -231,6 +255,11 @@ func (s *Service) requireMember(ctx context.Context, tenantID, userID string) (s
 		return "", err
 	}
 	return role, nil
+}
+
+func (s *Service) RequireTenantOwner(ctx context.Context, tenantID, userID string) error {
+	_, err := s.requireOwner(ctx, tenantID, userID)
+	return err
 }
 
 func (s *Service) requireOwner(ctx context.Context, tenantID, userID string) (string, error) {

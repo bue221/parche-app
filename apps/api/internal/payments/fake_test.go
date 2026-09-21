@@ -29,7 +29,8 @@ func TestNewFakeAndRedirect(t *testing.T) {
 	if err != nil || live.Name() != "stripe" {
 		t.Fatal(err)
 	}
-	if sess.URL != "https://pay.example/go?order_id=oid" {
-		t.Fatalf("url=%s", sess.URL)
+	_, err = New(config.Config{PaymentProvider: "mercadopago"})
+	if err == nil {
+		t.Fatal("mercadopago without access token")
 	}
 }

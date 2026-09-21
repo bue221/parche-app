@@ -9,7 +9,7 @@ Un usuario puede ser asistente y DJ a la vez. El **promoter** es dueño de un **
 ## Quick path
 
 1. Tablas `tenants`, `user_profiles`, `tenant_members`.
-2. Register promoter crea tenant + membership `owner`.
+2. Register promoter crea tenant + membership `owner`. Un asistente puede volverse organizer después con `POST /v1/me/profiles/promoter` (nombre del colectivo + tenant).
 3. Endpoints para añadir perfil `artist` y para admin de plataforma asignar `platform_admin`.
 
 ## Perfiles
@@ -17,7 +17,7 @@ Un usuario puede ser asistente y DJ a la vez. El **promoter** es dueño de un **
 | profile | Cómo se obtiene |
 |---------|-----------------|
 | `attendee` | Default en todo register |
-| `promoter` | Register `profile=promoter` o promoción admin |
+| `promoter` | Register `profile=promoter`, `POST /v1/me/profiles/promoter`, o promoción admin |
 | `artist` | `POST /v1/me/profiles/artist` (crea fila artist en F12 o marca perfil) |
 | `platform_admin` | Solo otro admin o seed; nunca self-serve |
 
@@ -38,6 +38,10 @@ Un promoter `owner` de tenant crea eventos de ese tenant. Un user puede ser owne
 ### `POST /v1/me/profiles/artist`
 
 Access. 204. Idempotente. No crea el documento público del artista (F12 `POST /v1/artists`).
+
+### `POST /v1/me/profiles/promoter`
+
+Access. Body `{ "name": "Pez Alado" }`. 200 tenant + membership owner. Idempotente: si ya hay tenant, lo devuelve sin crear otro.
 
 ### `POST /v1/tenants`
 
@@ -78,6 +82,7 @@ Cubierto en [F27](F27-platform-admin.md). Aquí: middleware `RequireProfile("pla
 ## Checklist
 
 - [x] Promoter register deja tenant usable
+- [x] Attendee puede volverse organizer (`POST /v1/me/profiles/promoter`)
 - [x] Attendee no crea eventos
 - [x] Artist profile no da métricas
 - [x] N members de tenant

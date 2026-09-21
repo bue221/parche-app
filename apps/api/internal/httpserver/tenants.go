@@ -34,6 +34,24 @@ func (h authHandler) addArtist(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h authHandler) addPromoter(w http.ResponseWriter, r *http.Request) {
+	p, err := h.access.Authenticate(r)
+	if err != nil {
+		writeAccessError(w, r, err)
+		return
+	}
+	var req createTenantBody
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	t, err := h.svc.AddPromoterProfile(r.Context(), p.UserID, req.Name)
+	if err != nil {
+		writeAuthErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, t)
+}
+
 func (h authHandler) createTenant(w http.ResponseWriter, r *http.Request) {
 	p, err := h.access.Authenticate(r)
 	if err != nil {

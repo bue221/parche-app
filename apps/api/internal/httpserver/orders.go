@@ -29,16 +29,19 @@ func registerOrderRoutes(mux *http.ServeMux, routes Routes) {
 		access = RejectAccess{}
 	}
 	h := orderHandler{
-		svc:    routes.Catalog,
-		access: access,
-		pay:    routes.Payments,
-		secret: routes.WebhookSecret,
-		dev:    strings.EqualFold(strings.TrimSpace(routes.AppEnv), "dev"),
-		now:    func() time.Time { return time.Now().UTC() },
+		svc:      routes.Catalog,
+		access:   access,
+		pay:      routes.Payments,
+		secret:   routes.WebhookSecret,
+		mpSecret: routes.MPWebhook,
+		mpToken:  routes.MPAccessToken,
+		dev:      strings.EqualFold(strings.TrimSpace(routes.AppEnv), "dev"),
+		now:      func() time.Time { return time.Now().UTC() },
 	}
 	mux.HandleFunc("POST /v1/events/{id}/orders", h.createOrder)
 	mux.HandleFunc("GET /v1/orders/{id}", h.getOrder)
 	mux.HandleFunc("POST /v1/payments/webhook", h.webhook)
+	registerMercadoPagoRoutes(mux, routes)
 	if h.dev {
 		mux.HandleFunc("GET /v1/dev/pay/{id}", h.devPay)
 		mux.HandleFunc("POST /v1/dev/payments/simulate", h.simulate)
@@ -46,12 +49,14 @@ func registerOrderRoutes(mux *http.ServeMux, routes Routes) {
 }
 
 type orderHandler struct {
-	svc    *events.Service
-	access Access
-	pay    payments.Provider
-	secret string
-	dev    bool
-	now    func() time.Time
+	svc      *events.Service
+	access   Access
+	pay      payments.Provider
+	secret   string
+	mpSecret string
+	mpToken  string
+	dev      bool
+	now      func() time.Time
 }
 
 func (h orderHandler) createOrder(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +76,14 @@ func (h orderHandler) createOrder(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	out, err := h.svc.CreateOrder(r.Context(), p.UserID, r.PathValue("id"), key, req.Items)
 	if err != nil {
+		if errors.Is(err, payments.ErrNotConnected) {
+			apierr.Write(w, r, apierr.Conflict, "Mercado Pago no está configurado", nil)
+			return
+		}
+		if errors.Is(err, payments.ErrCheckout) {
+			apierr.Write(w, r, apierr.Conflict, "No pudimos abrir Mercado Pago. Intenta de nuevo.", nil)
+			return
+		}
 		writeEventErr(w, r, err)
 		return
 	}
@@ -93,6 +106,7 @@ func (h orderHandler) getOrder(w http.ResponseWriter, r *http.Request) {
 		writeEventErr(w, r, err)
 		return
 	}
+	view.CheckoutURL = absoluteUploadURL(r, view.CheckoutURL)
 	apierr.WriteJSON(w, http.StatusOK, view)
 }
 
@@ -109,6 +123,10 @@ func (h orderHandler) webhook(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	if h.now != nil {
 		now = h.now()
+	}
+	if payments.LooksLikeMercadoPago(r, raw) {
+		h.mpWebhook(w, r, raw, now)
+		return
 	}
 	if err := payments.Verify(h.secret, now, r.Header.Get(payments.HeaderSignature), raw); err != nil {
 		if errors.Is(err, payments.ErrReplay) {
@@ -128,6 +146,54 @@ func (h orderHandler) webhook(w http.ResponseWriter, r *http.Request) {
 		provider = h.pay.Name()
 	}
 	if err := h.svc.ApplyWebhook(r.Context(), ev, provider, payments.HashPayload(raw), payments.TruncatePayload(raw)); err != nil {
+		writeEventErr(w, r, err)
+		return
+	}
+	apierr.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h orderHandler) mpWebhook(w http.ResponseWriter, r *http.Request, raw []byte, now time.Time) {
+	secret := strings.TrimSpace(h.mpSecret)
+	if secret != "" {
+		if err := payments.VerifyMercadoPago(secret, r, raw, now); err != nil {
+			apierr.Write(w, r, apierr.Unauthorized, "", nil)
+			return
+		}
+	} else if !h.dev {
+		apierr.Write(w, r, apierr.Unauthorized, "", nil)
+		return
+	}
+	if payments.IgnoreMPTopic(payments.MPType(r, raw)) {
+		apierr.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		return
+	}
+	id, err := payments.PaymentID(r, raw)
+	if err != nil {
+		apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "data.id", Issue: "required"}})
+		return
+	}
+	mp, ok := h.pay.(payments.MercadoPago)
+	if !ok {
+		mp = payments.MercadoPago{PlatformToken: h.mpToken}
+	}
+	if strings.TrimSpace(mp.PlatformToken) == "" {
+		mp.PlatformToken = h.mpToken
+	}
+	pay, err := mp.Payment(r.Context(), id)
+	if err != nil {
+		apierr.Write(w, r, apierr.Internal, "", nil)
+		return
+	}
+	ev, err := payments.EventFromPayment(pay)
+	if err != nil {
+		apierr.Write(w, r, apierr.Validation, "", []apierr.Detail{{Field: "payment", Issue: "invalid"}})
+		return
+	}
+	if ev.OrderID == "" {
+		apierr.WriteJSON(w, http.StatusOK, map[string]string{"status": "ignored"})
+		return
+	}
+	if err := h.svc.ApplyWebhook(r.Context(), ev, "mercadopago", payments.HashPayload(raw), payments.TruncatePayload(raw)); err != nil {
 		writeEventErr(w, r, err)
 		return
 	}

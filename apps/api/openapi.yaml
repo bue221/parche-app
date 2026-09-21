@@ -397,10 +397,33 @@ paths:
       parameters:
         - name: X-Payment-Signature
           in: header
-          required: true
+          required: false
           schema:
             type: string
-          description: t=<unix>,v1=<hmac-sha256 hex> over "{unix}.{raw body}"
+          description: Fake/dev HMAC t=<unix>,v1=<hex> over "{unix}.{raw body}"
+        - name: x-signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Mercado Pago HMAC ts=<epoch>,v1=<hex> (official webhook validator)
+        - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: data.id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Mercado Pago payment id
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: payment (Checkout Pro)
       requestBody:
         required: true
         content:
@@ -418,6 +441,82 @@ paths:
           $ref: "#/components/responses/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /v1/tenants/{id}/mercadopago:
+    get:
+      summary: Mercado Pago connection status for a tenant (F16)
+      operationId: getTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: connected, oauth_enabled, platform_ready, payout_required, commission_percent, iva_percent. Never returns tokens.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      summary: Disconnect Mercado Pago OAuth for the tenant owner (F16)
+      operationId: disconnectTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Seller tokens removed. Idempotent if nothing was connected.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/tenants/{id}/mercadopago/connect:
+    post:
+      summary: Start Mercado Pago OAuth for the tenant owner (F16)
+      operationId: connectTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: authorization_url for the promoter
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/payments/mercadopago/oauth/callback:
+    get:
+      summary: OAuth redirect from Mercado Pago (F16)
+      operationId: mercadoPagoOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to APP_ORIGIN with mp=connected or error
   /v1/dev/payments/simulate:
     post:
       summary: Dev-only fake payment (APP_ENV=dev)
@@ -1539,6 +1638,33 @@ paths:
       responses:
         "204":
           description: Idempotent; does not create the public artist document (F12)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/profiles/promoter:
+    post:
+      summary: Become an organizer and create a tenant if missing (F06)
+      operationId: addPromoterProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+            example:
+              name: Pez Alado
+      responses:
+        "200":
+          description: Tenant plus owner membership. Idempotent if the caller already has a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -3424,7 +3550,7 @@ components:
                 minimum: 1
     CheckoutCreated:
       type: object
-      required: [order_id, status, checkout_url, expires_at]
+      required: [order_id, status, checkout_url, expires_at, amount_cents, commission_cents, iva_cents, fee_cents, charge_cents, currency]
       properties:
         order_id:
           type: string
@@ -3437,9 +3563,26 @@ components:
         expires_at:
           type: string
           format: date-time
+        amount_cents:
+          type: integer
+          description: Listed ticket subtotal in COP pesos. The promoter keeps this when OAuth is connected.
+        commission_cents:
+          type: integer
+          description: 10% of amount_cents.
+        iva_cents:
+          type: integer
+          description: 19% IVA on commission_cents.
+        fee_cents:
+          type: integer
+          description: commission_cents + iva_cents, charged to the buyer.
+        charge_cents:
+          type: integer
+          description: amount_cents + fee_cents. What Mercado Pago charges the buyer.
+        currency:
+          type: string
     OrderView:
       type: object
-      required: [id, event_id, status, amount_cents, currency, items, tickets]
+      required: [id, event_id, status, amount_cents, commission_cents, iva_cents, fee_cents, charge_cents, currency, items, tickets]
       properties:
         id:
           type: string
@@ -3451,6 +3594,14 @@ components:
           type: string
           enum: [pending, paid, failed, expired]
         amount_cents:
+          type: integer
+        commission_cents:
+          type: integer
+        iva_cents:
+          type: integer
+        fee_cents:
+          type: integer
+        charge_cents:
           type: integer
         currency:
           type: string

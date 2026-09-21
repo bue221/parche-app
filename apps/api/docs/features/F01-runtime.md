@@ -48,7 +48,10 @@ Decisión de broker: **NATS JetStream** por defecto (menos piezas, subjects `tic
 | `TICKET_SIGNING_KEY` | QR (F17) — **distinta** |
 | `OBJECT_STORE_DRIVER` | `minio` \| `fs` \| `s3` |
 | `OBJECT_STORE_*` | endpoint, bucket, keys, region |
-| `PAYMENT_WEBHOOK_SECRET` | F16 |
+| `PAYMENT_WEBHOOK_SECRET` | F16 fake HMAC |
+| `PAYMENT_PROVIDER` | `fake` (compose) o `mercadopago` |
+| `MP_ACCESS_TOKEN` / `MP_PUBLIC_KEY` / `MP_CLIENT_ID` | Checkout Pro (lo que muestra la tarjeta de credenciales) |
+| `MP_*` | Client Secret **obligatorio** para OAuth del organizer (no Auth0); webhook secret y URLs se derivan |
 | `SMTP_*` / `EMAIL_FROM` | F26 |
 | `CORS_ORIGINS` | lista web |
 | `LOG_LEVEL` | `info` |
