@@ -2,11 +2,7 @@ package objectstore
 
 import (
 	"context"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -33,15 +29,6 @@ type fsStore struct {
 	root   string
 	secret []byte
 	now    func() time.Time
-}
-
-type directTicket struct {
-	V   int    `json:"v"`
-	Op  string `json:"op"`
-	Key string `json:"key"`
-	CT  string `json:"ct,omitempty"`
-	Max int64  `json:"max,omitempty"`
-	Exp int64  `json:"exp"`
 }
 
 // NewFS stores objects under root (dev fallback when MinIO is down).
@@ -308,36 +295,9 @@ func (s *fsStore) resolve(key string) (string, error) {
 }
 
 func (s *fsStore) sign(t directTicket) (string, error) {
-	raw, err := json.Marshal(t)
-	if err != nil {
-		return "", err
-	}
-	mac := hmac.New(sha256.New, s.secret)
-	_, _ = mac.Write(raw)
-	return base64.RawURLEncoding.EncodeToString(raw) + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
+	return signDirectTicket(s.secret, t)
 }
 
 func (s *fsStore) parse(token string) (directTicket, error) {
-	payloadB64, sigB64, ok := strings.Cut(token, ".")
-	if !ok {
-		return directTicket{}, ErrPresignToken
-	}
-	raw, err := base64.RawURLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return directTicket{}, ErrPresignToken
-	}
-	sig, err := base64.RawURLEncoding.DecodeString(sigB64)
-	if err != nil {
-		return directTicket{}, ErrPresignToken
-	}
-	mac := hmac.New(sha256.New, s.secret)
-	_, _ = mac.Write(raw)
-	if !hmac.Equal(mac.Sum(nil), sig) {
-		return directTicket{}, ErrPresignToken
-	}
-	var t directTicket
-	if err := json.Unmarshal(raw, &t); err != nil {
-		return directTicket{}, ErrPresignToken
-	}
-	return t, nil
+	return parseDirectTicket(s.secret, token)
 }

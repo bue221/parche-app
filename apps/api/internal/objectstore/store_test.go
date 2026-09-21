@@ -165,6 +165,40 @@ func TestS3GetPublicURLUsesCDN(t *testing.T) {
 	}
 }
 
+func TestS3PutPresignInternalEndpointUsesDirect(t *testing.T) {
+	store := &s3Store{
+		endpoint: "minio:9000",
+		bucket:   "parche",
+		secret:   []byte("test-direct-secret-32-bytes!!!!!"),
+		now:      time.Now,
+	}
+	grant, err := store.PutPresign(context.Background(), "users/u/avatar/a.png", "image/png", 12, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grant.Method != "PUT" || grant.Headers["Content-Type"] != "image/png" {
+		t.Fatalf("grant=%+v", grant)
+	}
+	if !strings.HasPrefix(grant.URL, DirectPutPrefix) {
+		t.Fatalf("private minio must issue direct PUT, got %q", grant.URL)
+	}
+	if tokenFromDirectURL(t, grant.URL) == "" {
+		t.Fatal("missing token")
+	}
+}
+
+func TestClientReachableObjectHost(t *testing.T) {
+	if clientReachableObjectHost("minio:9000") {
+		t.Fatal("minio docker dns")
+	}
+	if clientReachableObjectHost("localhost:9000") {
+		t.Fatal("loopback")
+	}
+	if !clientReachableObjectHost("s3.us-east-1.amazonaws.com") {
+		t.Fatal("public s3")
+	}
+}
+
 func TestS3GetPublicURLLoopbackUsesMediaPath(t *testing.T) {
 	store := &s3Store{publicBase: "http://localhost:9000/parche"}
 	got := store.GetPublicURL("t/e/flyer/a.webp")

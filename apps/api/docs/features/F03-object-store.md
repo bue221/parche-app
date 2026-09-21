@@ -10,7 +10,7 @@ Flyers, avatares y audios no se guardan “en un folder de Go”. Todo pasa por 
 
 1. Interfaz `ObjectStore`: `PutPresign`, `GetPublicURL`, `GetPresign`, `Delete`, `Exists`.
 2. Drivers: `minio`, `fs` (`./data/media`), `s3`.
-3. `POST /v1/uploads` emite presign; el binario **no** recibe el archivo en el API (salvo fallback `fs` en tests).
+3. `POST /v1/uploads` emite presign. Si el bucket es público, el cliente hace PUT directo. Si el endpoint no es alcanzable (`minio:9000`, loopback), usa el mismo fallback `PUT /v1/uploads/direct` que el driver `fs`.
 4. Keys: `{tenant_id}/{event_id|user_id}/{kind}/{uuid}.{ext}`.
 
 ## Puerto
