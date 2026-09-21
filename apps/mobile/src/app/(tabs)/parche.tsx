@@ -6,6 +6,7 @@ import {
   CircleUser,
   ClipboardList,
   KeyRound,
+  Banknote,
   LogOut,
   ShieldCheck,
   UserRound,
@@ -33,14 +34,19 @@ import { useAuthSnapshot, usePrimaryProfile } from '@/data/session';
 import { useAuthSheet } from '@/data/auth-sheet-store';
 import { THEME_PREF_LABEL, useThemePref } from '@/data/theme-store';
 import type { Artist, Membership, ParcheEvent, User } from '@/data/types';
+import { useCompactLayout } from '@/hooks/use-compact-layout';
+import { useRequestCreateEvent } from '@/hooks/use-request-create-event';
 import { profileLabel, profileMascot, type PrimaryProfile } from '@/lib/profiles';
 
 const THEME_ACTION = <ThemeToggle className="border border-border bg-surface" />;
 
 export default function ParcheScreen() {
   const { isLoggedIn, user, memberships, isAdmin, isPromoter } = useAuthSnapshot();
+  const requestCreate = useRequestCreateEvent();
   const { primary, density } = usePrimaryProfile();
   const openAuth = useAuthSheet((s) => s.open);
+  const compact = useCompactLayout();
+  const themeAction = compact ? THEME_ACTION : undefined;
   const [activating, setActivating] = useState(false);
   const followingQuery = useQuery({
     queryKey: ['following', user?.id],
@@ -77,7 +83,7 @@ export default function ParcheScreen() {
 
   if (!isLoggedIn || !user) {
     return (
-      <Screen title="Parche" lead="Guarda boletas y sigue artistas." headerAction={THEME_ACTION}>
+      <Screen title="Parche" lead="Guarda boletas y sigue artistas." headerAction={themeAction}>
         <View className="mt-ds-24 max-w-xl gap-ds-16">
           <Surface elevated className="flex-row items-center gap-ds-16">
             <View className="size-16 items-center justify-center rounded-full bg-muted">
@@ -147,7 +153,7 @@ export default function ParcheScreen() {
     onTonight: tonight ? () => router.push(`/event/${tonight.id}/door` as Href) : undefined,
     onActivate: () => void activateArtist(),
     onComplete: () => router.push('/parche/completar-perfil' as Href),
-    onCreate: () => router.push('/event/create' as Href),
+    onCreate: () => void requestCreate(),
   });
 
   return (
@@ -155,7 +161,7 @@ export default function ParcheScreen() {
       eyebrow={profileMascot(primary).name}
       mark={<ProfileMascot profile={primary} size={32} />}
       title="Parche"
-      headerAction={THEME_ACTION}>
+      headerAction={themeAction}>
       <View className="mt-ds-24 max-w-xl gap-ds-16">
         <FadeSlideIn>
           <IdentityCard
@@ -222,6 +228,12 @@ export default function ParcheScreen() {
             divided={false}
           />
           <AppearanceRow icon={UserRound} />
+          <SettingsRow
+            icon={<MenuIcon icon={Banknote} />}
+            label={isPromoter ? 'Cobros Mercado Pago' : 'Organiza eventos'}
+            onPress={() => router.push('/parche/cobros' as Href)}
+            divided={false}
+          />
           {hasArtist && artist?.id ? (
             <SettingsRow
               icon={<MenuIcon icon={Users} />}
@@ -247,7 +259,7 @@ export default function ParcheScreen() {
               <SettingsRow
                 icon={<MenuIcon icon={CalendarPlus} />}
                 label="Crear evento"
-                onPress={() => router.push('/event/create' as Href)}
+                onPress={() => void requestCreate()}
                 divided={false}
               />
             ) : null}

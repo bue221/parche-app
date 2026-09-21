@@ -162,7 +162,9 @@ export type Order = {
   items: OrderItem[];
   status: OrderStatus;
   totalCents: number;
+  chargeCents?: number;
   createdAt: string;
+  checkoutUrl?: string;
 };
 
 export type Ticket = {

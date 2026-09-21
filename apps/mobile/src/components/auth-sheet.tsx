@@ -14,6 +14,7 @@ import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { debugLog } from '@/data/log';
 import { reconcileInterest } from '@/data/interest-sync';
+import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { useResolvedColorScheme, useTheme } from '@/hooks/use-theme';
 import { THEME_VARS } from '@/lib/theme';
 import { controlShadowStyle, controlTone, fieldChromeClassName } from '@/lib/control-chrome';
@@ -42,6 +43,7 @@ export function AuthSheet({
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = useResolvedColorScheme();
+  const compact = useCompactLayout();
   const tone = controlTone({ focused, error: Boolean(error) && step === 'identity' });
   const sheetTop = Platform.OS === 'ios' && !inline ? 8 : insets.top;
 
@@ -227,21 +229,25 @@ export function AuthSheet({
     </View>
   );
 
+  const closeRow = (
+    <View className="h-14 flex-row items-center justify-end px-ds-8">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar"
+        hitSlop={8}
+        onPress={close}
+        className="size-11 items-center justify-center active:opacity-70">
+        <X size={22} color={theme.text} strokeWidth={2} />
+      </Pressable>
+    </View>
+  );
+
   const body = (
     <View
       className={inline || Platform.OS === 'web' ? 'absolute inset-0 z-[1800] bg-surface' : 'flex-1 bg-surface'}
       style={THEME_VARS[scheme]}>
       <View className="flex-1" style={{ paddingTop: sheetTop, paddingBottom: Math.max(insets.bottom, 16) }}>
-        <View className="h-14 flex-row items-center justify-end px-ds-8">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
-            hitSlop={8}
-            onPress={close}
-            className="size-11 items-center justify-center active:opacity-70">
-            <X size={22} color={theme.text} strokeWidth={2} />
-          </Pressable>
-        </View>
+        {closeRow}
         {Platform.OS === 'web' ? (
           <ScrollView
             style={{ flex: 1 }}
@@ -267,6 +273,28 @@ export function AuthSheet({
 
   if (inline || Platform.OS === 'web') {
     if (!visible) return null;
+    if (Platform.OS === 'web' && !inline && !compact) {
+      return (
+        <View className="absolute inset-0 z-[1800] items-center justify-center px-ds-24" style={THEME_VARS[scheme]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            onPress={close}
+            className="absolute inset-0"
+            style={{ backgroundColor: 'rgba(7, 7, 12, 0.45)' }}
+          />
+          <View className="z-10 w-full max-w-[440px] overflow-hidden rounded-cards border border-border bg-surface shadow-card">
+            {closeRow}
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 8 }}
+              showsVerticalScrollIndicator={false}>
+              {form}
+            </ScrollView>
+          </View>
+        </View>
+      );
+    }
     return body;
   }
 

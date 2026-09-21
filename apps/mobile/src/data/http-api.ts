@@ -19,6 +19,7 @@ import {
 import { bytesAsBody } from '@/lib/image-asset';
 import { eventHasEnded } from '@/lib/format';
 import { mergeOrderItems } from '@/lib/order-items';
+import { rememberCheckout } from '@/lib/pending-checkout';
 import {
   getAccessExpiresAt,
   getRefreshToken,
@@ -98,6 +99,7 @@ function mapMe(raw: unknown): Me {
     profiles,
     platformAdmin,
     memberships,
+    tenantName: str(firstTenant.name) || undefined,
   };
   const previousId = useAuthStore.getState().me?.id;
   if (previousId && previousId !== me.id) {
@@ -125,7 +127,9 @@ async function hydrateEvent(id: string): Promise<EventWithExtras> {
   const detail = mapEventDetail(await apiFetch(`/v1/events/${id}`, { auth: Boolean(useAuthStore.getState().me) }));
   if (detail.ticketTypes.length === 0) {
     try {
-      const types = await apiFetch(`/v1/events/${id}/ticket-types`, { auth: true });
+      const types = await apiFetch(`/v1/events/${id}/ticket-types`, {
+        auth: Boolean(useAuthStore.getState().me),
+      });
       detail.ticketTypes = itemsOf(types).map(mapTicketType);
     } catch {
       /* public detail may omit types until signed in */
@@ -174,7 +178,8 @@ async function ensureTenant(): Promise<string> {
   if (id) {
     return id;
   }
-  const created = asRecord(await apiFetch('/v1/tenants', { method: 'POST', auth: true, body: JSON.stringify({ name: 'Parche' }) }));
+  const name = useAuthStore.getState().me?.displayName?.trim() || 'Colectivo';
+  const created = asRecord(await apiFetch('/v1/tenants', { method: 'POST', auth: true, body: JSON.stringify({ name }) }));
   const tenantId = str(created.id);
   useAuthStore.getState().setTenantId(tenantId);
   return tenantId;
@@ -264,16 +269,20 @@ function mapOrder(raw: unknown): Order & { tickets: Ticket[] } {
   const id = str(o.id) || str(o.order_id);
   const eventId = str(o.event_id);
   const tickets = mapOrderTickets(raw, id, eventId);
-  return {
+  const mapped = {
     id,
     eventId,
     userId: useAuthStore.getState().me?.id ?? '',
     items: mapOrderItems(raw, tickets),
     status: (str(o.status) || 'pending') as Order['status'],
     totalCents: num(o.amount_cents),
+    chargeCents: num(o.charge_cents) || undefined,
     createdAt: str(o.created_at) || new Date().toISOString(),
+    checkoutUrl: str(o.checkout_url) || undefined,
     tickets,
   };
+  rememberCheckout(mapped.id, mapped.checkoutUrl);
+  return mapped;
 }
 
 function confirmedAssetUrl(confirmed: Record<string, unknown>, fallbackKey: string): string {
@@ -399,6 +408,14 @@ export const httpApi: ParcheApi = {
     },
     async activateArtist() {
       await apiFetch('/v1/me/profiles/artist', { method: 'POST', auth: true, body: JSON.stringify({}) });
+      return this.me();
+    },
+    async activateOrganizer(name: string) {
+      await apiFetch('/v1/me/profiles/promoter', {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({ name: name.trim() }),
+      });
       return this.me();
     },
     async requestPasswordReset(email: string) {
@@ -737,15 +754,19 @@ export const httpApi: ParcheApi = {
           }),
         })
       );
-      return {
+      const order = {
         id: str(created.order_id) || str(created.id),
         eventId,
         userId: useAuthStore.getState().me?.id ?? '',
         items: lines,
         status: (str(created.status) || 'pending') as Order['status'],
         totalCents: num(created.amount_cents),
+        chargeCents: num(created.charge_cents) || undefined,
         createdAt: new Date().toISOString(),
+        checkoutUrl: str(created.checkout_url) || undefined,
       };
+      rememberCheckout(order.id, order.checkoutUrl);
+      return order;
     },
     async getOrder(id) {
       return mapOrder(await apiFetch(`/v1/orders/${id}`, { auth: true }));
@@ -1089,6 +1110,38 @@ export const httpApi: ParcheApi = {
       } catch {
         return [];
       }
+    },
+  },
+
+  payments: {
+    async status() {
+      const tenantId = await ensureTenant();
+      const body = asRecord(await apiFetch(`/v1/tenants/${tenantId}/mercadopago`, { auth: true }));
+      return {
+        connected: Boolean(body.connected),
+        mpUserId: str(body.mp_user_id) || undefined,
+        oauthEnabled: Boolean(body.oauth_enabled),
+        oauthNeeds: str(body.oauth_needs) || undefined,
+        platformReady: Boolean(body.platform_ready),
+        payoutRequired: Boolean(body.payout_required),
+        commissionPercent: num(body.commission_percent) || 10,
+        ivaPercent: num(body.iva_percent) || 19,
+      };
+    },
+    async connect(): Promise<string> {
+      const tenantId = await ensureTenant();
+      const body = asRecord(
+        await apiFetch(`/v1/tenants/${tenantId}/mercadopago/connect`, { method: 'POST', auth: true })
+      );
+      const url = str(body.authorization_url);
+      if (!url) {
+        throw new ApiError('NOT_FOUND', 'Mercado Pago OAuth no está configurado. Falta MP_CLIENT_SECRET en el API (Editar datos de la aplicación). No es Auth0.');
+      }
+      return url;
+    },
+    async disconnect(): Promise<void> {
+      const tenantId = await ensureTenant();
+      await apiFetch(`/v1/tenants/${tenantId}/mercadopago`, { method: 'DELETE', auth: true });
     },
   },
 

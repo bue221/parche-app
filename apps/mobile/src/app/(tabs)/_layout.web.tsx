@@ -1,6 +1,6 @@
 import { type Href } from 'expo-router';
 import { Tabs, TabList, TabTrigger, TabSlot, TabTriggerSlotProps, TabListProps } from 'expo-router/ui';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { BrandLockup } from '@/components/brand-lockup';
 import { TabBar, TabBarItem, TAB_GLYPHS, type TabGlyph } from '@/components/tab-bar';
@@ -14,7 +14,7 @@ export default function TabsLayout() {
   const tabs = useTabVisibility();
 
   return (
-    <Tabs>
+    <Tabs style={{ flex: 1, flexDirection: 'column' }}>
       <TabList asChild>
         <WebNav>
           <TabTrigger name="agenda" href="/" asChild>
@@ -38,7 +38,7 @@ export default function TabsLayout() {
           ) : null}
         </WebNav>
       </TabList>
-      <TabSlot style={{ flex: 1, height: '100%' }} />
+      <TabSlot style={{ flex: 1, minHeight: 0 }} />
     </Tabs>
   );
 }
@@ -69,14 +69,20 @@ function NavChip({
       accessibilityRole="tab"
       accessibilityState={{ selected: Boolean(isFocused) }}
       className="relative outline-none">
-      <Text
-        variant="caption"
+      <View
         className={cn(
-          'rounded-tags px-ds-16 py-ds-8 font-normal normal-case tracking-normal',
-          isFocused ? 'bg-aurora text-pitch-black' : 'text-muted-foreground'
+          'rounded-tags px-ds-16 py-ds-8',
+          isFocused ? 'bg-aurora' : Platform.select({ web: 'hover:bg-muted' })
         )}>
-        {children}
-      </Text>
+        <Text
+          variant="caption"
+          className={cn(
+            'font-normal normal-case tracking-normal',
+            isFocused ? 'text-pitch-black' : 'text-muted-foreground'
+          )}>
+          {children}
+        </Text>
+      </View>
       {badge > 0 ? <View className="absolute right-1 top-1 size-2 rounded-full bg-danger" /> : null}
     </Pressable>
   );
@@ -103,9 +109,9 @@ function WebNav({ children, ...props }: TabListProps) {
   }
 
   return (
-    <View className="absolute top-0 z-50 w-full border-b border-border bg-background" {...props}>
-      <View className="mx-auto w-full flex-row items-center gap-ds-8 px-ds-40 py-ds-12">
-        <View style={{ marginRight: 'auto' }}>
+    <View className="z-50 w-full shrink-0 border-b border-border bg-background" {...props}>
+      <View className="w-full flex-row items-center gap-ds-12 px-ds-40 py-ds-12">
+        <View className="shrink-0">
           <BrandLockup size={32} profile={profile} />
         </View>
         <View className="min-w-0 flex-1 flex-row items-center justify-end gap-ds-4">

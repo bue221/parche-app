@@ -50,3 +50,6 @@ example
 
 # Harrness
 .atl
+
+# Mercado Pago wizard local state
+.mp-integrate-progress.md

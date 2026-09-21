@@ -21,7 +21,7 @@ Estado pendiente: spinner + “Confirmando el pago” (sin verde `confirm` aún)
 
 ## Flujo
 
-Poll con backoff corto. Máximo razonable; luego “Sigue pendiente — revisa Tiquetes”. Si más tarde está paid, wallet + impresión pendiente.
+Poll con backoff corto (~90 s). Máximo razonable; luego “Sigue pendiente — revisa Tiquetes”. Si más tarde está paid, wallet + impresión pendiente.
 
 Usuario mata la app a mitad: al reabrir Tiquetes, si hay `valid` sin “print seen”, se lanza 023.
 

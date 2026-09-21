@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { AuthSheet } from '@/components/auth-sheet';
 import { EndedEventNotice } from '@/components/ended-event-notice';
+import { FeeBreakdown } from '@/components/fee-breakdown';
 import { LoadError, Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
 import { Screen } from '@/components/screen';
@@ -15,8 +16,9 @@ import { api } from '@/data/client';
 import { userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
 import { useAuthSnapshot } from '@/data/session';
-import { formatMoney, eventHasEnded } from '@/lib/format';
+import { formatListingDate, formatMoney, eventHasEnded, eventTimeLabel, eventVenueParts } from '@/lib/format';
 import { mergeOrderItems, orderItemsLabel, orderItemsTotalCents } from '@/lib/order-items';
+import { splitParcheFee } from '@/lib/parche-fee';
 import type { EventWithExtras, OrderItem, TicketType } from '@/data/types';
 
 function StageQty({
@@ -89,6 +91,7 @@ export default function CheckoutScreen() {
     [qtyByType]
   );
   const totalCents = event ? orderItemsTotalCents(items, event.ticketTypes) : 0;
+  const split = splitParcheFee(totalCents);
   const summary = event ? orderItemsLabel(items, event.ticketTypes) : '';
   const currency = event?.ticketTypes.find((type) => type.id === items[0]?.ticketTypeId)?.currency ?? event?.ticketTypes[0]?.currency;
 
@@ -118,7 +121,7 @@ export default function CheckoutScreen() {
   if (!event) {
     return (
       <Screen back>
-        <Skeleton className="aspect-[16/10] w-full" />
+        <Skeleton className="h-20 w-full" />
         <Skeleton className="mt-ds-16 h-8 w-40" />
         <Skeleton className="mt-ds-16 h-24 w-full" />
       </Screen>
@@ -127,20 +130,31 @@ export default function CheckoutScreen() {
 
   const ended = eventHasEnded(event);
   const canPay = !ended && !busy && items.length > 0;
+  const { venue } = eventVenueParts(event.venueName, event.addressText);
+  const when = `${formatListingDate(event.startsAt)} · ${eventTimeLabel(event.startsAt, event.endsAt)}`;
 
   return (
     <View className="flex-1">
       <Screen
         back
-        title="Boleta"
-        lead={event.name}
+        title="Tu boleta"
+        lead="El total incluye comisión Parche (10%) e IVA (19%) sobre esa comisión."
         footer={
           <StickyCta>
             <View className="gap-ds-8">
               {ended || items.length === 0 ? null : (
-                <View className="gap-ds-4">
-                  {summary ? <Text variant="muted">{summary}</Text> : null}
-                  <Text variant="muted">Total {formatMoney(totalCents, currency)}</Text>
+                <View className="flex-row items-end justify-between gap-ds-12">
+                  <View className="min-w-0 flex-1">
+                    {summary ? (
+                      <Text variant="muted" numberOfLines={1}>
+                        {summary}
+                      </Text>
+                    ) : null}
+                    <Text variant="caption" className="uppercase text-muted-foreground">
+                      Total a pagar
+                    </Text>
+                  </View>
+                  <Text variant="headingSm">{formatMoney(split.charge, currency)}</Text>
                 </View>
               )}
               {error ? <Text>{error}</Text> : null}
@@ -155,7 +169,15 @@ export default function CheckoutScreen() {
                   }
                   createOrder(items);
                 }}>
-                <Text>{ended ? 'Finalizado' : busy ? 'Reservando…' : 'Ir a pagar'}</Text>
+                <Text>
+                  {ended
+                    ? 'Finalizado'
+                    : busy
+                      ? 'Reservando…'
+                      : items.length === 0
+                        ? 'Elige boletas'
+                        : `Pagar ${formatMoney(split.charge, currency)}`}
+                </Text>
               </Button>
             </View>
           </StickyCta>
@@ -165,31 +187,40 @@ export default function CheckoutScreen() {
             <EndedEventNotice />
           </View>
         ) : null}
-        {event.flyerUrl ? (
-          <View className="mt-ds-16 overflow-hidden rounded-images">
-            <FlyerImage uri={event.flyerUrl} className="w-full" aspectRatio={16 / 10} />
+        <Surface elevated className="mt-ds-16">
+          <View className="flex-row items-center gap-ds-12">
+            {event.flyerUrl ? (
+              <View className="overflow-hidden rounded-images">
+                <FlyerImage uri={event.flyerUrl} className="size-16" aspectRatio={1} />
+              </View>
+            ) : null}
+            <View className="min-w-0 flex-1 gap-ds-4">
+              <Text className="font-bold" numberOfLines={2}>
+                {event.name}
+              </Text>
+              <Text variant="muted" numberOfLines={1}>
+                {venue} · {when}
+              </Text>
+            </View>
           </View>
-        ) : null}
-        <View className="mt-ds-16 gap-ds-8">
-          <Text variant="caption" className="uppercase">
-            Etapas
-          </Text>
-          <Text variant="muted">Mismo evento, un pago. Elige cuántas boletas de cada etapa.</Text>
+        </Surface>
+        <View className="mt-ds-24 gap-ds-12">
+          <Text variant="subheading">Elige etapa</Text>
+          <Text variant="muted">Cuántas boletas de cada una. Se pagan juntas.</Text>
           {event.ticketTypes.map((type) => {
             const onSale = !ended && api.helpers.typeOnSale(type);
             const left = api.helpers.available(type);
             const qty = qtyByType[type.id] ?? 0;
+            const selected = qty > 0 && onSale;
             return (
               <Surface
                 key={type.id}
                 elevated
                 muted={!onSale}
-                className={qty > 0 && onSale ? 'border-foreground' : undefined}>
+                className={selected ? 'border-aurora' : undefined}>
                 <View className="flex-row items-center gap-ds-12">
                   <View className="min-w-0 flex-1 gap-ds-4">
-                    <Text>
-                      {type.name} · {formatMoney(type.priceCents, type.currency)}
-                    </Text>
+                    <Text className="font-bold">{type.name}</Text>
                     <Text variant="muted">
                       {ended || (!onSale && left > 0)
                         ? 'No disponible'
@@ -198,6 +229,7 @@ export default function CheckoutScreen() {
                           : `${left} disponibles`}
                     </Text>
                   </View>
+                  <Text variant="subheading">{formatMoney(type.priceCents, type.currency)}</Text>
                   {ended ? null : (
                     <StageQty qty={qty} max={left} disabled={!onSale} onChange={(next) => setQty(type, next)} />
                   )}
@@ -206,6 +238,13 @@ export default function CheckoutScreen() {
             );
           })}
         </View>
+        {ended || items.length === 0 ? null : (
+          <Surface elevated className="mt-ds-24 gap-ds-12">
+            <Text variant="subheading">Qué vas a pagar</Text>
+            <Text variant="muted">Precio de las boletas más 10% de Parche e IVA 19% sobre esa comisión.</Text>
+            <FeeBreakdown split={split} currency={currency} />
+          </Surface>
+        )}
       </Screen>
       <AuthSheet
         visible={authOpen}

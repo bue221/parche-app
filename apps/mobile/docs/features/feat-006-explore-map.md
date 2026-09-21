@@ -22,7 +22,7 @@ El mapa muestra pines de eventos publicados. Teselas OSM Humanitarian (HOT) + Le
 |-------|-------|
 | Mapa | Leaflet en WebView + teselas OSM Humanitarian (sin grayscale, saturadas). Full-bleed, `rounded-[24px]` alineado al sheet. Cluster con recuento; tap = zoom. Cero SDK Google/Mapbox de producto |
 | Pines | Pill blanca con fecha (`Hoy` / `18 sep`) y punto de género (neon / volt / amber). Seleccionado = fill aurora |
-| Lista/mapa | SearchBar + chips + botón filtros **fijos** (no scrollan). Chips full-bleed hasta el borde. Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con catalog cards en **2 columnas**), expandido. FAB "Lista" para volver a modo lista. Wide web: split view permanente (lista + mapa lado a lado); el hero de la lista también queda pinneado. |
+| Lista/mapa | SearchBar + chips + botón filtros **fijos** (no scrollan). Chips full-bleed hasta el borde. Sheet de 3 posiciones: colapsado (asa + recuento), peek (~50% con catalog cards en **2 columnas**), expandido. FAB "Lista" para volver a modo lista. Wide web: el split **no es permanente** — FAB “Mostrar mapa” abre catálogo + mapa (~40%); “Mostrar lista” vuelve al grid. Pin del mapa abre preview con flyer + **Ver boletas**. |
 | Ubicación usuario | Opcional ([FEAT-036](feat-036-device-permissions.md)); no bloquea pines |
 
 ## Flujo
@@ -49,6 +49,7 @@ Rutas/navegación turn-by-turn. Geocoding de búsqueda de direcciones (excepto N
 - [ ] Pin abre el evento correcto.
 - [ ] Evento sin coords no se publica (regla de backend); la app no inventa coords.
 - [ ] FAB toggle sincroniza estado con lista.
+- [ ] En desktop el mapa solo aparece tras “Mostrar mapa”.
 - [ ] Filtros compartidos entre lista y mapa.
 
 ## Relacionadas

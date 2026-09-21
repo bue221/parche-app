@@ -18,6 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
 import { useAuthSnapshot, usePrimaryProfile } from '@/data/session';
+import { useRequestCreateEvent } from '@/hooks/use-request-create-event';
 import type { EventStatus, EventWithExtras, Membership, ParcheEvent } from '@/data/types';
 import { eventHasEnded, eventIsThisWeek, statusLabel } from '@/lib/format';
 import { membershipRoleLabel } from '@/lib/profiles';
@@ -46,6 +47,7 @@ const BUCKETS: {
 
 export default function OperateHubScreen() {
   const { user, memberships, isPromoter, isAdmin } = useAuthSnapshot();
+  const requestCreate = useRequestCreateEvent();
   const { density } = usePrimaryProfile();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<OperateFilter>('all');
@@ -85,7 +87,7 @@ export default function OperateHubScreen() {
   const lead =
     density === 'door' ? 'La próxima puerta.' : density === 'metrics' ? 'Números de tus eventos.' : 'Tus eventos.';
 
-  const create = () => router.push('/event/create' as Href);
+  const create = () => void requestCreate();
   const hasEvents = memberships.length > 0;
   const searching = Boolean(query.trim());
 

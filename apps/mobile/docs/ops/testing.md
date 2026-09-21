@@ -33,11 +33,17 @@ src/lib/__tests__/ticket-label-test.ts
 | Módulo | Qué se protege |
 |--------|----------------|
 | `lib/check-in` | Que `confirm` sea exclusivo de `approved` y que `duplicate` no se confunda con un rechazo |
-| `lib/order-items` | Mezcla de etapas en una sola orden, cantidades inválidas, totales |
+| `lib/parche-fee` | Comisión 10% + IVA 19% sobre la comisión, redondeo a peso |
 | `lib/ticket-label` | Agrupación del wallet, conteos, código impreso del tiquete |
 | `lib/phone` | Parseo E.164, prefijos compartidos (+1), longitudes por país |
 | `lib/password` | Reglas de contraseña, incluido el conteo por code point |
+| `lib/ticket-offer` | Precio piso, cupo restante, copy del CTA Comprar boletas |
 | `lib/format` | Fechas ancladas a Bogotá, countdowns, rangos de filtro |
+| `lib/explore-rails` | Chips de fecha, rieles de género, y qué bloque muestra Explorar en phone vs desktop catalog |
+| `lib/explore-dates` | Grilla del calendario Explorar, label del rango, y `from`/`to` de un día local |
+| `lib/rail-layout` | Ancho de cards en rieles: 2+peek en teléfono, fila llena en desktop |
+| `lib/event-detail-layout` | Tope de la hoja blanca sobre el flyer fijo: docks bajo el chrome, nunca por encima |
+| `lib/map-sheet-layout` | Índice de fila para FlatList de 2 columnas en el sheet del mapa |
 | `lib/favorite-collections` | Agrupación de guardados por ciudad y año |
 | `data/env` | Reescritura de URLs de media y subida: qué firma sobrevive y qué nunca pasa por el proxy de lectura |
 | `data/errors` | Mensajes en español y que no se filtren tokens |

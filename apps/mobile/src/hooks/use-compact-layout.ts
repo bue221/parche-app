@@ -1,31 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-const QUERY = '(max-width: 767px)';
+const COMPACT_QUERY = '(max-width: 767px)';
+const WIDE_QUERY = '(min-width: 900px)';
 
-function readCompact() {
-  if (Platform.OS !== 'web') {
-    return true;
+function readMatch(query: string, fallback: boolean) {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return fallback;
   }
-  if (typeof window === 'undefined') {
-    return true;
-  }
-  return window.matchMedia(QUERY).matches;
+  return window.matchMedia(query).matches;
 }
 
-export function useCompactLayout() {
-  const [compact, setCompact] = useState(readCompact);
+function useMatchMedia(query: string, fallback: boolean) {
+  const [matches, setMatches] = useState(() => readMatch(query, fallback));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') {
       return;
     }
-    const mq = window.matchMedia(QUERY);
-    const apply = () => setCompact(mq.matches);
+    const mq = window.matchMedia(query);
+    const apply = () => setMatches(mq.matches);
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
-  }, []);
+  }, [query]);
 
-  return compact;
+  return matches;
+}
+
+export function useCompactLayout() {
+  return useMatchMedia(COMPACT_QUERY, true);
+}
+
+/** List + map split (desktop web ≥900px). Phone and tablet web stay on the FAB toggle. */
+export function useWideLayout() {
+  const wide = useMatchMedia(WIDE_QUERY, false);
+  return Platform.OS === 'web' && wide;
 }

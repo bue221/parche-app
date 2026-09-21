@@ -20,7 +20,13 @@ function routeFromUrl(url: string): Href | null {
     return `/invites/${rest[0]}` as Href;
   }
   if ((head === 'orders' || head === 'return') && rest[0]) {
+    if (rest[1] === 'pay') {
+      return `/orders/${rest[0]}/pay` as Href;
+    }
     return `/orders/${rest[0]}` as Href;
+  }
+  if (head === 'parche' && rest[0] === 'cobros') {
+    return '/parche/cobros' as Href;
   }
   if (head === 'tickets' && rest[0] === 'print') {
     return '/tickets/print' as Href;
@@ -43,7 +49,10 @@ export function DeepLinkListener() {
         debugLog('deeplink', 'unknown url');
         return;
       }
-      const needsAuth = String(dest).includes('/invites/') || String(dest).includes('/orders/');
+      const needsAuth =
+        String(dest).includes('/invites/') ||
+        String(dest).includes('/orders/') ||
+        String(dest).includes('/parche/cobros');
       if (needsAuth && !isLoggedIn) {
         setPendingPath(String(dest));
         router.push('/auth/login' as Href);

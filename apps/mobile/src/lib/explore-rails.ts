@@ -65,3 +65,18 @@ export function genreRails(
   }
   return ordered;
 }
+
+/** Phone keeps discovery rails. Desktop web is a filling catalog (map is a toggle). */
+export function exploreShowsGenreRails(wide: boolean, genreFilter?: string) {
+  return !wide && !genreFilter;
+}
+
+/** Empty or loading tonight stays on phone. Desktop catalog has no rails. */
+export function exploreShowsTonightRail(opts: { count: number; loading: boolean; wide: boolean }) {
+  if (opts.wide) return false;
+  return true;
+}
+
+export function exploreShowsForYouRail(wide: boolean) {
+  return !wide;
+}

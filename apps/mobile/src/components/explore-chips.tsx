@@ -1,19 +1,7 @@
-import {
-  Calendar,
-  CalendarDays,
-  Cloud,
-  Disc,
-  Disc3,
-  Factory,
-  LayoutGrid,
-  Mic2,
-  Music2,
-  Sun,
-  Waves,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { Calendar, CalendarDays, LayoutGrid, Sun, type LucideIcon } from 'lucide-react-native';
 
 import { Chip, ChipRow } from '@/components/chip-row';
+import { GENRE_ICONS } from '@/components/explore-hero';
 import { FadeSlideIn } from '@/components/motion';
 import { useFilters, type FilterScope } from '@/data/filters';
 import { activeDateChip, DATE_CHIPS, datePreset } from '@/lib/explore-rails';
@@ -23,16 +11,6 @@ const DATE_ICONS: Record<(typeof DATE_CHIPS)[number]['id'], LucideIcon> = {
   hoy: Sun,
   finde: Calendar,
   mes: CalendarDays,
-};
-
-const GENRE_ICONS: Record<(typeof GENRE_CHIPS)[number], LucideIcon> = {
-  techno: Disc3,
-  industrial: Factory,
-  house: Music2,
-  trance: Waves,
-  ambient: Cloud,
-  club: Disc,
-  concierto: Mic2,
 };
 
 export function ExploreChips({ scope }: { scope: FilterScope }) {
@@ -79,4 +57,3 @@ export function ExploreChips({ scope }: { scope: FilterScope }) {
     </ChipRow>
   );
 }
-

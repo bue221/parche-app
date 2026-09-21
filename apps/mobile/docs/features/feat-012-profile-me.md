@@ -29,7 +29,7 @@ El cuerpo logueado no es un listado plano: tarjeta de identidad, dos atajos y un
 | Atajo 1 | Cambia con el primario: Tiquetes → `/wallet` (tab Boletas); Tu vitrina → editar ficha; Tus eventos → Operar |
 | Atajo 2 | Siguiendo → `/parche/siguiendo` |
 | CTA | Una sola: Esta noche (puerta) > activar artista > primer evento > completar perfil |
-| Cuenta | Editar perfil (`/parche/editar`), restablecer contraseña (`/parche/contrasena`), apariencia (Sistema / Claro / Oscuro), ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
+| Cuenta | Editar perfil (`/parche/editar`), restablecer contraseña (`/parche/contrasena`), apariencia (Sistema / Claro / Oscuro), **Organiza eventos** / cobros Mercado Pago (`/parche/cobros`: activar organizer + colectivo, crear o conectar MP, comisión 10% + IVA 19% sobre la comisión), ver perfil público si hay ficha, Operar / crear / cola, cerrar sesión |
 
 | Primario | Mascota | Atajo 1 |
 |----------|---------|---------|

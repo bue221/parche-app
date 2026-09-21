@@ -17,7 +17,7 @@ El asistente recorta la agenda por fecha, subgénero, DJ y texto. El mapa puede 
 
 ## Pantallas
 
-SearchBar + chips en Explorar y Mapa, **estado independiente** (scope `agenda` vs `map`). En lista, mapa y split wide el SearchBar y los chips quedan **fijos** (no scrollan con el contenido). Chips full-bleed hasta el borde de la pantalla en ambas. Pantalla compacta de filtros con CTA fijo. Sin color de acento. Bbox: al soltar el mapa en Mapa (debounce).
+SearchBar + chips en Explorar y Mapa, **estado independiente** (scope `agenda` vs `map`). En lista, mapa y split wide el hero (SearchBar o cápsula Buscar/Fechas) y los chips quedan **fijos** (no scrollan con el contenido). Chips full-bleed hasta el borde de la pantalla en ambas. Pantalla compacta de filtros con CTA fijo (phone). Desktop aplica `q` y fechas en la cápsula. Sin color de acento. Bbox: al soltar el mapa en Mapa (debounce).
 
 ## Flujo
 

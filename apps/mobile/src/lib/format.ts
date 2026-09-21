@@ -50,7 +50,7 @@ export function formatCardDayShort(iso: string): string {
   return `${day} ${month}`;
 }
 
-/** Catalog meta under the flyer: "17 sept". */
+/** Catalog meta under the flyer: "17 de sept". */
 export function formatListingDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
@@ -58,7 +58,15 @@ export function formatListingDate(iso: string): string {
     date.toLocaleDateString('es-CO', { month: 'short', timeZone: BOGOTA_TZ })
   ).toLowerCase();
   const day = date.toLocaleDateString('es-CO', { day: 'numeric', timeZone: BOGOTA_TZ });
-  return `${day} ${month}`;
+  return `${day} de ${month}`;
+}
+
+/** Listing place line: "Video Club, Bogotá". */
+export function listingPlaceLine(venueName?: string, addressText?: string): string {
+  const { venue, city } = eventVenueParts(venueName, addressText);
+  if (!city || venue.toLowerCase() === city.toLowerCase()) return venue;
+  if (venue.toLowerCase().includes(city.toLowerCase())) return venue;
+  return `${venue}, ${city}`;
 }
 
 const BOGOTA_HINT =

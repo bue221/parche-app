@@ -1,5 +1,5 @@
-import { Children, type ReactNode } from 'react';
 import { Heart } from 'lucide-react-native';
+import { Children, type ReactNode } from 'react';
 import { Platform, Pressable, View, type ViewStyle } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
@@ -11,19 +11,19 @@ import { useAuthSnapshot } from '@/data/session';
 import type { ParcheEvent } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cardShadowStyle } from '@/lib/card-shadow';
-import { eventTimeLabel, eventVenueParts, formatListingDate, formatWhen } from '@/lib/format';
+import { eventTimeLabel, eventVenueParts, formatListingDate, formatWhen, listingPlaceLine } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const PAPER_WHITE = '#F5F5F8';
+const PITCH_BLACK = '#0B0B12';
 
-export const LISTING_CARD_MIN_PX = 168;
-export const LISTING_CARD_MAX_PX = 220;
+export const LISTING_CARD_MIN_PX = 260;
 
 const desktopListingGridStyle = {
   display: 'grid',
-  gridTemplateColumns: `repeat(auto-fill, minmax(${LISTING_CARD_MIN_PX}px, ${LISTING_CARD_MAX_PX}px))`,
-  gap: 24,
-  justifyContent: 'start',
+  gridTemplateColumns: `repeat(auto-fill, minmax(${LISTING_CARD_MIN_PX}px, 1fr))`,
+  columnGap: 16,
+  rowGap: 24,
 } as object;
 
 const badgeShadow: ViewStyle =
@@ -70,6 +70,7 @@ export function EventCard({
 }) {
   const { isLoggedIn } = useAuthSnapshot();
   const saved = useInterestStore((s) => s.eventIds.includes(event.id));
+  const compact = useCompactLayout();
 
   if (layout === 'row') {
     return (
@@ -101,6 +102,9 @@ export function EventCard({
   const { venue } = eventVenueParts(event.venueName, event.addressText);
   const timeLabel = eventTimeLabel(event.startsAt, event.endsAt, caption);
   const dateLabel = formatListingDate(event.startsAt);
+  const place = listingPlaceLine(event.venueName, event.addressText);
+  const genre = event.genre?.trim();
+  const catalogMeta = Platform.OS === 'web' && !compact;
   const meta = caption?.trim()
     ? `${venue} · ${caption.trim()}`
     : `${venue} · ${dateLabel} · ${timeLabel}`;
@@ -110,11 +114,11 @@ export function EventCard({
   return (
     <View className="relative w-full">
       <PressScale onPress={onPress} className="w-full">
-        <View className="w-full gap-ds-8">
+        <View className="w-full gap-ds-12">
           <View
             className={cn(
-              'relative w-full overflow-hidden rounded-images bg-muted',
-              selected ? 'border border-aurora' : undefined
+              'relative w-full overflow-hidden rounded-2xl bg-muted',
+              selected ? 'border-2 border-aurora' : undefined
             )}
             style={cardShadowStyle}>
             <PosterThumb event={event} className={photoClass} />
@@ -132,14 +136,33 @@ export function EventCard({
               </View>
             ) : null}
           </View>
-          <View className="gap-ds-4">
-            <Text className="font-bold" numberOfLines={2}>
-              {event.name}
-            </Text>
-            <Text variant="muted" numberOfLines={2}>
-              {meta}
-            </Text>
-          </View>
+          {catalogMeta ? (
+            <View className="gap-ds-4 px-0.5">
+              <View className="flex-row items-start justify-between gap-ds-8">
+                <Text variant="bodySm" className="min-w-0 flex-1 font-bold" numberOfLines={1}>
+                  {event.name}
+                </Text>
+                {genre ? (
+                  <Text variant="caption" className="shrink-0 text-muted-foreground" numberOfLines={1}>
+                    {genre}
+                  </Text>
+                ) : null}
+              </View>
+              <Text variant="muted" numberOfLines={1}>
+                {place}
+              </Text>
+              <Text variant="muted">{caption?.trim() || dateLabel}</Text>
+            </View>
+          ) : (
+            <View className="gap-ds-4">
+              <Text className="font-bold" numberOfLines={2}>
+                {event.name}
+              </Text>
+              <Text variant="muted" numberOfLines={2}>
+                {meta}
+              </Text>
+            </View>
+          )}
         </View>
       </PressScale>
       {saveable ? (
@@ -148,14 +171,25 @@ export function EventCard({
           accessibilityLabel={saved ? 'Quitar de guardados' : 'Guardar evento'}
           hitSlop={4}
           onPress={() => void toggleSave(event.id, isLoggedIn)}
-          className="absolute right-ds-4 top-ds-4 z-10 size-11 items-center justify-center">
-          <Heart
-            size={22}
-            color={PAPER_WHITE}
-            fill={saved ? PAPER_WHITE : 'transparent'}
-            strokeWidth={2}
-            style={heartShadow}
-          />
+          className="absolute right-ds-8 top-ds-8 z-10 size-11 items-center justify-center">
+          {catalogMeta ? (
+            <View className="size-8 items-center justify-center rounded-full bg-paper-white/90" style={badgeShadow}>
+              <Heart
+                size={14}
+                color={PITCH_BLACK}
+                fill={saved ? PITCH_BLACK : 'transparent'}
+                strokeWidth={2}
+              />
+            </View>
+          ) : (
+            <Heart
+              size={22}
+              color={PAPER_WHITE}
+              fill={saved ? PAPER_WHITE : 'transparent'}
+              strokeWidth={2}
+              style={heartShadow}
+            />
+          )}
         </Pressable>
       ) : null}
     </View>
@@ -203,7 +237,7 @@ export function EventGridItem({ children }: { children: ReactNode }) {
   if (Platform.OS !== 'web' || compact) {
     return <View style={{ width: '48.2%' }}>{children}</View>;
   }
-  return <View className="min-w-0 w-full max-w-[220px]">{children}</View>;
+  return <View className="min-w-0 w-full">{children}</View>;
 }
 
 /** Same 2-up catalog grid as Explorar, on phone and desktop. */

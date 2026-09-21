@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBar } from '@/components/back-bar';
 import { PageHeader } from '@/components/page-header';
 import { WebHead } from '@/components/web-head';
-import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop, WebNavHeight } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop } from '@/constants/theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ type ScreenProps = PropsWithChildren<{
   center?: boolean;
   flush?: boolean;
   back?: boolean;
+  onScroll?: ScrollViewProps['onScroll'];
   title?: string;
   lead?: string;
   /** Browser tab / og:title. Defaults to `title`, then the tab path label. */
@@ -66,6 +67,7 @@ export function Screen({
   stickyHeader,
   footer,
   refreshControl,
+  onScroll,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const web = Platform.OS === 'web';
@@ -84,14 +86,12 @@ export function Screen({
   const topSafe = flush
     ? 0
     : web
-      ? inWebTabs
-        ? compact
-          ? WebCompactTop
-          : WebNavHeight
+      ? inWebTabs && compact
+        ? WebCompactTop
         : 0
       : insets.top;
   const pagePadX = padded ? (web && !compact ? 40 : 16) : 0;
-  const pagePadTop = web ? (inWebTabs ? 16 : compact ? 24 : 32) : 16;
+  const pagePadTop = web ? (inWebTabs ? (compact ? 16 : 24) : compact ? 24 : 32) : 16;
   const contentPadding = flush
     ? { flexGrow: 1 }
     : {
@@ -132,7 +132,7 @@ export function Screen({
   );
   const stickyChrome = stickyHeader ? (
     <View
-      className="z-10 overflow-visible bg-background"
+      className="z-40 overflow-visible bg-background"
       style={{ paddingTop: pagePadTop, paddingHorizontal: pagePadX, paddingBottom: 8 }}>
       <View className="overflow-visible" style={width === 'page' ? widthStyle : { width: '100%' }}>
         {stickyHeader}
@@ -175,6 +175,8 @@ export function Screen({
       contentInsetAdjustmentBehavior="never"
       bottomOffset={footer ? footerHeight + 16 : 24}
       extraKeyboardSpace={footer ? footerHeight : 0}
+      scrollEventThrottle={onScroll ? 16 : undefined}
+      onScroll={onScroll}
       refreshControl={refreshControl}>
       {inner}
     </KeyboardAwareScrollView>
@@ -184,6 +186,8 @@ export function Screen({
       contentContainerStyle={contentPadding}
       keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="never"
+      scrollEventThrottle={onScroll ? 16 : undefined}
+      onScroll={onScroll}
       refreshControl={refreshControl}>
       {inner}
     </ScrollView>

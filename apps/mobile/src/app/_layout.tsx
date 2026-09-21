@@ -10,6 +10,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthSheetHost } from '@/components/auth-sheet-host';
+import { CreateEventGateHost } from '@/components/create-event-gate-host';
 import { DeepLinkListener } from '@/components/deep-link-listener';
 import { OnboardingOverlay } from '@/components/onboarding-overlay';
 import { SessionLifecycle } from '@/components/session-lifecycle';
@@ -45,6 +46,7 @@ export default function RootLayout() {
               <SessionLifecycle />
               <DeepLinkListener />
               <AuthSheetHost />
+              <CreateEventGateHost />
               <Stack
                 screenOptions={{
                   headerShown: false,

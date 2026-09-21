@@ -14,12 +14,12 @@ El asistente reserva aforo y paga. El tiquete `valid` no se muestra como QR hast
 1. Detalle → cantidades por etapa (mismo evento).
 2. CTA; no doble tap.
 3. `POST /v1/events/{id}/orders` con `items[]` → order `pending`, tickets `reserved`.
-4. Abrir pasarela (URL del API).
+4. Abrir Mercado Pago (`checkout_url` / `init_point`) en el navegador in-app (Custom Tabs / Safari View Controller). Sin WebView y sin campos de tarjeta en Parche.
 5. Vuelta: [FEAT-022](feat-022-order-return.md).
 
 ## Pantallas
 
-Resumen: evento, etapas elegidas, total, política corta. Sin campos de tarjeta en Parche (pasarela externa). Las etapas del mismo evento se mezclan en un solo pago; no hay carrito entre eventos.
+Resumen: flyer compacto + evento, etapas como cards de precio (aurora border si hay cantidad), total en el sticky, política corta. CTA **Pagar $X**. El cobro corre en una hoja de Mercado Pago encima de Parche (no en Safari/Chrome como app aparte). Las etapas del mismo evento se mezclan en un solo pago; no hay carrito entre eventos.
 
 Invitado: el checkout se abre igual; al confirmar, AuthSheet OTP/Google inline ([FEAT-038](feat-038-auth-otp.md)). No redirige a register. Nombre/teléfono van a [FEAT-041](feat-041-complete-profile.md) después.
 

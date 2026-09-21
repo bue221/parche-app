@@ -153,21 +153,37 @@ function fitAll() {
   panToVisible(markers[0].getLatLng());
 }
 fitAll();
+let selectedId = null;
+let sized = false;
+function refreshMap() {
+  map.invalidateSize();
+  const size = map.getSize();
+  if (size.x < 8 || size.y < 8) return;
+  if (!sized) {
+    sized = true;
+    fitAll();
+    if (selectedId && byId[selectedId]) panToVisible(byId[selectedId].getLatLng());
+  }
+}
 function setSelected(id) {
+  selectedId = id || null;
   Object.keys(byId).forEach((key) => {
     const el = byId[key].getElement();
     const node = el && (el.querySelector('.pill') || el.querySelector('.pin'));
     if (node) node.classList.toggle('on', key === id);
   });
-  if (id && byId[id]) panToVisible(byId[id].getLatLng());
+  if (id && byId[id] && sized) panToVisible(byId[id].getLatLng());
 }
 window.setSelected = setSelected;
 window.setMapPad = function (top, bottom) {
   padTop = Number(top) || 0;
   padBottom = Number(bottom) || 0;
-  map.invalidateSize();
+  refreshMap();
 };
-window.addEventListener('resize', function () { map.invalidateSize(); });
+window.addEventListener('resize', refreshMap);
+if (window.ResizeObserver) {
+  new ResizeObserver(refreshMap).observe(document.getElementById('map'));
+}
 window.addEventListener('message', (e) => {
   try {
     const msg = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
@@ -186,7 +202,9 @@ if (pick) {
     post({ type: 'pin', lat: e.latlng.lat, lng: e.latlng.lng });
   });
 }
-setTimeout(function () { map.invalidateSize(); }, 200);
+[0, 80, 240, 700].forEach(function (ms) {
+  setTimeout(refreshMap, ms);
+});
 </script></body></html>`;
 }
 

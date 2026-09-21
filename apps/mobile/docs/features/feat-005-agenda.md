@@ -1,6 +1,6 @@
 # FEAT-005: Explorar (listado + mapa)
 
-El asistente ve los próximos eventos foto-first: SearchBar, chips con icono, rieles horizontales y un grid de catalog cards debajo. Un FAB flotante permite alternar a vista mapa (estilo Airbnb). Es el home de producto. El tab se llama **Explorar**; la ruta sigue siendo `/`. No hay título de página en el tab. Eventos ya finalizados no salen en esta lista; siguen en Operar (consulta) y por deep link.
+El asistente ve los próximos eventos foto-first. En teléfono: SearchBar, chips con icono, rieles horizontales y un grid de catalog cards. En **web desktop** el home es un catálogo Airbnb: cápsula Buscar + Fechas, chips de género con icono, grid que llena la página y un FAB centrado **Mostrar mapa**. El tab se llama **Explorar**; la ruta sigue siendo `/`. No hay título de página en el tab. Eventos ya finalizados no salen en esta lista; siguen en Operar (consulta) y por deep link.
 
 | Campo | Valor |
 |-------|-------|
@@ -19,15 +19,16 @@ El asistente ve los próximos eventos foto-first: SearchBar, chips con icono, ri
 
 | Zona | Regla |
 |------|-------|
-| Hero | SearchBar pill (abre filtros) + chips **fijos** bajo la safe band: no scrollan con la lista. Chips con icono: Todo + Hoy / Finde / Este mes + géneros. El riel es full-bleed: el primer chip alinea con el SearchBar y el resto se asoma hasta el borde de la pantalla. Todo limpia fecha y género (no el `q`). Sin `PageHeader`. `Screen stickyHeader`. |
-| Rieles | `SectionRail` + `EventCard` catalog: foto cuadrada, título y venue · fecha debajo. **2 cards + peek** (~168px), full-bleed como los chips. Orden: **Esta noche**, **Para ti**, un riel por género si no hay filtro de género. Chevron aplica el filtro del riel; Para ti no lleva flecha. Si el riel no tiene eventos, se queda el título + `EmptyState` compacto: no se oculta ni queda un scroll vacío. |
-| Lista | Título “Todos los eventos” siempre visible + grid catalog en **2 columnas** en teléfono. Vacío del grid no sustituye a los rieles. Los rieles recortan; el grid es la agenda completa. |
-| Guardar | Corazón 44px en el flyer (listing); no abre el detalle. Funciona sin sesión ([FEAT-037](feat-037-local-interest.md)). |
+| Hero (phone) | SearchBar pill (abre filtros) + chips **fijos** bajo la safe band: no scrollan con la lista. Chips con icono: Todo + Hoy / Finde / Este mes + géneros. El riel es full-bleed: el primer chip alinea con el SearchBar y el resto se asoma hasta el borde de la pantalla. Todo limpia fecha y género (no el `q`). Sin `PageHeader`. `Screen stickyHeader`. |
+| Hero (desktop web) | Cápsula Airbnb: **Buscar** (input vivo) + **Fechas** (calendario rango, “Cualquier fecha”) + recuento `N eventos en Bogotá` (o `· filtrado`). Debajo, chips de **categoría** (icono sobre label, underline `foreground` al seleccionar): Todo + géneros. Todo solo limpia el género; las fechas viven en la cápsula. Sticky. |
+| Rieles | Phone: `SectionRail` + `EventCard` catalog: foto cuadrada, título y venue · fecha debajo. **2 cards + peek** (~168px), full-bleed como los chips. Orden: **Esta noche**, **Para ti**, un riel por género si no hay filtro de género. Chevron aplica el filtro del riel; Para ti no lleva flecha. Si el riel no tiene eventos, se queda el título + `EmptyState` compacto (línea, no un pozo de 168px). **Desktop no tiene rieles**: los chips filtran el grid. |
+| Lista | Phone: título “Todos los eventos” + grid 2 columnas. Desktop: sin título de sección; el grid **llena la página** (`minmax(260px, 1fr)`). Vacío del grid no sustituye a los rieles en phone. |
+| Guardar | Corazón 44px en el flyer (listing); no abre el detalle. En desktop el corazón va en una pastilla blanca. Funciona sin sesión ([FEAT-037](feat-037-local-interest.md)). |
 | Pull-to-refresh | Invalida lista local |
-| Promoter | CTA **Crear evento** compacto bajo el SearchBar; no es el home de Operar |
-| FAB Toggle | Botón flotante `MapToggleFAB` bottom-right, sobre el tab bar. Muestra "Mapa" en modo lista, "Lista" en modo mapa. `bg-primary`, `shadow-button`, hit >= 56px. |
-| Modo Mapa | Al tap FAB "Mapa": OsmMap full-bleed con pines, MapSheet colapsable con cards. Mismos filtros que lista. Ver [FEAT-006](feat-006-explore-map.md) para detalles del mapa. |
-| Wide/Desktop | Split view: lista izquierda + mapa derecha. FAB no aparece (siempre visibles ambas). |
+| Promoter | CTA **Crear evento** compacto bajo el SearchBar / cápsula; no es el home de Operar |
+| FAB Toggle | Phone: FAB 56px bottom-right sobre el tab bar, “Mapa” / “Lista”. Web: pastilla del sitio (min 48px, icono 16, **Mostrar mapa** / **Mostrar lista**), centrada, `position: fixed`. |
+| Modo Mapa | Al tap FAB: OsmMap. Phone: full-bleed + MapSheet. Desktop: split catálogo ~60% + mapa ~40%; el FAB queda sobre el mapa. Mismos filtros que lista. Ver [FEAT-006](feat-006-explore-map.md). |
+| Wide/Desktop | Lista primero (grid 4 cols). FAB abre el split. Tap en card abre el detalle. Pin del mapa muestra preview con flyer + **Ver boletas**. |
 
 Rail **Esta noche**: same-day, badge “Esta noche”, countdown a `startsAt` (aurora). Vacío: el riel se queda con “Nada esta noche”. Chips usan `FadeSlideIn` / `PressScale`. Sprint 4: [FEAT-033](feat-033-recommendations.md) (“Para ti”) encima del grid, no en lugar de Esta noche.
 
@@ -58,7 +59,7 @@ Crear evento (CTA solo si `promoter`, va a [FEAT-008](feat-008-event-create.md))
 - [ ] Refresh no deja eventos publicados hace un minuto fuera si el API ya los trae.
 - [ ] Promoter sigue viendo Crear evento.
 - [ ] FAB toggle alterna entre lista y mapa.
-- [ ] En desktop/wide, split view muestra lista + mapa sin FAB.
+- [ ] En desktop/wide, la lista llena la página; el FAB “Mostrar mapa” abre el split.
 
 ## Relacionadas
 

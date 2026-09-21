@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, View, type PressableProps } from 'react-native';
+import { Pressable, Platform, View, type PressableProps } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
@@ -42,7 +42,7 @@ export function PressScale({
       onPressOut={() => {
         if (!reduce) scale.value = withTiming(1, { duration: 120 });
       }}
-      className={cn(fit ? 'shrink-0 self-start' : 'w-full', className)}>
+      className={cn(fit ? 'shrink-0 self-start' : 'w-full', Platform.select({ web: 'cursor-pointer' }), className)}>
       <Animated.View className={fit ? undefined : 'w-full'} style={style}>
         {children}
       </Animated.View>

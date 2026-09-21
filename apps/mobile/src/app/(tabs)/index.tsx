@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { SlidersHorizontal } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform, Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventCard, EventGrid, EventGridItem } from '@/components/event-card';
 import { ExploreChips } from '@/components/explore-chips';
+import { ExploreDesktopHero } from '@/components/explore-hero';
 import { EmptyState, ErrorState, ListingSkeleton } from '@/components/feedback';
+import { FlyerImage } from '@/components/flyer-image';
 import { MapSheet, mapSheetMetrics } from '@/components/map-sheet';
 import { MapToggleFAB, type ViewMode } from '@/components/map-toggle-fab';
 import { FadeSlideIn, PressScale } from '@/components/motion';
@@ -23,11 +25,20 @@ import { api } from '@/data/client';
 import { useFilters } from '@/data/filters';
 import { useAuthSnapshot } from '@/data/session';
 import type { ParcheEvent } from '@/data/types';
-import { useCompactLayout } from '@/hooks/use-compact-layout';
+import { useCompactLayout, useWideLayout } from '@/hooks/use-compact-layout';
+import { useRequestCreateEvent } from '@/hooks/use-request-create-event';
 import { useTheme } from '@/hooks/use-theme';
 import { cardShadowStyle } from '@/lib/card-shadow';
-import { activeDateChip, datePreset, genreRails, matchesExploreFilters } from '@/lib/explore-rails';
-import { countdownTo, isSameLocalDay } from '@/lib/format';
+import {
+  activeDateChip,
+  datePreset,
+  exploreShowsForYouRail,
+  exploreShowsGenreRails,
+  exploreShowsTonightRail,
+  genreRails,
+  matchesExploreFilters,
+} from '@/lib/explore-rails';
+import { countdownTo, eventVenueParts, formatListingDate, isSameLocalDay } from '@/lib/format';
 import { hasActiveFilters } from '@/lib/genres';
 
 const TONIGHT_EMPTY = {
@@ -44,16 +55,18 @@ function ExploreHero({
   query,
   isPromoter,
   onFilters,
+  onCreateEvent,
 }: {
   query?: string;
   isPromoter: boolean;
   onFilters: () => void;
+  onCreateEvent: () => void;
 }) {
   return (
     <View className="gap-ds-12 overflow-visible">
       <SearchBar value={query} onPress={onFilters} />
       {isPromoter ? (
-        <Button size="sm" onPress={() => router.push('/event/create' as Href)}>
+        <Button size="sm" onPress={onCreateEvent}>
           <Text>Crear evento</Text>
         </Button>
       ) : null}
@@ -95,6 +108,39 @@ function MapSearchHeader({
   );
 }
 
+function MapEventPreview({ event, onOpen }: { event: ParcheEvent; onOpen: () => void }) {
+  const { venue } = eventVenueParts(event.venueName, event.addressText);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ver boletas de ${event.name}`}
+      onPress={onOpen}
+      className="absolute bottom-4 left-4 right-4"
+      style={cardShadowStyle}>
+      <View className="flex-row overflow-hidden rounded-cards border border-border bg-surface">
+        <View className="size-24 overflow-hidden bg-muted">
+          {event.flyerUrl ? (
+            <FlyerImage uri={event.flyerUrl} className="h-full w-full" aspectRatio={1} />
+          ) : (
+            <View className="h-full w-full items-center justify-center">
+              <Text variant="caption">{event.name.slice(0, 2)}</Text>
+            </View>
+          )}
+        </View>
+        <View className="min-w-0 flex-1 justify-center gap-ds-4 px-ds-12 py-ds-8">
+          <Text className="font-bold" numberOfLines={1}>
+            {event.name}
+          </Text>
+          <Text variant="muted" numberOfLines={1}>
+            {venue} · {formatListingDate(event.startsAt)}
+          </Text>
+          <Text className="font-bold text-aurora">Ver boletas</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 function RailSkeletons() {
   return (
     <>
@@ -114,6 +160,7 @@ function ExploreFeed({
   recsLoading,
   filtered,
   isLoggedIn,
+  wide,
   selectedDate,
   selectedId,
   onTonightSeeAll,
@@ -131,6 +178,7 @@ function ExploreFeed({
   recsLoading: boolean;
   filtered: boolean;
   isLoggedIn: boolean;
+  wide: boolean;
   selectedDate?: string;
   selectedId?: string;
   onTonightSeeAll: () => void;
@@ -139,33 +187,39 @@ function ExploreFeed({
   onRetry: () => void;
   onClearFilters: () => void;
 }) {
+  const showTonight = exploreShowsTonightRail({ count: tonight.length, loading, wide });
+  const showForYou = exploreShowsForYouRail(wide) && isLoggedIn && (recsLoading || recs.length > 0);
+  const genreRailsVisible = exploreShowsGenreRails(wide) && !loading && railsByGenre.length > 0;
+
   return (
     <View className="gap-ds-32">
-      <SectionRail
-        title="Esta noche"
-        empty={loading ? undefined : TONIGHT_EMPTY}
-        onSeeAll={tonight.length > 0 && selectedDate !== 'hoy' ? onTonightSeeAll : undefined}>
-        {loading ? (
-          <RailSkeletons />
-        ) : (
-          tonight.map((event, index) => {
-            const left = countdownTo(event.startsAt);
-            return (
-              <FadeSlideIn key={`tonight-${event.id}`} index={index}>
-                <EventCard
-                  event={event}
-                  saveable
-                  badge="Esta noche"
-                  caption={left ?? undefined}
-                  selected={selectedId === event.id}
-                  onPress={() => onEventPress(event)}
-                />
-              </FadeSlideIn>
-            );
-          })
-        )}
-      </SectionRail>
-      {isLoggedIn ? (
+      {showTonight ? (
+        <SectionRail
+          title="Esta noche"
+          empty={loading ? undefined : TONIGHT_EMPTY}
+          onSeeAll={tonight.length > 0 && selectedDate !== 'hoy' ? onTonightSeeAll : undefined}>
+          {loading ? (
+            <RailSkeletons />
+          ) : (
+            tonight.map((event, index) => {
+              const left = countdownTo(event.startsAt);
+              return (
+                <FadeSlideIn key={`tonight-${event.id}`} index={index}>
+                  <EventCard
+                    event={event}
+                    saveable
+                    badge="Esta noche"
+                    caption={left ?? undefined}
+                    selected={selectedId === event.id}
+                    onPress={() => onEventPress(event)}
+                  />
+                </FadeSlideIn>
+              );
+            })
+          )}
+        </SectionRail>
+      ) : null}
+      {showForYou ? (
         <SectionRail title="Para ti" empty={recsLoading ? undefined : FOR_YOU_EMPTY}>
           {recsLoading ? (
             <RailSkeletons />
@@ -183,7 +237,7 @@ function ExploreFeed({
           )}
         </SectionRail>
       ) : null}
-      {!loading
+      {genreRailsVisible
         ? railsByGenre.map((rail) => (
             <SectionRail
               key={`genre-${rail.genre}`}
@@ -204,7 +258,11 @@ function ExploreFeed({
           ))
         : null}
       <View className="gap-ds-16">
-        <Text variant="headingSm">Todos los eventos</Text>
+        {wide ? null : (
+          <View className="flex-row items-end justify-between gap-ds-12">
+            <Text variant="headingSm">Todos los eventos</Text>
+          </View>
+        )}
         {error ? <ErrorState message={error} onRetry={onRetry} /> : null}
         {events.length === 0 && !error && !loading ? (
           <EmptyState
@@ -216,7 +274,7 @@ function ExploreFeed({
         ) : null}
         {loading ? (
           <EventGrid>
-            {[0, 1, 2, 3].map((key) => (
+            {[0, 1, 2, 3, 4, 5].map((key) => (
               <EventGridItem key={`sk-${key}`}>
                 <ListingSkeleton />
               </EventGridItem>
@@ -247,12 +305,13 @@ function ExploreFeed({
 export default function ExplorarScreen() {
   const insets = useSafeAreaInsets();
   const { isLoggedIn, isPromoter } = useAuthSnapshot();
+  const requestCreate = useRequestCreateEvent();
   const { filters, setFilters } = useFilters('agenda');
   const { height: windowH } = useWindowDimensions();
   const compact = useCompactLayout();
+  const wide = useWideLayout();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [wide, setWide] = useState(Platform.OS === 'web');
   const [selected, setSelected] = useState<ParcheEvent | null>(null);
   const [headerH, setHeaderH] = useState(120);
   const [sheetPad, setSheetPad] = useState(140);
@@ -267,24 +326,26 @@ export default function ExplorarScreen() {
     enabled: isLoggedIn,
   });
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const mq = window.matchMedia('(min-width: 900px)');
-    const apply = () => setWide(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
-
-  const events = eventsQuery.data ?? [];
-  const recs = (recsQuery.data ?? []).filter((event) => matchesExploreFilters(event, filters));
+  const events = Array.isArray(eventsQuery.data) ? eventsQuery.data : [];
+  const recs = (Array.isArray(recsQuery.data) ? recsQuery.data : []).filter((event) =>
+    matchesExploreFilters(event, filters),
+  );
   const tonight = events.filter((event) => isSameLocalDay(event.startsAt));
   const railsByGenre = genreRails(events, filters.genre);
   const error = eventsQuery.error ? 'No pudimos cargar los eventos' : null;
   const filtered = hasActiveFilters(filters);
   const selectedDate = activeDateChip(filters.from, filters.to);
   const openFilters = () => router.push('/filters?scope=agenda' as Href);
-  const hero = <ExploreHero query={filters.q} isPromoter={isPromoter} onFilters={openFilters} />;
+  const hero = wide ? (
+    <ExploreDesktopHero
+      resultCount={events.length}
+      filtered={filtered}
+      isPromoter={isPromoter}
+      onCreateEvent={() => void requestCreate()}
+    />
+  ) : (
+    <ExploreHero query={filters.q} isPromoter={isPromoter} onFilters={openFilters} onCreateEvent={() => void requestCreate()} />
+  );
   const feed = (
     <ExploreFeed
       tonight={tonight}
@@ -296,11 +357,12 @@ export default function ExplorarScreen() {
       recsLoading={recsQuery.isLoading}
       filtered={filtered}
       isLoggedIn={isLoggedIn}
+      wide={wide}
       selectedDate={selectedDate}
       selectedId={selected?.id}
       onTonightSeeAll={() => setFilters({ ...filters, ...datePreset('hoy') })}
       onGenreSeeAll={(genre) => setFilters({ ...filters, genre })}
-      onEventPress={wide ? selectEvent : openEventFromList}
+      onEventPress={openEventFromList}
       onRetry={() => void eventsQuery.refetch()}
       onClearFilters={() => setFilters({})}
     />
@@ -324,56 +386,73 @@ export default function ExplorarScreen() {
   }
 
   const headerPad = Platform.OS === 'web' ? (compact ? WebCompactTop : 0) : insets.top;
-  const overlayTop = wide
-    ? (Platform.OS === 'web' ? (compact ? WebCompactTop : WebNavHeight) : insets.top) + 124
-    : headerH;
-  const { collapsedH } = mapSheetMetrics(windowH, wide ? 0 : overlayTop);
+  const overlayTop = headerH;
+  const { collapsedH } = mapSheetMetrics(windowH, overlayTop);
   const sheetOverlap = 16;
   const mapBottom = Math.max((sheetPad || collapsedH) - sheetOverlap, 24);
 
+  if (wide && viewMode === 'map') {
+    const shellH = Math.max(windowH - WebNavHeight, 480);
+    return (
+      <View className="flex-1">
+        <Screen scroll={false} padded={false} width="full" flush contentClassName="relative flex-1">
+          <View className="bg-background" style={{ height: shellH, minHeight: 0 }}>
+            <View
+              className="shrink-0 overflow-visible border-b border-border bg-background px-ds-40 pb-ds-12 pt-ds-16"
+              onLayout={(event) => {
+                const next = event.nativeEvent.layout.height;
+                setHeaderH((current) => (Math.abs(current - next) < 1 ? current : next));
+              }}>
+              {hero}
+            </View>
+            <View className="min-h-0 flex-1 flex-row" style={{ minHeight: 0, flex: 1 }}>
+              <ScrollView
+                className="min-w-0 flex-1"
+                style={{ flex: 1, minHeight: 0 }}
+                contentContainerStyle={{ paddingHorizontal: 40, paddingTop: 20, paddingBottom: 48 }}
+                refreshControl={
+                  <RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />
+                }>
+                {feed}
+              </ScrollView>
+              <View
+                className="relative min-h-0 overflow-hidden border-l border-border bg-muted"
+                style={{ width: '40%', minWidth: 448, maxWidth: 640, minHeight: 0 }}>
+                <View className="flex-1 overflow-hidden">
+                  <OsmMap
+                    fill
+                    events={events}
+                    selectedId={selected?.id}
+                    padTop={24}
+                    padBottom={selected ? 128 : 24}
+                    onPressEvent={selectEvent}
+                    onClear={() => setSelected(null)}
+                  />
+                </View>
+                {selected ? <MapEventPreview event={selected} onOpen={() => openEventFromMap(selected)} /> : null}
+              </View>
+            </View>
+          </View>
+        </Screen>
+        <MapToggleFAB mode="map" onToggle={() => setViewMode('list')} />
+      </View>
+    );
+  }
+
   if (wide) {
     return (
-      <Screen scroll={false} padded={false} width="full" flush contentClassName="relative flex-1">
-        <View className="flex-1 flex-row bg-background">
-          <View className="flex-1">
-            <View className="overflow-visible bg-background px-ds-16 pb-ds-8 pt-ds-16">{hero}</View>
-            <ScrollView
-              className="flex-1"
-              contentContainerStyle={{ padding: 16, paddingTop: 24 }}
-              refreshControl={
-                <RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />
-              }>
-              {feed}
-            </ScrollView>
-          </View>
-          <View className="relative border-l border-border" style={{ width: 480 }}>
-            <View className="flex-1 overflow-hidden">
-              <OsmMap
-                fill
-                events={events}
-                selectedId={selected?.id}
-                padTop={overlayTop}
-                padBottom={48}
-                onPressEvent={selectEvent}
-                onClear={() => setSelected(null)}
-              />
-            </View>
-            {selected ? (
-              <Pressable
-                onPress={() => openEventFromMap(selected)}
-                className="absolute bottom-4 left-4 right-4 rounded-cards border border-border bg-surface p-ds-16 shadow-card">
-                <Text variant="subheading" numberOfLines={1}>
-                  {selected.name}
-                </Text>
-                <Text variant="muted" numberOfLines={1}>
-                  {selected.venueName}
-                </Text>
-                <Text className="mt-2 font-bold text-aurora">Ver detalles</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-      </Screen>
+      <View className="flex-1">
+        <Screen
+          scroll
+          stickyHeader={hero}
+          refreshControl={
+            <RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />
+          }>
+          {feed}
+          <View style={{ height: 72 }} />
+        </Screen>
+        <MapToggleFAB mode="list" onToggle={() => setViewMode('map')} />
+      </View>
     );
   }
 
@@ -430,6 +509,7 @@ export default function ExplorarScreen() {
         stickyHeader={hero}
         refreshControl={<RefreshControl refreshing={eventsQuery.isRefetching} onRefresh={() => void eventsQuery.refetch()} />}>
         {feed}
+        <View style={{ height: 64 }} />
       </Screen>
       <MapToggleFAB mode={viewMode} onToggle={() => setViewMode('map')} />
     </View>

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Screen } from '@/components/screen';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
 export function EmptyState({
@@ -18,11 +19,13 @@ export function EmptyState({
   onAction?: () => void;
   compact?: boolean;
 }) {
+  const phone = useCompactLayout();
   return (
     <View
       className={cn(
         'items-start rounded-cards bg-muted px-ds-24',
-        compact ? 'min-h-[168px] justify-center gap-ds-8 py-ds-24' : 'gap-ds-12 py-ds-32'
+        compact ? 'w-full gap-ds-4 py-ds-16' : 'gap-ds-12 py-ds-32',
+        !phone && !compact && 'max-w-xl'
       )}>
       <Text variant={compact ? 'subheading' : 'headingSm'}>{title}</Text>
       {lead ? <Text variant="muted">{lead}</Text> : null}

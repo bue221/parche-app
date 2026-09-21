@@ -48,6 +48,7 @@ const pendingPasswordResets = new Map<string, string>();
 
 export type Me = Omit<User, 'password'> & {
   memberships: Membership[];
+  tenantName?: string;
 };
 
 export type { EventWithExtras };
@@ -343,6 +344,24 @@ export const mockApi = {
         }
       });
       return this.me();
+    },
+
+    async activateOrganizer(name: string): Promise<Me> {
+      await wait();
+      const session = requireSession();
+      const label = name.trim();
+      if (!label) {
+        throw new ApiError('VALIDATION_ERROR', 'Ponle nombre al colectivo', { name: 'Requerido' });
+      }
+      useMockStore.getState().setData((d) => {
+        const user = d.users.find((u) => u.id === session.userId);
+        if (user && !user.profiles.includes('promoter')) {
+          user.profiles.push('promoter');
+        }
+      });
+      const me = await this.me();
+      me.tenantName = label;
+      return me;
     },
 
     async requestPasswordReset(email: string): Promise<void> {
@@ -1392,6 +1411,37 @@ export const mockApi = {
         .lineup.filter((l) => followed.includes(l.artistId))
         .map((l) => l.eventId);
       return getSnapshot().events.filter((e) => e.status === 'published' && eventIds.includes(e.id));
+    },
+  },
+
+  payments: {
+    async status(): Promise<{
+      connected: boolean;
+      mpUserId?: string;
+      oauthEnabled: boolean;
+      oauthNeeds?: string;
+      platformReady: boolean;
+      payoutRequired: boolean;
+      commissionPercent: number;
+      ivaPercent: number;
+    }> {
+      await wait(20);
+      requireSession();
+      return {
+        connected: false,
+        oauthEnabled: false,
+        platformReady: false,
+        payoutRequired: false,
+        commissionPercent: 10,
+        ivaPercent: 19,
+      };
+    },
+    async connect(): Promise<string> {
+      return Promise.reject(new ApiError('NOT_FOUND', 'En demo el cobro no usa Mercado Pago')) as Promise<string>;
+    },
+    async disconnect(): Promise<void> {
+      await wait(20);
+      requireSession();
     },
   },
 

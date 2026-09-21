@@ -11,7 +11,7 @@ El promoter arma un evento en un wizard flyer-first. Sin pin ni flyer no hay env
 
 ## Quick path
 
-1. Operar o CTA Explorar (solo promoter) → crear.
+1. Operar, Explorar o Parche → crear. Si el organizer no tiene Mercado Pago, un modal pide conectar la cuenta antes del wizard.
 2. Flyer (preview 4:5) y fotos extra → Datos → Pin → Review con `EventCard` listing.
 3. Guardar borrador abre el checklist de listing. Enviar a revisión abre la mesa de ese evento.
 
@@ -34,7 +34,7 @@ El paso 1 muestra el flyer como portada y un riel **Más fotos**. Sin `event_id`
 
 ## Flujo
 
-`POST /v1/events` al confirmar el pin → ids → upload flyer y galería asociados al `event_id`. Publicar exige `lat`/`lng` + flyer principal.
+`POST /v1/events` al confirmar el pin → ids → upload flyer y galería asociados al `event_id`. Publicar exige `lat`/`lng` + flyer principal. Un asistente se vuelve organizer en `/parche/cobros` (`POST /v1/me/profiles/promoter`) y conecta Mercado Pago ahí. Con `PAYMENT_PROVIDER=mercadopago` y OAuth activo, `POST /v1/events` responde 409 hasta conectar cobros.
 
 ## Estados
 
@@ -54,7 +54,7 @@ Duplicar evento. Rediseñar etapas / artistas por dentro (el checklist solo nave
 - [ ] Publicar sin pin o sin flyer está bloqueado en Review.
 - [ ] El flyer se elige y se ve antes de crear el draft.
 - [ ] Las fotos extra se eligen en el paso 1 y aparecen en el detalle tras el borrador.
-- [ ] Tras borrador, el checklist apunta a etapas y artistas.
+- [ ] El wizard no abre si falta Mercado Pago (modal de cobro).
 
 ## Relacionadas
 

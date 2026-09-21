@@ -280,6 +280,17 @@
     background: var(--color-aurora);
     color: var(--color-pitch-black);
   }
+
+  [role='button'],
+  [role='tab'],
+  button {
+    cursor: pointer;
+  }
+
+  [aria-disabled='true'],
+  [disabled] {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {

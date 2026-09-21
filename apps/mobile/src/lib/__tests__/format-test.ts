@@ -10,6 +10,7 @@ import {
   eventYear,
   formatCardDate,
   formatCardDayShort,
+  listingPlaceLine,
   formatClock,
   formatDuration,
   formatListingDate,
@@ -46,6 +47,7 @@ describe('Bogotá-pinned date formatting', () => {
     expect(card).not.toContain('.');
     const listing = formatListingDate(NIGHT_ISO);
     expect(listing).toBe(listing.toLowerCase());
+    expect(listing).toMatch(/^16 de /);
   });
 
   test('formatClock renders 24h Bogotá time', () => {
@@ -231,6 +233,14 @@ describe('eventCity and eventVenueParts', () => {
       venue: 'Video Club',
       city: 'Medellín',
     });
+  });
+
+  test('the listing line joins venue and city', () => {
+    expect(listingPlaceLine('Video Club', 'Calle 10, Medellín')).toBe('Video Club, Medellín');
+  });
+
+  test('a venue that already names the city is not duplicated', () => {
+    expect(listingPlaceLine('Medellín', 'Medellín')).toBe('Medellín');
   });
 
   test('without a venue name the street becomes the venue', () => {

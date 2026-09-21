@@ -9,7 +9,7 @@ const buttonVariants = cva(
   cn(
     'group min-h-11 shrink-0 flex-row items-center justify-center gap-2 rounded-buttons px-[22px] py-3',
     Platform.select({
-      web: 'whitespace-nowrap outline-none transition-[transform,box-shadow,opacity,background-color] duration-150 focus-visible:ring-2 focus-visible:ring-aurora focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none',
+      web: 'cursor-pointer whitespace-nowrap outline-none transition-[transform,box-shadow,opacity,background-color] duration-150 focus-visible:ring-2 focus-visible:ring-aurora focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:cursor-not-allowed',
     })
   ),
   {
