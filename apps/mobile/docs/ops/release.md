@@ -69,7 +69,7 @@ Para probar sin publicar el sitio, `npx expo start --tunnel` con `EXPO_TUNNEL_SU
 
 - No hay `extra.eas.projectId`: `eas build` no corre hasta ejecutar `eas init`.
 - No hay `apple-app-site-association` ni `assetlinks.json` publicados.
-- El cobro sigue pasando por `POST /v1/dev/payments/simulate`; no hay pasarela real ([FEAT-021](../features/feat-021-ticket-purchase.md)).
+- El cobro usa Mercado Pago Checkout Pro cuando el API tiene `PAYMENT_PROVIDER=mercadopago` ([FEAT-021](../features/feat-021-ticket-purchase.md)). La UI demo (`/v1/dev/pay/`) solo aparece si el API sigue en `fake`.
 
 ## Relacionadas
 

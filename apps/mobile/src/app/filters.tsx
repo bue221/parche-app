@@ -42,6 +42,7 @@ export default function FiltersScreen() {
   return (
     <Screen
       back
+      width="form"
       title="Filtros"
       lead="Nombre, barrio, género o día."
       footer={

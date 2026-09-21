@@ -9,6 +9,7 @@ import { CreateEventFab } from '@/components/create-event-fab';
 import { EventCard, EventFeed } from '@/components/event-card';
 import { eventOperateHref } from '@/components/event-staff-actions';
 import { EmptyState, ListingSkeleton } from '@/components/feedback';
+import { GuestPanel } from '@/components/guest-panel';
 import { FadeSlideIn } from '@/components/motion';
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
+import { useAuthSheet } from '@/data/auth-sheet-store';
 import { useAuthSnapshot, usePrimaryProfile } from '@/data/session';
 import { useRequestCreateEvent } from '@/hooks/use-request-create-event';
 import type { EventStatus, EventWithExtras, Membership, ParcheEvent } from '@/data/types';
@@ -48,6 +50,7 @@ const BUCKETS: {
 export default function OperateHubScreen() {
   const { user, memberships, isPromoter, isAdmin } = useAuthSnapshot();
   const requestCreate = useRequestCreateEvent();
+  const openAuth = useAuthSheet((s) => s.open);
   const { density } = usePrimaryProfile();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<OperateFilter>('all');
@@ -81,7 +84,19 @@ export default function OperateHubScreen() {
     ) + (filter === 'all' || filter === 'drafts' ? loadingRows.length : 0);
 
   if (!user) {
-    return <Screen title="Operar" lead="Entra para ver tus eventos." />;
+    return (
+      <Screen title="Operar" lead="Entra para ver tus eventos.">
+        <View className="mt-ds-24">
+          <GuestPanel
+            title="Entra para operar"
+            lead="La mesa de cada evento aparece cuando hay sesión y una membresía activa."
+            actionLabel="Entrar"
+            onAction={() => openAuth()}
+            points={['Setup y flyer', 'Puerta y aforo', 'Métricas de la noche']}
+          />
+        </View>
+      </Screen>
+    );
   }
 
   const lead =
@@ -138,7 +153,12 @@ export default function OperateHubScreen() {
         }>
         <View className={isPromoter ? 'gap-ds-32 pb-20' : 'gap-ds-32'}>
           {memberships.length === 0 && isPromoter ? (
-            <EmptyState title="Crea tu primer evento" lead="Flyer, pin y boleta en un solo flujo." />
+            <EmptyState
+              title="Crea tu primer evento"
+              lead="Flyer, pin y boleta en un solo flujo."
+              actionLabel="Crear evento"
+              onAction={create}
+            />
           ) : null}
           {memberships.length === 0 && !isPromoter ? (
             <EmptyState

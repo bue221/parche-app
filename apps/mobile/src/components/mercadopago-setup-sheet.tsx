@@ -1,15 +1,14 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { View } from 'react-native';
 
 import { BottomSheet } from '@/components/bottom-sheet';
+import { MercadoPagoConnectCard } from '@/components/mercadopago-connect';
+import { Skeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { api } from '@/data/client';
-import { userMessage } from '@/data/errors';
-import { toast } from '@/data/toast-store';
-import { openMercadoPagoSignup, startMercadoPagoConnect } from '@/lib/mercadopago-checkout';
+import { useMercadoPagoConnect } from '@/hooks/use-mercadopago-connect';
 
 export function MercadoPagoSetupSheet({
   visible,
@@ -22,59 +21,54 @@ export function MercadoPagoSetupSheet({
   onConnected?: () => void;
   inline?: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-
-  async function connect() {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const result = await startMercadoPagoConnect();
-      await queryClient.invalidateQueries({ queryKey: ['mercadopago'] });
-      if (result === 'connected') {
-        onConnected?.();
-        onClose();
-        return;
-      }
-      if (result === 'denied') {
-        toast('No se autorizó Mercado Pago');
-        return;
-      }
-      const status = await api.payments.status();
-      if (status.connected) {
-        onConnected?.();
-        onClose();
-      }
-    } catch (err) {
-      toast(userMessage(err));
-    } finally {
-      setBusy(false);
+  const status = useQuery({
+    queryKey: ['mercadopago'],
+    queryFn: () => api.payments.status(),
+    enabled: visible,
+  });
+  const { busy, connect, signup } = useMercadoPagoConnect(() => {
+    onConnected?.();
+    if (!inline) {
+      onClose();
     }
+  });
+
+  const card = status.data ? (
+    <MercadoPagoConnectCard
+      connected={status.data.connected}
+      oauthEnabled={status.data.oauthEnabled}
+      oauthNeeds={status.data.oauthNeeds}
+      mpUserId={status.data.mpUserId}
+      busy={busy}
+      compact
+      onConnect={() => void connect()}
+      onSignup={signup}
+      extra={
+        inline ? null : (
+          <Button
+            variant="outline"
+            disabled={busy}
+            onPress={() => {
+              onClose();
+              router.push('/parche/cobros' as Href);
+            }}>
+            <Text>Ver cobros</Text>
+          </Button>
+        )
+      }
+    />
+  ) : (
+    <Skeleton className="h-40 w-full" />
+  );
+
+  if (inline) {
+    if (!visible) return null;
+    return <View className="mt-ds-16">{card}</View>;
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Cuenta de cobro" inline={inline}>
-      <View className="gap-ds-16 pb-ds-8">
-        <Text variant="muted">
-          Antes de crear un evento conecta Mercado Pago (OAuth de Mercado Pago, no Auth0). El dinero de las boletas llega
-          a tu cuenta; Parche se queda el 10% más IVA sobre esa comisión.
-        </Text>
-        <Button variant="outline" disabled={busy} onPress={() => void openMercadoPagoSignup()}>
-          <Text>Crear cuenta en Mercado Pago</Text>
-        </Button>
-        <Button disabled={busy} onPress={() => void connect()}>
-          <Text>{busy ? 'Abriendo…' : 'Conectar Mercado Pago'}</Text>
-        </Button>
-        <Button
-          variant="outline"
-          disabled={busy}
-          onPress={() => {
-            onClose();
-            router.push('/parche/cobros' as Href);
-          }}>
-          <Text>Ver cobros</Text>
-        </Button>
-      </View>
+    <BottomSheet visible={visible} onClose={onClose} title="Cuenta de cobro">
+      <View className="gap-ds-8 pb-ds-8">{card}</View>
     </BottomSheet>
   );
 }

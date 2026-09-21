@@ -4,6 +4,7 @@ import { Linking, Platform } from 'react-native';
 
 import { FeeBreakdown } from '@/components/fee-breakdown';
 import { PendingAuth, Skeleton } from '@/components/feedback';
+import { MercadoPagoMark } from '@/components/mercadopago-mark';
 import { Screen } from '@/components/screen';
 import { Surface } from '@/components/surface';
 import { Button } from '@/components/ui/button';
@@ -144,8 +145,12 @@ export default function PayScreen() {
         {breakdown}
         {error ? <Text className="mt-ds-16">{error}</Text> : null}
         <Button className="mt-ds-24" disabled={busy} onPress={() => void openCheckout()}>
-          <Text>{busy ? 'Abriendo…' : `Pagar ${chargeLabel} en Mercado Pago`}</Text>
+          <MercadoPagoMark size={18} />
+          <Text>{busy ? 'Abriendo…' : `Pagar ${chargeLabel}`}</Text>
         </Button>
+        <Text variant="helper" className="mt-ds-8 text-center">
+          Pago seguro con Mercado Pago
+        </Text>
       </Screen>
     );
   }

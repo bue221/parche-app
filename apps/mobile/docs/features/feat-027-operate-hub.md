@@ -35,9 +35,10 @@ Chips: **Todos** + un chip por grupo con conteo. Tap filtra el catálogo. Buscad
 | Host (owner/manager) | Catalog cards, FAB Crear evento, “Continuar setup” al entrar si el draft está incompleto |
 | Puerta | Misma grilla; el próximo evento lleva badge Esta noche. Al entrar, primaria Puerta |
 | Métricas | Listing; al entrar, primaria Métricas |
-| Vacío promoter | “Crea tu primer evento” |
+| Vacío promoter | “Crea tu primer evento” + CTA crear |
 | Vacío door | “Cuando te inviten, escaneas aquí” |
 | Vacío metrics | “Sin eventos con números todavía” |
+| Sin sesión | `GuestPanel` Entrar (el tab suele estar oculto) |
 
 Mesa `/event/[id]/operate`: **no es el detalle público**. Nombre + flyer chico + rol/status. La primaria sale del **rol de esa membresía**:
 

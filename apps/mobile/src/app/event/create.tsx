@@ -39,10 +39,11 @@ export default function EventCreateScreen() {
   }
   if (payout.data && needsPayoutSetup(payout.data)) {
     return (
-      <Screen back title="Nuevo evento">
-        <Text className="mt-ds-24" variant="muted">
-          Conecta Mercado Pago para que el dinero de las boletas llegue a tu cuenta.
-        </Text>
+      <Screen
+        back
+        width="form"
+        title="Conecta cobros"
+        lead="Conecta Mercado Pago para que el dinero de las boletas llegue a tu cuenta. Luego sigue el wizard del evento.">
         <MercadoPagoSetupSheet visible inline onClose={() => router.back()} onConnected={() => void payout.refetch()} />
       </Screen>
     );

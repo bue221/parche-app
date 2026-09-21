@@ -20,17 +20,18 @@ export function EmptyState({
   compact?: boolean;
 }) {
   const phone = useCompactLayout();
+  const board = !phone && !compact;
   return (
     <View
       className={cn(
-        'items-start rounded-cards bg-muted px-ds-24',
-        compact ? 'w-full gap-ds-4 py-ds-16' : 'gap-ds-12 py-ds-32',
-        !phone && !compact && 'max-w-xl'
+        'items-start rounded-cards bg-muted',
+        compact ? 'w-full gap-ds-4 px-ds-24 py-ds-16' : 'gap-ds-12 px-ds-24 py-ds-32',
+        board && 'min-h-[240px] justify-center px-ds-40 py-ds-48'
       )}>
-      <Text variant={compact ? 'subheading' : 'headingSm'}>{title}</Text>
-      {lead ? <Text variant="muted">{lead}</Text> : null}
+      <Text variant={compact ? 'subheading' : board ? 'heading' : 'headingSm'}>{title}</Text>
+      {lead ? <Text variant="muted" className={board ? 'max-w-xl' : undefined}>{lead}</Text> : null}
       {actionLabel && onAction ? (
-        <Button onPress={onAction}>
+        <Button onPress={onAction} className="self-start">
           <Text>{actionLabel}</Text>
         </Button>
       ) : null}

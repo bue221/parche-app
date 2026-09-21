@@ -4,12 +4,12 @@ import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 
 import { EmptyState, ErrorState, Skeleton } from '@/components/feedback';
+import { GuestPanel } from '@/components/guest-panel';
 import { FadeSlideIn } from '@/components/motion';
 import { Screen } from '@/components/screen';
 import { SectionRail } from '@/components/section-rail';
 import { Surface } from '@/components/surface';
 import { firstWalletTicket, TicketEventCard } from '@/components/ticket-card';
-import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Spacing } from '@/constants/theme';
 import { api } from '@/data/client';
@@ -58,7 +58,7 @@ export default function WalletScreen() {
 
   if (!hydrated) {
     return (
-      <Screen width="full" title="Boletas" lead="Muéstralos en puerta.">
+      <Screen title="Boletas" lead="Muéstralos en puerta.">
         <View className="mt-ds-24">
           <WalletSkeleton />
         </View>
@@ -69,10 +69,7 @@ export default function WalletScreen() {
   const needsProfile = Boolean(isLoggedIn && user && !user.phone && visible.some((t) => t.status === 'valid'));
 
   return (
-    <Screen
-      width="full"
-      title="Boletas"
-      lead={isLoggedIn && visible.length > 0 ? summary : 'Muéstralos en puerta.'}>
+    <Screen title="Boletas" lead={isLoggedIn && visible.length > 0 ? summary : 'Muéstralos en puerta.'}>
       <View className="mt-ds-24 gap-ds-24">
         {needsProfile ? (
           <Surface elevated onPress={() => router.push('/parche/completar-perfil' as Href)}>
@@ -81,13 +78,15 @@ export default function WalletScreen() {
           </Surface>
         ) : null}
         {!isLoggedIn ? (
-          <Surface elevated className="gap-ds-12">
-            <Text variant="subheading">Entra para ver tus QRs</Text>
-            <Text variant="muted">Puedes explorar y guardar eventos sin cuenta.</Text>
-            <Button variant="outline" onPress={() => openAuth()}>
-              <Text>Entrar</Text>
-            </Button>
-          </Surface>
+          <GuestPanel
+            title="Entra para ver tus QRs"
+            lead="Puedes explorar y guardar eventos sin cuenta. La boleta aparece aquí después de comprar."
+            actionLabel="Entrar"
+            onAction={() => openAuth()}
+            secondaryLabel="Explorar"
+            onSecondary={() => router.push('/' as Href)}
+            points={['Un card por evento', 'QR listo para puerta', 'El recuento de disponibles y usadas']}
+          />
         ) : (
           <>
             {error ? <ErrorState message={userMessage(error)} onRetry={() => void refetch()} /> : null}

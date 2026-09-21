@@ -14,7 +14,7 @@ export default function ProfilePasswordScreen() {
   }
 
   return (
-    <Screen back title="Restablecer contraseña" lead="Te enviamos un enlace al correo de la cuenta. No pedimos la clave actual.">
+    <Screen back width="form" title="Restablecer contraseña" lead="Te enviamos un enlace al correo de la cuenta. No pedimos la clave actual.">
       <View className="mt-ds-24 max-w-xl">
         <PasswordResetRequest initialEmail={user.email} emailLocked />
       </View>

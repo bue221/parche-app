@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBar } from '@/components/back-bar';
 import { PageHeader } from '@/components/page-header';
 import { WebHead } from '@/components/web-head';
-import { BottomTabInset, MaxContentWidth, WebCompactBottom, WebCompactTop } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, MaxFormWidth, WebCompactBottom, WebCompactTop } from '@/constants/theme';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ type ScreenProps = PropsWithChildren<{
   className?: string;
   contentClassName?: string;
   padded?: boolean;
-  width?: 'page' | 'full';
+  width?: 'page' | 'form' | 'full';
   center?: boolean;
   flush?: boolean;
   back?: boolean;
@@ -97,11 +97,7 @@ export function Screen({
     : {
         paddingTop: stickyHeader ? 24 : pagePadTop,
         paddingBottom: web
-          ? inWebTabs
-            ? compact
-              ? WebCompactBottom + 16
-              : 48
-            : 48
+          ? (inWebTabs && compact ? WebCompactBottom + 16 : 48) + (footer ? footerHeight : 0)
           : footer
             ? 24
             : insets.bottom + BottomTabInset + 24,
@@ -111,9 +107,13 @@ export function Screen({
         justifyContent: center ? ('center' as const) : ('flex-start' as const),
       };
   const widthStyle =
-    width === 'page'
-      ? { maxWidth: MaxContentWidth, width: '100%' as const, alignSelf: 'center' as const }
-      : { width: '100%' as const, alignSelf: 'stretch' as const, flex: scrollEnabled ? undefined : 1 };
+    width === 'full'
+      ? { width: '100%' as const, alignSelf: 'stretch' as const, flex: scrollEnabled ? undefined : 1 }
+      : {
+          maxWidth: width === 'form' ? MaxFormWidth : MaxContentWidth,
+          width: '100%' as const,
+          alignSelf: 'center' as const,
+        };
   const inner = (
     <View className={cn('w-full', !scrollEnabled && 'flex-1', contentClassName)} style={widthStyle}>
       {back ? <BackBar /> : null}

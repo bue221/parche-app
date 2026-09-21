@@ -15,7 +15,7 @@ export default function CompleteProfileScreen() {
   }
 
   return (
-    <Screen back title="Completar perfil" lead="Opcional. Tu QR ya está listo.">
+    <Screen back width="form" title="Completar perfil" lead="Opcional. Tu QR ya está listo.">
       <View className="mt-ds-24 gap-ds-16">
         <ProfileEditor onSaved={() => router.back()} />
         <Button variant="ghost" onPress={() => router.replace('/wallet' as Href)}>

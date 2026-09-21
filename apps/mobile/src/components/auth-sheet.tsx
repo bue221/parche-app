@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { router, type Href } from 'expo-router';
@@ -6,6 +6,7 @@ import { X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AuthBrandPanel } from '@/components/auth-brand-panel';
 import { BrandMark } from '@/components/brand-mark';
 import { Field } from '@/components/field';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ export function AuthSheet({
   const compact = useCompactLayout();
   const tone = controlTone({ focused, error: Boolean(error) && step === 'identity' });
   const sheetTop = Platform.OS === 'ios' && !inline ? 8 : insets.top;
+  const split = Platform.OS === 'web' && !inline && !compact;
 
   function reset() {
     setStep('identity');
@@ -60,6 +62,18 @@ export function AuthSheet({
     reset();
     onClose();
   }
+
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        reset();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [visible, onClose]);
 
   async function finish() {
     await reconcileInterest();
@@ -126,13 +140,17 @@ export function AuthSheet({
   }
 
   const form = (
-    <View className="w-full max-w-md gap-ds-24 self-center px-ds-24 pb-ds-24">
-      <View className="items-center gap-ds-16">
-        <BrandMark size={56} onDark={scheme === 'dark'} />
-        <Text variant="heading" className="text-center" style={{ fontSize: 26, lineHeight: 32 }}>
-          {step === 'otp' ? 'Revisa tu correo' : 'Inicia sesión o regístrate'}
-        </Text>
-      </View>
+    <View className={split ? 'w-full gap-ds-24 px-ds-32 pb-ds-32' : 'w-full max-w-md gap-ds-24 self-center px-ds-24 pb-ds-24'}>
+      {split ? (
+        <Text variant="headingSm">{step === 'otp' ? 'Revisa tu correo' : 'Inicia sesión o regístrate'}</Text>
+      ) : (
+        <View className="items-center gap-ds-16">
+          <BrandMark size={56} onDark={scheme === 'dark'} />
+          <Text variant="heading" className="text-center" style={{ fontSize: 26, lineHeight: 32 }}>
+            {step === 'otp' ? 'Revisa tu correo' : 'Inicia sesión o regístrate'}
+          </Text>
+        </View>
+      )}
 
       {step === 'identity' ? (
         <View className="gap-ds-16">
@@ -194,7 +212,7 @@ export function AuthSheet({
         </View>
       ) : (
         <View className="gap-ds-16">
-          <Text variant="muted" className="text-center">
+          <Text variant="muted" className={split ? undefined : 'text-center'}>
             Te enviamos un código de 6 dígitos a {email}.
           </Text>
           <Field
@@ -273,24 +291,35 @@ export function AuthSheet({
 
   if (inline || Platform.OS === 'web') {
     if (!visible) return null;
-    if (Platform.OS === 'web' && !inline && !compact) {
+    if (split) {
       return (
         <View className="absolute inset-0 z-[1800] items-center justify-center px-ds-24" style={THEME_VARS[scheme]}>
           <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
+            accessible={false}
             onPress={close}
             className="absolute inset-0"
             style={{ backgroundColor: 'rgba(7, 7, 12, 0.45)' }}
           />
-          <View className="z-10 w-full max-w-[440px] overflow-hidden rounded-cards border border-border bg-surface shadow-card">
-            {closeRow}
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingBottom: 8 }}
-              showsVerticalScrollIndicator={false}>
-              {form}
-            </ScrollView>
+          <View className="z-10 w-full max-w-[880px] flex-row overflow-hidden rounded-cards border border-border bg-surface shadow-card">
+            <AuthBrandPanel
+              dense
+              title={step === 'otp' ? 'Revisa\ntu correo' : 'Entra\nal parche'}
+              lead={
+                step === 'otp'
+                  ? `Te enviamos un código de 6 dígitos a ${email}.`
+                  : 'Compra, sigue artistas u opera un evento.'
+              }
+              className="min-h-[480px] w-[42%]"
+            />
+            <View className="min-w-0 flex-1 bg-surface">
+              {closeRow}
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 8 }}
+                showsVerticalScrollIndicator={false}>
+                {form}
+              </ScrollView>
+            </View>
           </View>
         </View>
       );

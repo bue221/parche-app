@@ -11,7 +11,7 @@ El promoter arma un evento en un wizard flyer-first. Sin pin ni flyer no hay env
 
 ## Quick path
 
-1. Operar, Explorar o Parche → crear. Si el organizer no tiene Mercado Pago, un modal pide conectar la cuenta antes del wizard.
+1. Operar, Explorar o Parche → crear. Si el organizer no tiene Mercado Pago, la pantalla o el modal piden conectar la cuenta (marca MP + CTA Conectar) antes del wizard.
 2. Flyer (preview 4:5) y fotos extra → Datos → Pin → Review con `EventCard` listing.
 3. Guardar borrador abre el checklist de listing. Enviar a revisión abre la mesa de ese evento.
 

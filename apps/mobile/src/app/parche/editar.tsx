@@ -13,7 +13,7 @@ export default function EditProfileScreen() {
   }
 
   return (
-    <Screen back title="Editar perfil" lead="Nombre, teléfono y foto. El email se ve, no se cambia.">
+    <Screen back width="form" title="Editar perfil" lead="Nombre, teléfono y foto. El email se ve, no se cambia.">
       <View className="mt-ds-24">
         <ProfileEditor onSaved={() => router.back()} />
       </View>

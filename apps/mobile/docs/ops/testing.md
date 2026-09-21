@@ -41,8 +41,11 @@ src/lib/__tests__/ticket-label-test.ts
 | `lib/format` | Fechas ancladas a Bogotá, countdowns, rangos de filtro |
 | `lib/explore-rails` | Chips de fecha, rieles de género, y qué bloque muestra Explorar en phone vs desktop catalog |
 | `lib/explore-dates` | Grilla del calendario Explorar, label del rango, y `from`/`to` de un día local |
+| `lib/auth-routes` | Qué rutas son el stack de clave/OTP, para no taparlas con el AuthSheet |
+| `lib/mercadopago-connect` | Estados de cobro: locked / needs_secret / ready / connected |
 | `lib/rail-layout` | Ancho de cards en rieles: 2+peek en teléfono, fila llena en desktop |
 | `lib/event-detail-layout` | Tope de la hoja blanca sobre el flyer fijo: docks bajo el chrome, nunca por encima |
+| `lib/event-detail-copy` | Badge de venta, edad, copy del panel de boletas y de la barra sticky en desktop |
 | `lib/event-images` | Flyer + galería sin duplicar URL; el visor no pagina si el recuadro mide 0 |
 | `lib/map-sheet-layout` | Índice de fila para FlatList de 2 columnas en el sheet del mapa |
 | `lib/favorite-collections` | Agrupación de guardados por ciudad y año |

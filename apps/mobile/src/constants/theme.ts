@@ -115,3 +115,4 @@ export const WebNavHeight = 72;
 export const WebCompactTop = 56;
 export const WebCompactBottom = 88;
 export const MaxContentWidth = 1280;
+export const MaxFormWidth = 560;

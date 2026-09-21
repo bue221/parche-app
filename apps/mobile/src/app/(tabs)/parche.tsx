@@ -17,12 +17,13 @@ import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { FlyerImage } from '@/components/flyer-image';
+import { GuestPanel } from '@/components/guest-panel';
+import { MercadoPagoMark } from '@/components/mercadopago-mark';
 import { FadeSlideIn, PressScale } from '@/components/motion';
 import { ProfileMascot } from '@/components/profile-mascot';
 import { Screen } from '@/components/screen';
 import { SettingsRow } from '@/components/settings-row';
 import { Surface } from '@/components/surface';
-import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -36,7 +37,9 @@ import { THEME_PREF_LABEL, useThemePref } from '@/data/theme-store';
 import type { Artist, Membership, ParcheEvent, User } from '@/data/types';
 import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { useRequestCreateEvent } from '@/hooks/use-request-create-event';
+import { cardShadowStyle } from '@/lib/card-shadow';
 import { profileLabel, profileMascot, type PrimaryProfile } from '@/lib/profiles';
+import { cn } from '@/lib/utils';
 
 const THEME_ACTION = <ThemeToggle className="border border-border bg-surface" />;
 
@@ -84,22 +87,18 @@ export default function ParcheScreen() {
   if (!isLoggedIn || !user) {
     return (
       <Screen title="Parche" lead="Guarda boletas y sigue artistas." headerAction={themeAction}>
-        <View className="mt-ds-24 max-w-xl gap-ds-16">
-          <Surface elevated className="flex-row items-center gap-ds-16">
-            <View className="size-16 items-center justify-center rounded-full bg-muted">
-              <ProfileMascot profile="attendee" size={36} />
-            </View>
-            <View className="min-w-0 flex-1 gap-ds-4">
-              <Text variant="subheading">Tu parche, cuando quieras</Text>
-              <Text variant="muted">Explora y guarda sin cuenta. Entra al comprar o para ver tus QRs.</Text>
-            </View>
-          </Surface>
-          <Button onPress={() => openAuth()}>
-            <Text>Entrar</Text>
-          </Button>
-        </View>
-        <View className="mt-ds-32 max-w-xl">
-          <AppearanceRow icon={CircleUser} />
+        <View className="mt-ds-24 gap-ds-16">
+          <GuestPanel
+            title="Tu parche, cuando quieras"
+            lead="Explora y guarda sin cuenta. Entra al comprar o para ver tus QRs."
+            actionLabel="Entrar"
+            onAction={() => openAuth()}
+            mascot="attendee"
+            points={['Compra y muestra QR', 'Sigue artistas', 'Opera si te invitan']}
+          />
+          <View className={compact ? 'max-w-xl' : 'rounded-cards border border-border bg-surface px-ds-24'}>
+            <AppearanceRow icon={CircleUser} />
+          </View>
         </View>
       </Screen>
     );
@@ -156,134 +155,154 @@ export default function ParcheScreen() {
     onCreate: () => void requestCreate(),
   });
 
+  const home = (
+    <>
+      <FadeSlideIn>
+        <IdentityCard
+          user={user}
+          role={profileLabel(primary)}
+          tickets={tickets.length}
+          following={following.length}
+          dates={owned.length}
+          onPress={() => router.push('/parche/editar' as Href)}
+          onTickets={() => router.push('/wallet' as Href)}
+          onFollowing={() => router.push('/parche/siguiendo' as Href)}
+          onDates={() => router.push('/operate' as Href)}
+        />
+      </FadeSlideIn>
+
+      <View className="flex-row gap-ds-12">
+        <View className="min-w-0 flex-1">
+          <FadeSlideIn index={1} className="w-full">
+            <ShortcutCard
+              label={shortcutLabel(primary)}
+              thumbs={primary === 'promoter' ? ownedFlyers : primary === 'artist' ? compactUris(artist?.avatarUrl) : ticketFlyers}
+              fallback={primary === 'artist' ? artist?.stageName || user.displayName : user.displayName}
+              onPress={() => router.push(shortcutHref(primary) as Href)}
+            />
+          </FadeSlideIn>
+        </View>
+        <View className="min-w-0 flex-1">
+          <FadeSlideIn index={2} className="w-full">
+            <ShortcutCard
+              label="Siguiendo"
+              thumbs={following.map((row) => row.avatarUrl).filter((uri): uri is string => Boolean(uri))}
+              fallback={following[0]?.stageName || user.displayName}
+              onPress={() => router.push('/parche/siguiendo' as Href)}
+            />
+          </FadeSlideIn>
+        </View>
+      </View>
+
+      {cta ? (
+        <FadeSlideIn index={3}>
+          <Surface elevated className="flex-row items-center gap-ds-16" onPress={cta.onPress} accessibilityLabel={cta.title}>
+            <View className="size-16 items-center justify-center rounded-full bg-muted">
+              {cta.mascot}
+            </View>
+            <View className="min-w-0 flex-1 gap-ds-4">
+              <Text variant="subheading">{cta.title}</Text>
+              <Text variant="muted">{cta.lead}</Text>
+            </View>
+          </Surface>
+        </FadeSlideIn>
+      ) : null}
+    </>
+  );
+
+  const account = (
+    <>
+      <View className={cn(compact && 'mt-ds-8')}>
+        <SettingsRow
+          icon={<MenuIcon icon={CircleUser} />}
+          label="Editar perfil"
+          onPress={() => router.push('/parche/editar' as Href)}
+          divided={false}
+        />
+        <SettingsRow
+          icon={<MenuIcon icon={KeyRound} />}
+          label="Restablecer contraseña"
+          onPress={() => router.push('/parche/contrasena' as Href)}
+          divided={false}
+        />
+        <AppearanceRow icon={UserRound} />
+        <SettingsRow
+          icon={isPromoter ? <MercadoPagoMark size={22} /> : <MenuIcon icon={Banknote} />}
+          label={isPromoter ? 'Cobros Mercado Pago' : 'Organiza eventos'}
+          onPress={() => router.push('/parche/cobros' as Href)}
+          divided={false}
+        />
+        {hasArtist && artist?.id ? (
+          <SettingsRow
+            icon={<MenuIcon icon={Users} />}
+            label="Ver perfil"
+            onPress={() => router.push(`/artist/${artist.id}` as Href)}
+            divided={false}
+          />
+        ) : null}
+      </View>
+
+      {memberships.length > 0 || isPromoter || isAdmin ? (
+        <View className="mt-ds-8">
+          {memberships.length > 0 ? (
+            <SettingsRow
+              icon={<MenuIcon icon={Wrench} />}
+              label="Operar"
+              detail={`${memberships.length}`}
+              onPress={() => router.push('/operate' as Href)}
+              divided={false}
+            />
+          ) : null}
+          {isPromoter ? (
+            <SettingsRow
+              icon={<MenuIcon icon={CalendarPlus} />}
+              label="Crear evento"
+              onPress={() => void requestCreate()}
+              divided={false}
+            />
+          ) : null}
+          {isAdmin ? (
+            <SettingsRow
+              icon={<MenuIcon icon={ClipboardList} />}
+              label="Cola de aprobación"
+              onPress={() => router.push('/admin/queue' as Href)}
+              divided={false}
+            />
+          ) : null}
+        </View>
+      ) : null}
+
+      <View className="mt-ds-8">
+        <SettingsRow
+          icon={<MenuIcon icon={LogOut} danger />}
+          label="Cerrar sesión"
+          tone="danger"
+          divided={false}
+          onPress={() => void logout()}
+        />
+      </View>
+    </>
+  );
+
   return (
     <Screen
       eyebrow={profileMascot(primary).name}
       mark={<ProfileMascot profile={primary} size={32} />}
       title="Parche"
       headerAction={themeAction}>
-      <View className="mt-ds-24 max-w-xl gap-ds-16">
-        <FadeSlideIn>
-          <IdentityCard
-            user={user}
-            role={profileLabel(primary)}
-            tickets={tickets.length}
-            following={following.length}
-            dates={owned.length}
-            onPress={() => router.push('/parche/editar' as Href)}
-            onTickets={() => router.push('/wallet' as Href)}
-            onFollowing={() => router.push('/parche/siguiendo' as Href)}
-            onDates={() => router.push('/operate' as Href)}
-          />
-        </FadeSlideIn>
-
-        <View className="flex-row gap-ds-12">
-          <View className="min-w-0 flex-1">
-            <FadeSlideIn index={1} className="w-full">
-              <ShortcutCard
-                label={shortcutLabel(primary)}
-                thumbs={primary === 'promoter' ? ownedFlyers : primary === 'artist' ? compactUris(artist?.avatarUrl) : ticketFlyers}
-                fallback={primary === 'artist' ? artist?.stageName || user.displayName : user.displayName}
-                onPress={() => router.push(shortcutHref(primary) as Href)}
-              />
-            </FadeSlideIn>
-          </View>
-          <View className="min-w-0 flex-1">
-            <FadeSlideIn index={2} className="w-full">
-              <ShortcutCard
-                label="Siguiendo"
-                thumbs={following.map((row) => row.avatarUrl).filter((uri): uri is string => Boolean(uri))}
-                fallback={following[0]?.stageName || user.displayName}
-                onPress={() => router.push('/parche/siguiendo' as Href)}
-              />
-            </FadeSlideIn>
+      {compact ? (
+        <View className="mt-ds-24 max-w-xl gap-ds-16">
+          {home}
+          {account}
+        </View>
+      ) : (
+        <View className="mt-ds-24 flex-row items-start gap-ds-24">
+          <View className="min-w-0 flex-[1.15] gap-ds-16">{home}</View>
+          <View className="min-w-0 flex-1 rounded-cards border border-border bg-surface px-ds-24 py-ds-8" style={cardShadowStyle}>
+            {account}
           </View>
         </View>
-
-        {cta ? (
-          <FadeSlideIn index={3}>
-            <Surface elevated className="flex-row items-center gap-ds-16" onPress={cta.onPress} accessibilityLabel={cta.title}>
-              <View className="size-16 items-center justify-center rounded-full bg-muted">
-                {cta.mascot}
-              </View>
-              <View className="min-w-0 flex-1 gap-ds-4">
-                <Text variant="subheading">{cta.title}</Text>
-                <Text variant="muted">{cta.lead}</Text>
-              </View>
-            </Surface>
-          </FadeSlideIn>
-        ) : null}
-
-        <View className="mt-ds-8">
-          <SettingsRow
-            icon={<MenuIcon icon={CircleUser} />}
-            label="Editar perfil"
-            onPress={() => router.push('/parche/editar' as Href)}
-            divided={false}
-          />
-          <SettingsRow
-            icon={<MenuIcon icon={KeyRound} />}
-            label="Restablecer contraseña"
-            onPress={() => router.push('/parche/contrasena' as Href)}
-            divided={false}
-          />
-          <AppearanceRow icon={UserRound} />
-          <SettingsRow
-            icon={<MenuIcon icon={Banknote} />}
-            label={isPromoter ? 'Cobros Mercado Pago' : 'Organiza eventos'}
-            onPress={() => router.push('/parche/cobros' as Href)}
-            divided={false}
-          />
-          {hasArtist && artist?.id ? (
-            <SettingsRow
-              icon={<MenuIcon icon={Users} />}
-              label="Ver perfil"
-              onPress={() => router.push(`/artist/${artist.id}` as Href)}
-              divided={false}
-            />
-          ) : null}
-        </View>
-
-        {memberships.length > 0 || isPromoter || isAdmin ? (
-          <View className="mt-ds-8">
-            {memberships.length > 0 ? (
-              <SettingsRow
-                icon={<MenuIcon icon={Wrench} />}
-                label="Operar"
-                detail={`${memberships.length}`}
-                onPress={() => router.push('/operate' as Href)}
-                divided={false}
-              />
-            ) : null}
-            {isPromoter ? (
-              <SettingsRow
-                icon={<MenuIcon icon={CalendarPlus} />}
-                label="Crear evento"
-                onPress={() => void requestCreate()}
-                divided={false}
-              />
-            ) : null}
-            {isAdmin ? (
-              <SettingsRow
-                icon={<MenuIcon icon={ClipboardList} />}
-                label="Cola de aprobación"
-                onPress={() => router.push('/admin/queue' as Href)}
-                divided={false}
-              />
-            ) : null}
-          </View>
-        ) : null}
-
-        <View className="mt-ds-8">
-          <SettingsRow
-            icon={<MenuIcon icon={LogOut} danger />}
-            label="Cerrar sesión"
-            tone="danger"
-            divided={false}
-            onPress={() => void logout()}
-          />
-        </View>
-      </View>
+      )}
     </Screen>
   );
 }
@@ -318,8 +337,7 @@ function IdentityCard({
             {user.avatarUrl ? (
               <Image
                 source={{ uri: user.avatarUrl }}
-                className="rounded-full bg-muted"
-                style={{ width: 112, height: 112 }}
+                className="size-28 rounded-full bg-muted"
               />
             ) : (
               <View className="size-28 items-center justify-center rounded-full bg-muted">

@@ -26,7 +26,7 @@ La segunda tab se llama **Favoritos**. Es un tablero de colecciones (estilo wish
 | Artistas | Una colección si hay follows. Cover = primer avatar. Subtítulo `N seguidos`. |
 | Edita | En edición, X en la foto vacía la colección (limpia recents de la cuenta, unsaves eventos o unfollows artistas). Listo sale del modo. |
 | Detalle | `/collection/[id]` con `Screen back`. Eventos = grilla 2 columnas de `EventCard` listing + corazón. Artistas = `ArtistRow`. |
-| Empty | "Nada guardado aún" + CTA Explorar si no hay recents (logueado) ni guardados. |
+| Empty | "Nada guardado aún" + CTA Explorar si no hay recents (logueado) ni guardados. En desktop es un board a ancho de columna, no una isla `max-w-xl`. |
 
 ## Flujo
 

@@ -29,7 +29,7 @@ export function PageHeader({
         </Text>
       ) : null}
       <View className="flex-row items-center gap-ds-12">
-        <View className="min-w-0 flex-1 flex-row items-center gap-ds-12">
+        <View className="min-w-0 flex-row items-center gap-ds-12">
           {mark}
           <Text variant="heading" className="shrink">
             {title}

@@ -39,6 +39,8 @@ Error: reintentar. Offline: mostrar último cache solo de metadatos; QR según 0
 
 Auth access. Cada item trae o permite fetch del ticket token.
 
+Desktop web: el invitado ve un `GuestPanel` (no un card estirado a todo el ancho). El riel de eventos sigue el ancho de página (1280), no el viewport.
+
 ## Fuera de alcance
 
 Reventa marketplace. Apple Wallet pass (backlog). La animación de emisión (023).
@@ -46,6 +48,7 @@ Reventa marketplace. Apple Wallet pass (backlog). La animación de emisión (023
 ## Checklist
 
 - [ ] Tab Boletas visible sin sesión; CTA suave para login, no muro.
+- [ ] Invitado en desktop ve un panel con CTA Entrar que no se estira a todo el ancho.
 - [ ] Primera compra no salta la impresión.
 - [ ] Used no parece válido.
 - [ ] Un card por evento, compacto, riel al borde, recuento disponibles/usadas, tap abre las boletas.

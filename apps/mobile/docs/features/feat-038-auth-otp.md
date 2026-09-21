@@ -20,7 +20,7 @@ La compra y la cuenta piden identidad con un modal de página: email + código d
 
 Pasos: identidad (email + Google) → OTP. Modal de página dismissible (X, logo, Continuar, icono Google). No es un bottom sheet ni una ruta nueva. Password es “Otras opciones” hacia [FEAT-003](feat-003-auth-login.md). Google en [FEAT-039](feat-039-auth-google.md). Promoter sigue en [FEAT-002](feat-002-auth-register.md).
 
-El invitado puede cerrar el modal y seguir en Explorar. Cuenta y checkout lo vuelven a abrir.
+El invitado puede cerrar el modal y seguir en Explorar. Cuenta y checkout lo vuelven a abrir. Desktop web: card partido (banda `pitch-black` + form), Escape cierra. No se monta sobre `/auth/*` ni `/reset`.
 
 ## Flujo
 
