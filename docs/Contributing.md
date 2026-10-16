@@ -25,8 +25,9 @@ Workflows en `.github/workflows/` corren lint/test **solo si cambian** archivos 
 
 Nunca commits de `.env`. Usa `.env.example`. No pegues tokens en issues/PRs.
 
-## Documentación
+## Documentación / Wiki
 
-Edita `docs/*.md` en el repo y haz commit/PR. Eso es la “wiki” del proyecto.
+1. Edita `docs/*.md` en el repo.
+2. Publica al GitHub Wiki: `pnpm wiki:publish` (o el workflow `wiki.yml`).
 
-GitHub Wiki no está disponible en repos **privados** con plan Free. Con Pro/Team (o repo público) puedes usar `pnpm wiki:publish` / `scripts/publish-wiki.sh`.
+La primera vez, GitHub exige crear una página en la UI ([wiki](https://github.com/bue221/parche-app/wiki) → Create the first page); después el remoto `.wiki.git` acepta pushes.

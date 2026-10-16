@@ -1,28 +1,35 @@
 name: Publish Wiki
 
-# GitHub Wiki is NOT available on private repos with GitHub Free.
-# This workflow is manual-only and fails fast with a clear message unless
-# the repo has wiki enabled (Pro/Team, or public Free).
 on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/wiki.yml"
+      - "scripts/publish-wiki.sh"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check wiki availability
+      - name: Publish docs/ to GitHub Wiki
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           HAS_WIKI="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .has_wiki)"
           if [[ "$HAS_WIKI" != "true" ]]; then
-            echo "::notice::GitHub Wiki is disabled (typical on private Free plans)."
-            echo "Use docs/ in the repo as the documentation source of truth."
-            echo "Upgrade to Pro/Team, or make the repo public, then enable Wiki in Settings."
+            echo "::error::Wiki disabled on repo. Enable it in Settings → Features → Wikis."
+            exit 1
+          fi
+          # Wiki git remote only exists after the first page is created in the UI.
+          if ! git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" HEAD >/dev/null 2>&1; then
+            echo "::notice::Wiki remote not initialized yet."
+            echo "Open https://github.com/${GITHUB_REPOSITORY}/wiki and click 'Create the first page', then re-run this workflow."
             exit 0
           fi
           git config --global user.name "github-actions[bot]"

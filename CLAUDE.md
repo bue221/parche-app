@@ -21,14 +21,14 @@ cd apps/api && go test ./... && go vet ./...
 COMPOSE_PARALLEL_LIMIT=1 docker compose --project-directory apps/api up --build
 ```
 
-Docs del monorepo: `docs/Home.md` (no hay GitHub Wiki en privado Free).
+Docs: `docs/Home.md` → Wiki con `pnpm wiki:publish` (repo público).
 
 ## Arquitectura
 
 - Mobile → `EXPO_PUBLIC_API_URL` → API `/v1`
 - Web → `API_URL` (server) → API para ISR
 - API módulo Go: `github.com/parche-app/backend` (nombre histórico; no renombrar a la ligera)
-- Producto/UI: `apps/*/docs/` y monorepo en `docs/`
+- Producto/UI: `apps/*/docs/` y wiki en `docs/`
 
 ## Convenciones
 

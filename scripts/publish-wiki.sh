@@ -43,7 +43,9 @@ TMP="$(mktemp -d)"
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
 
-echo "Publishing $DOCS → $WIKI_REPO"
+# Never echo credentials if WIKI_REPO embeds a token.
+SAFE_WIKI_REPO="$(echo "$WIKI_REPO" | sed -E 's#://[^/@]*@#://***@#')"
+echo "Publishing $DOCS → $SAFE_WIKI_REPO"
 if ! git clone --depth 1 "$WIKI_REPO" "$TMP/wiki" 2>/dev/null; then
   mkdir -p "$TMP/wiki"
   git -C "$TMP/wiki" init -b master

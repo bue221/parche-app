@@ -8,7 +8,7 @@ Monorepo de carpetas de **Parche** — app para eventos en vivo. Tres apps **ind
 | API | [`apps/api`](apps/api) | Go 1.26 · Compose | `cd apps/api && cp .env.example .env && COMPOSE_PARALLEL_LIMIT=1 docker compose up --build` |
 | Web | [`apps/web`](apps/web) | Next.js 16 | `cd apps/web && pnpm install && pnpm dev` |
 
-Repo: [github.com/bue221/parche-app](https://github.com/bue221/parche-app) · Docs: [`docs/Home.md`](docs/Home.md) (en el repo; GitHub Wiki no está disponible en privado Free)
+Repo: [github.com/bue221/parche-app](https://github.com/bue221/parche-app) (público) · Docs: [`docs/`](docs/Home.md) · [Wiki](https://github.com/bue221/parche-app/wiki)
 
 ## Arquitectura
 
@@ -87,8 +87,8 @@ parche-app/
 │   ├── mobile/   # Expo (pnpm propio)
 │   ├── api/      # Go + Docker Compose
 │   └── web/      # Next.js (pnpm propio)
-├── docs/         # Documentación del monorepo (fuente de verdad)
-├── scripts/publish-wiki.sh  # solo si tienes Wiki (Pro / repo público)
+├── docs/         # Fuente del GitHub Wiki
+├── scripts/publish-wiki.sh
 ├── .github/workflows/
 ├── package.json  # solo scripts atajo (sin dependencies)
 ├── README.md
@@ -97,9 +97,9 @@ parche-app/
 
 ## Documentación
 
-Índice: [`docs/Home.md`](docs/Home.md). Reglas por app: `apps/*/AGENTS.md`.
-
-GitHub Wiki no está disponible en este repo **privado Free**. Edita `docs/` y haz commit. Con Pro (o repo público) puedes habilitar Wiki y usar `pnpm wiki:publish`.
+- En el repo: [`docs/Home.md`](docs/Home.md)
+- Wiki: [github.com/bue221/parche-app/wiki](https://github.com/bue221/parche-app/wiki) — sincroniza con `pnpm wiki:publish` (la primera página hay que crearla una vez en la UI de GitHub)
+- Reglas por app: `apps/*/AGENTS.md`
 
 ## Contribuir
 
