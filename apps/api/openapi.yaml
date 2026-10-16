@@ -1,0 +1,4484 @@
+openapi: 3.0.3
+info:
+  title: Parche API
+  version: 0.9.0
+  description: >
+    Product HTTP contract. All product routes live under /v1, speak JSON,
+    echo X-Request-Id, and fail with the Error envelope. Update this file
+    in the same change as each new Go route.
+servers:
+  - url: http://localhost:8080
+    description: Local Compose
+paths:
+  /health:
+    get:
+      summary: Process liveness
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Process is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+  /ready:
+    get:
+      summary: Dependency readiness
+      operationId: getReady
+      security: []
+      responses:
+        "200":
+          description: Postgres, Redis, and object store respond
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ready
+        "503":
+          $ref: "#/components/responses/NotReady"
+  /v1/events:
+    get:
+      summary: Public published agenda with search filters (F08 catalog, F22 q/genre/dates/artist, F07 bbox)
+      operationId: listEvents
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          description: ILIKE title and description (max 80 characters)
+          schema:
+            type: string
+            maxLength: 80
+        - name: from
+          in: query
+          description: Inclusive lower bound on starts_at (RFC3339 or YYYY-MM-DD)
+          schema:
+            type: string
+        - name: to
+          in: query
+          description: Inclusive upper bound on starts_at (RFC3339 or YYYY-MM-DD)
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: Overlap event genres. Repeat for any-of (genre=techno&genre=acid)
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+        - name: artist_id
+          in: query
+          description: Events that include this artist on the lineup
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
+      responses:
+        "200":
+          description: Cursor page of published events. Each item includes WGS84 lat/lng.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+              example:
+                items: []
+                next_cursor: null
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Create an event draft (F08)
+      operationId: createEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Draft event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/events/{id}:
+    get:
+      summary: Event detail (F08)
+      operationId: getEvent
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published and cancelled are public; drafts only for event members (404 otherwise)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      summary: Update an event (F08)
+      operationId: patchEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchEventRequest"
+      responses:
+        "200":
+          description: Updated event. Date or venue change on published returns pending_review.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/similar:
+    get:
+      summary: Similar published events by genre and lineup (F24)
+      operationId: listSimilarEvents
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Up to 20 published events. Drafts and the seed id are never included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/events/{id}/submit:
+    post:
+      summary: Send draft or rejected event to review (F08)
+      operationId: submitEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status is pending_review. Requires a venue pin and a usable flyer.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/cancel:
+    post:
+      summary: Cancel a published event (F08)
+      operationId: cancelEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status is cancelled. Detail remains public; agenda listing drops it.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/ticket-types:
+    get:
+      summary: List ticket types for an event (F15)
+      operationId: listEventTicketTypes
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published events expose on_sale and sold_out. Event members see every status including draft and paused.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketTypeList"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      summary: Replace the ticket type catalog (F15)
+      operationId: putEventTicketTypes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutTicketTypesRequest"
+            example:
+              items:
+                - name: Early
+                  price_cents: 50000
+                  capacity: 40
+                  status: on_sale
+                - name: Door
+                  price_cents: 80000
+                  capacity: 60
+                  status: draft
+      responses:
+        "200":
+          description: Upserted catalog. Types with sold_count>0 omitted from the list are archived, not deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketTypeList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/orders:
+    post:
+      summary: Create a checkout order (F16)
+      operationId: createEventOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IdempotencyKeyRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+            example:
+              items:
+                - ticket_type_id: "0199a0c0-0000-7000-8000-000000000010"
+                  quantity: 2
+      responses:
+        "201":
+          description: Pending order with a payment checkout URL. Replay of the same Idempotency-Key returns the original order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutCreated"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/orders/{id}:
+    get:
+      summary: Get order status and items (F16)
+      operationId: getOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Buyer or event.metrics.read. No payment instrument data.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderView"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/payments/webhook:
+    post:
+      summary: Payment provider webhook (F16)
+      operationId: paymentWebhook
+      security: []
+      parameters:
+        - name: X-Payment-Signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Fake/dev HMAC t=<unix>,v1=<hex> over "{unix}.{raw body}"
+        - name: x-signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Mercado Pago HMAC ts=<epoch>,v1=<hex> (official webhook validator)
+        - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: data.id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Mercado Pago payment id
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: payment (Checkout Pro)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentWebhook"
+            example:
+              provider_event_id: evt_01
+              order_id: "0199a0c0-0000-7000-8000-000000000020"
+              status: success
+      responses:
+        "200":
+          description: Accepted. Duplicate provider_event_id is a no-op.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/tenants/{id}/mercadopago:
+    get:
+      summary: Mercado Pago connection status for a tenant (F16)
+      operationId: getTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: connected, oauth_enabled, platform_ready, payout_required, commission_percent, iva_percent. Never returns tokens.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      summary: Disconnect Mercado Pago OAuth for the tenant owner (F16)
+      operationId: disconnectTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Seller tokens removed. Idempotent if nothing was connected.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/tenants/{id}/mercadopago/connect:
+    post:
+      summary: Start Mercado Pago OAuth for the tenant owner (F16)
+      operationId: connectTenantMercadoPago
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: authorization_url for the promoter
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/payments/mercadopago/oauth/callback:
+    get:
+      summary: OAuth redirect from Mercado Pago (F16)
+      operationId: mercadoPagoOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to APP_ORIGIN with mp=connected or error
+  /v1/dev/payments/simulate:
+    post:
+      summary: Dev-only fake payment (APP_ENV=dev)
+      operationId: simulatePayment
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id]
+              properties:
+                order_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [success, failed]
+      responses:
+        "200":
+          description: Signed webhook applied
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/members:
+    get:
+      summary: List event members (F11)
+      operationId: listEventMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: user_id, display_name, role, status. Requires event.members.manage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Invite a member by email or user_id (F11)
+      operationId: inviteEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteEventMemberRequest"
+      responses:
+        "201":
+          description: Pending invite. role cannot be owner. Unknown emails stay pending until accept.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventInvite"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/members/{userId}:
+    patch:
+      summary: Change an event member role (F11)
+      operationId: patchEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchEventMemberRequest"
+      responses:
+        "200":
+          description: Updated member. Cannot promote to owner or demote the last owner.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMember"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+    delete:
+      summary: Revoke an event member (F11)
+      operationId: revokeEventMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: status=revoked. Invalidates Redis ACL. Cannot revoke the last owner.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/transfer-ownership:
+    post:
+      summary: Transfer event ownership (F11)
+      operationId: transferEventOwnership
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferOwnershipRequest"
+      responses:
+        "204":
+          description: Target becomes owner; caller becomes manager.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/invites/{token}/accept:
+    post:
+      summary: Accept an event invite (F11)
+      operationId: acceptEventInvite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member is active. Email must match the invite.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          $ref: "#/components/responses/Gone"
+  /v1/events/{id}/assets:
+    post:
+      summary: Confirm an uploaded flyer or gallery image (F09)
+      operationId: confirmEventAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEventAssetRequest"
+            example:
+              key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/flyer/0199a0c0-0000-7000-8000-000000000030.webp
+              kind: flyer
+      responses:
+        "201":
+          description: Asset metadata with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/audio:
+    post:
+      summary: Confirm an uploaded audio master (F10)
+      operationId: confirmEventAudio
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEventAudioRequest"
+            example:
+              key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/audio/0199a0c0-0000-7000-8000-000000000040.wav
+      responses:
+        "201":
+          description: Audio asset metadata without public master URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAudioAsset"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/tracks:
+    put:
+      summary: Replace ordered reference tracks (F10)
+      operationId: putEventTracks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutEventTracksRequest"
+            example:
+              tracks:
+                - asset_id: 0199a0c0-0000-7000-8000-000000000041
+                  title: Acid jam
+                  position: 0
+      responses:
+        "200":
+          description: Ordered track list with signed preview URLs when ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTracksResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/tracks/{trackId}/master:
+    get:
+      summary: Short-lived signed URL for an audio master (F10)
+      operationId: getEventTrackMaster
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: trackId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Presigned GET. Never a public CDN URL. Requires event.write.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackMasterResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/assets/{assetId}:
+    delete:
+      summary: Delete an event image (F09)
+      operationId: deleteEventAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Object and thumbs removed (best-effort). Cannot delete the only flyer of a pending or published event.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/events:
+    get:
+      summary: Tenant event list, all statuses (F08)
+      operationId: listTenantEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of the colectivo's events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAdminList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/venues:
+    get:
+      summary: List venues (F07)
+      operationId: listVenues
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - name: tenant_id
+          in: query
+          description: Member-only list of that colectivo's venues (including unpublished)
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
+      responses:
+        "200":
+          description: Public venues with at least one published event, or tenant venues when tenant_id is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VenueList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      summary: Create a venue pin in a tenant (F07)
+      operationId: createVenue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVenueRequest"
+            example:
+              tenant_id: "0199a0c0-0000-7000-8000-000000000010"
+              name: Video Club
+              address_text: Chapinero, Bogotá
+              lat: 4.65
+              lng: -74.06
+      responses:
+        "201":
+          description: Venue stored with user_pin source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/venues/{id}:
+    get:
+      summary: Get a venue (F07)
+      operationId: getVenue
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Public if a published event uses it; otherwise tenant member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update venue (tenant owner or staff) (F07)
+      operationId: patchVenue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchVenueRequest"
+      responses:
+        "200":
+          description: Updated venue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/clubs:
+    get:
+      summary: Public club directory (F25)
+      operationId: listClubs
+      security: []
+      description: >
+        Venues with kind=club that are listed or have at least one published event.
+        Pins are WGS84 for MapLibre/OSM; no Google Maps.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: q
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - $ref: "#/components/parameters/MinLat"
+        - $ref: "#/components/parameters/MinLng"
+        - $ref: "#/components/parameters/MaxLat"
+        - $ref: "#/components/parameters/MaxLng"
+      responses:
+        "200":
+          description: Club map directory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClubList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      summary: Create a listed club venue (F25)
+      operationId: createClub
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVenueRequest"
+            example:
+              tenant_id: "0199a0c0-0000-7000-8000-000000000010"
+              name: Video Club
+              address_text: Chapinero, Bogotá
+              lat: 4.65
+              lng: -74.06
+      responses:
+        "201":
+          description: Venue stored as kind=club listed=true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/clubs/{id}:
+    get:
+      summary: Get a club with pin, address, and upcoming events (F25)
+      operationId: getClub
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Public if listed or a published event uses it; otherwise tenant member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update a club (tenant owner) (F25)
+      operationId: patchClub
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchClubRequest"
+      responses:
+        "200":
+          description: Updated club
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/auth/register:
+    post:
+      summary: Register (F04)
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              email: ada@example.com
+              password: correct-horse
+              display_name: Ada
+              profile: attendee
+      responses:
+        "201":
+          description: Session tokens and public user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/login:
+    post:
+      summary: Login (F04)
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session tokens and public user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/refresh:
+    post:
+      summary: Rotate refresh (F04)
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New access and refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/logout:
+    post:
+      summary: Revoke refresh family (F04)
+      operationId: logout
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+		"204":
+          description: Family revoked (idempotent)
+  /v1/auth/password/forgot:
+    post:
+      summary: Start password recovery (F05)
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: ada@example.com
+      responses:
+        "204":
+          description: Always no content (does not reveal whether the email exists)
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/auth/password/reset:
+    post:
+      summary: Complete password recovery (F05)
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              token: url-safe-one-use-token
+              password: new-correct-horse
+      responses:
+        "204":
+          description: Password updated; caller must log in again
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "410":
+          $ref: "#/components/responses/Gone"
+  /v1/me:
+    get:
+      summary: Current user (F04, F14)
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profiles, optional tenant, membership summaries, bio, avatar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Update display name and bio (F14)
+      operationId: patchMe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchMeRequest"
+      responses:
+        "200":
+          description: Updated me document. Email is not accepted here.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/tickets:
+    get:
+      summary: List the caller's tickets with QR JWS (F17)
+      operationId: listMyTickets
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: upcoming
+          in: query
+          schema:
+            type: boolean
+          description: When true, omit used tickets and events that have already ended
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [valid, used]
+          description: Default valid. used lists scanned tickets (not included in upcoming)
+      responses:
+        "200":
+          description: Owner-only wallet. qr_token is a JWS signed with TICKET_SIGNING_KEY, not the ticket UUID. Re-GET re-signs the same jti.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyTickets"
+              example:
+                items:
+                  - ticket_id: "0199a0c0-0000-7000-8000-000000000030"
+                    event:
+                      id: "0199a0c0-0000-7000-8000-000000000001"
+                      title: Norte
+                      starts_at: "2026-09-12T01:00:00Z"
+                    status: valid
+                    qr_token: eyJhbGciOiJIUzI1NiIsImtpZCI6InYxIiwidHlwIjoiSldUIn0.eyJ0aWQiOiIuLi4ifQ.sig
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/Error"
+  /v1/tickets/{id}/transfer:
+    post:
+      summary: Transfer a valid ticket to another user (F18)
+      operationId: transferTicket
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferTicketRequest"
+            example:
+              to_email: dest@example.com
+      responses:
+        "204":
+          description: Immediate cesión when the destination has an account; otherwise a 48h ticket_claim email. Rotates jti and denylists the previous QR in Redis.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tickets/claims/{token}/accept:
+    post:
+      summary: Accept a pending ticket claim (F18)
+      operationId: acceptTicketClaim
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Caller now owns the ticket. qr_token is a new JWS (new jti). Email must match the claim.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyTicket"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Gone"
+  /v1/me/avatar:
+    post:
+      summary: Confirm a user avatar upload (F14)
+      operationId: confirmMyAvatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmUserAvatarRequest"
+      responses:
+        "201":
+          description: Avatar image with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/me/email/change:
+    post:
+      summary: Request an email change (F14)
+      operationId: changeMyEmail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeEmailRequest"
+      responses:
+        "204":
+          description: email_change mail sent to the new address
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/me/email/confirm:
+    post:
+      summary: Confirm an email change token (F14)
+      operationId: confirmMyEmail
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEmailRequest"
+      responses:
+        "204":
+          description: Email updated
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/me/email/opt-out:
+    post:
+      summary: Unsubscribe from broadcasts and digest (F27)
+      operationId: optOutEmail
+      security: []
+      description: Access JWT or signed token from mail (body.token or query token). Sets users.email_opt_out.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        "204":
+          description: Opted out
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/users/{id}:
+    get:
+      summary: Public user profile (F14)
+      operationId: getUser
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: display_name, bio, avatar_url. Never email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/me/memberships:
+    get:
+      summary: Active event memberships (F11)
+      operationId: listMyMemberships
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: event_id, role, status=active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMembershipList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/following:
+    get:
+      summary: Artists the caller follows (F13)
+      operationId: listMyFollowing
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of public artist documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtistList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/recommendations:
+    get:
+      summary: Personalized upcoming events (F24)
+      operationId: listMyRecommendations
+      security:
+        - bearerAuth: []
+      description: |
+        Scores published events from follows (F13), lineup (F12), genre overlap from
+        follows and purchases, optional same-city bbox, and 7-day popularity.
+        Bought tickets are never suggested. Max 20. Worker recs.refresh stores top 50.
+      responses:
+        "200":
+          description: Ranked public event summaries with reason follow, genre, or popular
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationList"
+              example:
+                events: []
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/me/profiles/artist:
+    post:
+      summary: Add artist platform profile (F06)
+      operationId: addArtistProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Idempotent; does not create the public artist document (F12)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/profiles/promoter:
+    post:
+      summary: Become an organizer and create a tenant if missing (F06)
+      operationId: addPromoterProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+            example:
+              name: Pez Alado
+      responses:
+        "200":
+          description: Tenant plus owner membership. Idempotent if the caller already has a tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/me/sessions:
+    get:
+      summary: List refresh families (F04)
+      operationId: listSessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active sessions without hashes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      summary: Revoke all refresh families (F04)
+      operationId: logoutAll
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: All sessions revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/tenants:
+    post:
+      summary: Create a colectivo (F06)
+      operationId: createTenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTenantRequest"
+            example:
+              name: Pez Alado
+      responses:
+        "201":
+          description: Tenant plus owner membership for the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/tenants/{id}:
+    get:
+      summary: Get a tenant the caller belongs to (F06)
+      operationId: getTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/Error"
+    patch:
+      summary: Update tenant name or currency (owner) (F06)
+      operationId: patchTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchTenantRequest"
+      responses:
+        "200":
+          description: Updated tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/metrics:
+    get:
+      summary: Tenant box-office metrics across events (F21)
+      operationId: tenantMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Window start (UTC). Default now-30d.
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Window end (UTC). Default now. Max span 366 days.
+      responses:
+        "200":
+          description: Owner-only totals. Gross and sold match the sum of F20 for events overlapping the window.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMetrics"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/tenants/{id}/members:
+    get:
+      summary: List tenant members (owner) (F06)
+      operationId: listTenantMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Members of the colectivo (not event_members)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Invite staff by user_id or email (owner) (F06)
+      operationId: addTenantMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddTenantMemberRequest"
+      responses:
+        "201":
+          description: Immediate staff membership when the user already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantMember"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/tenants/{id}/members/{userId}:
+    delete:
+      summary: Remove a tenant member (owner) (F06)
+      operationId: removeTenantMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Member removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/artists:
+    post:
+      summary: Add an artist to the event lineup (F12)
+      operationId: addEventArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddEventArtistRequest"
+      responses:
+        "204":
+          description: Linked
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/events/{id}/artists/{artistId}:
+    delete:
+      summary: Remove an artist from the lineup (F12)
+      operationId: removeEventArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed or already absent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists:
+    post:
+      summary: Create a public artist profile or promoter act (F12)
+      operationId: createArtist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateArtistRequest"
+      responses:
+        "201":
+          description: Public artist document (no email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/artists/{id}:
+    get:
+      summary: Public artist profile (F12, F13)
+      operationId: getArtist
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Name, bio, links, upcoming published events, followers_count. Never email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      summary: Update artist profile (F12)
+      operationId: patchArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchArtistRequest"
+      responses:
+        "200":
+          description: Updated public document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Artist"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists/{id}/events:
+    get:
+      summary: Published events for an artist (F12)
+      operationId: listArtistEvents
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: when
+          in: query
+          schema:
+            type: string
+            enum: [upcoming, past]
+            default: upcoming
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Cursor page of published events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/artists/{id}/assets:
+    post:
+      summary: Confirm an artist avatar upload (F12)
+      operationId: confirmArtistAsset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmArtistAssetRequest"
+      responses:
+        "201":
+          description: Avatar image with public URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Error"
+  /v1/artists/{id}/follow:
+    post:
+      summary: Follow an artist (F13)
+      operationId: followArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Followed or already following
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Unfollow an artist (F13)
+      operationId: unfollowArtist
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Unfollowed or was not following
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/posts:
+    get:
+      summary: Public published editorial posts (F23)
+      operationId: listPosts
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Newest published first. Drafts are never included.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/posts/{slug}:
+    get:
+      summary: Public published post by slug (F23)
+      operationId: getPost
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Markdown plus sanitized body_html. Draft slugs are 404.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/admin/posts:
+    post:
+      summary: Create an editorial draft (F23)
+      operationId: createPost
+      security:
+        - bearerAuth: []
+      description: Requires platform_admin (database profile, not only JWT).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostRequest"
+      responses:
+        "201":
+          description: Draft post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}:
+    patch:
+      summary: Update a draft or published post (F23)
+      operationId: patchPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchPostRequest"
+      responses:
+        "200":
+          description: Updated post. Slug cannot change after publish.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}/publish:
+    post:
+      summary: Publish a draft post (F23)
+      operationId: publishPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Status is published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/posts/{id}/assets:
+    post:
+      summary: Confirm a post cover object (F03, F23)
+      operationId: confirmPostCover
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmPostCoverRequest"
+      responses:
+        "201":
+          description: Cover image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventImage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
+  /v1/admin/events:
+    get:
+      summary: Admin event queue (F27)
+      operationId: listAdminEvents
+      security:
+        - bearerAuth: []
+      description: Requires platform_admin. Default status is pending_review. Does not grant event.door.scan.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_review, published, rejected, cancelled, archived]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        "200":
+          description: Events matching status
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/admin/events/{id}/approve:
+    post:
+      summary: Publish a pending_review event (F27)
+      operationId: approveAdminEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Event is published; public list cache dropped; artist follow mail queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/events/{id}/reject:
+    post:
+      summary: Reject a pending_review event (F27)
+      operationId: rejectAdminEvent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Status is rejected; promoter is emailed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/users:
+    get:
+      summary: Search users by email or name (F27)
+      operationId: listAdminUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+      responses:
+        "200":
+          description: Admin user rows including email
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/admin/users/{id}:
+    get:
+      summary: User detail with profiles and tenants (F27)
+      operationId: getAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Admin user
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/admin/users/{id}/disable:
+    post:
+      summary: Disable a user and revoke sessions (F27)
+      operationId: disableAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status disabled; refresh revoked; session_epoch incremented
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/users/{id}/enable:
+    post:
+      summary: Re-enable a user (F27)
+      operationId: enableAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Status active
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/admin/users/{id}/profiles:
+    post:
+      summary: Add or remove platform_admin or promoter (F27)
+      operationId: mutateAdminUserProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile, op]
+              properties:
+                profile:
+                  type: string
+                  enum: [platform_admin, promoter]
+                op:
+                  type: string
+                  enum: [add, remove]
+      responses:
+        "204":
+          description: Profile updated
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Error"
+  /v1/admin/metrics:
+    get:
+      summary: Platform totals (F27)
+      operationId: getAdminMetrics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Users, published events, GMV last 30 days
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: integer
+                  events_published:
+                    type: integer
+                  gmv_cents_30d:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/admin/broadcasts:
+    post:
+      summary: Queue transactional digest to a Parche audience (F26, F27)
+      operationId: createAdminBroadcast
+      security:
+        - bearerAuth: []
+      description: platform_admin only. Recipients are Parche users who have not set email_opt_out. Rate limited harder than other admin routes. Does not buy lists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audience]
+              properties:
+                template:
+                  type: string
+                  default: admin_digest
+                audience:
+                  type: string
+                  enum: [all_attendees, followers_of_artist, event_buyers]
+                artist_id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+                vars:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        "202":
+          description: Messages queued through email.send
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/uploads:
+    post:
+      summary: Issue a short-lived PUT presign (F03)
+      operationId: createUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+            example:
+              kind: flyer
+              content_type: image/jpeg
+              byte_size: 1200000
+              event_id: "0199a0c0-0000-7000-8000-000000000010"
+      responses:
+        "200":
+          description: Server-generated key and PUT grant (5 minute TTL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+              example:
+                key: 0199a0c0-0000-7000-8000-000000000020/0199a0c0-0000-7000-8000-000000000010/flyer/0199a0c0-0000-7000-8000-000000000030.webp
+                upload:
+                  method: PUT
+                  url: https://minio.example/parche/...?X-Amz-Signature=redacted
+                  headers:
+                    Content-Type: image/jpeg
+                  expires_at: "2026-09-11T19:35:00Z"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Error"
+  /v1/events/{eventId}/check-in:
+    post:
+      summary: Door check-in (F19)
+      operationId: checkIn
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInRequest"
+            example:
+              qr_token: eyJhbGciOiJIUzI1NiIsImtpZCI6InYxIiwidHlwIjoiSldUIn0.eyJ0aWQiOiIuLi4ifQ.sig
+      responses:
+        "200":
+          description: Scan outcome. Duplicate is 200, not 409.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInResult"
+              example:
+                result: approved
+                ticket_id: "0199a0c0-0000-7000-8000-000000000030"
+                scanned_at: "2026-09-12T02:15:00Z"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /v1/events/{eventId}/door/live:
+    get:
+      summary: Live door counts (F19)
+      operationId: doorLive
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: include
+          in: query
+          schema:
+            type: string
+            enum: [guest_name]
+          description: Guest display names only when the caller has event.metrics.read
+      responses:
+        "200":
+          description: Aforo. No revenue. Door role never receives guest_name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoorLive"
+              example:
+                sold: 100
+                used: 37
+                inside: 37
+                capacity: 120
+                recent:
+                  - ts: "2026-09-12T02:15:00Z"
+                    scanner_user_id: "0199a0c0-0000-7000-8000-000000000040"
+                    result: approved
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/events/{id}/metrics:
+    get:
+      summary: Event sales and door metrics (F20)
+      operationId: eventMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Aggregates only. Includes revenue. Door role is 403.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventMetrics"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/events/{id}/metrics/orders:
+    get:
+      summary: Event orders for metrics (F20)
+      operationId: eventMetricsOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated orders. Metrics role sees masked emails; owner sees full.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MetricsOrder"
+                  next_cursor:
+                    type: string
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/events/{id}/metrics/export:
+    get:
+      summary: Ticket CSV export (F20)
+      operationId: eventMetricsExport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: CSV of tickets (status, type). No QR. Owner and manager only.
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+    IdempotencyKeyRequired:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    MinLat:
+      name: min_lat
+      in: query
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    MinLng:
+      name: min_lng
+      in: query
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+    MaxLat:
+      name: max_lat
+      in: query
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    MaxLng:
+      name: max_lng
+      in: query
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - GONE
+            - RATE_LIMITED
+            - NOT_READY
+            - INTERNAL
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+      example:
+        code: FORBIDDEN
+        message: No tienes permiso de puerta en este evento
+        request_id: "0199a0c0-0000-7000-8000-000000000001"
+    ErrorDetail:
+      type: object
+      required: [field, issue]
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+      example:
+        field: ends_at
+        issue: order
+    EventList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMapItem"
+        next_cursor:
+          type: string
+          nullable: true
+    EventMapItem:
+      type: object
+      required: [id, lat, lng]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        lat:
+          type: number
+          description: WGS84. Required on published events.
+        lng:
+          type: number
+        venue_id:
+          type: string
+          format: uuid
+        address_text:
+          type: string
+        slug:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [published]
+        genres:
+          type: array
+          items:
+            type: string
+        flyer:
+          $ref: "#/components/schemas/EventImage"
+    RecommendationList:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/RecommendedEvent"
+    RecommendedEvent:
+      allOf:
+        - $ref: "#/components/schemas/EventMapItem"
+        - type: object
+          required: [reason]
+          properties:
+            reason:
+              type: string
+              enum: [follow, genre, popular]
+    Event:
+      type: object
+      required: [id, tenant_id, title, slug, starts_at, ends_at, venue_id, status, lat, lng]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, pending_review, published, rejected, cancelled, archived]
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        lat:
+          type: number
+        lng:
+          type: number
+        address_text:
+          type: string
+        venue_name:
+          type: string
+        flyer_asset_id:
+          type: string
+          format: uuid
+        flyer:
+          $ref: "#/components/schemas/EventImage"
+        gallery:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventImage"
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventTrack"
+        lineup:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventLineupSlot"
+    EventAdminList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateEventRequest:
+      type: object
+      required: [tenant_id, title, starts_at, ends_at]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+          description: Exactly one of venue_id or pin
+        pin:
+          $ref: "#/components/schemas/EventPin"
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+    PatchEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        venue_id:
+          type: string
+          format: uuid
+        pin:
+          $ref: "#/components/schemas/EventPin"
+        genres:
+          type: array
+          items:
+            type: string
+        age_policy:
+          type: string
+    EventPin:
+      type: object
+      required: [lat, lng]
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+    Venue:
+      type: object
+      required: [id, tenant_id, name, address_text, lat, lng, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          description: Optional GeoJSON Point or Polygon. Never Google Places.
+          type: object
+        source:
+          type: string
+          enum: [user_pin]
+        created_at:
+          type: string
+          format: date-time
+        kind:
+          type: string
+          enum: [club, other]
+        listed:
+          type: boolean
+          description: Explicit directory listing. Clubs also appear when published_uses > 0.
+    Club:
+      allOf:
+        - $ref: "#/components/schemas/Venue"
+        - type: object
+          properties:
+            upcoming:
+              type: array
+              items:
+                $ref: "#/components/schemas/EventMapItem"
+    ClubList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Venue"
+        next_cursor:
+          type: string
+          nullable: true
+    VenueList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Venue"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateVenueRequest:
+      type: object
+      required: [tenant_id, name, lat, lng]
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+        source:
+          type: string
+          enum: [user_pin]
+        kind:
+          type: string
+          enum: [club, other]
+    PatchVenueRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+          nullable: true
+        kind:
+          type: string
+          enum: [club, other]
+        listed:
+          type: boolean
+    PatchClubRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address_text:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        geojson:
+          type: object
+          nullable: true
+        listed:
+          type: boolean
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name, profile]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+        display_name:
+          type: string
+        phone:
+          type: string
+          description: Optional E.164-ish contact phone
+        profile:
+          type: string
+          enum: [attendee, promoter]
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Opaque refresh; web may send httpOnly cookie `refresh` (Path=/v1/auth) instead. Cookie-only refresh/logout require Origin (or Referer) in CORS_ORIGINS.
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 10
+    PublicUser:
+      type: object
+      required: [id, email, display_name, profiles]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        phone:
+          type: string
+        profiles:
+          type: array
+          items:
+            type: string
+    Session:
+      type: object
+      required: [access_token, access_expires_at, refresh_expires_at, user]
+      properties:
+        access_token:
+          type: string
+        access_expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+          description: Opaque refresh for native clients. Omitted when Origin is present; browsers use the httpOnly cookie `refresh` (Path=/v1/auth).
+        refresh_expires_at:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/PublicUser"
+    Me:
+      type: object
+      required: [id, email, display_name, profiles, tenants, memberships, bio]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        phone:
+          type: string
+        bio:
+          type: string
+          maxLength: 280
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar_url:
+          type: string
+        profiles:
+          type: array
+          items:
+            type: string
+        tenant:
+          $ref: "#/components/schemas/TenantView"
+          nullable: true
+          description: First tenant membership; prefer tenants[]
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantView"
+        memberships:
+          type: array
+          items:
+            type: object
+            required: [event_id, role, status]
+            properties:
+              event_id:
+                type: string
+              role:
+                type: string
+              status:
+                type: string
+    EventMembershipList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [event_id, role, status]
+            properties:
+              event_id:
+                type: string
+                format: uuid
+              role:
+                type: string
+              status:
+                type: string
+    EventMember:
+      type: object
+      required: [user_id, display_name, role, status]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, door, metrics]
+        status:
+          type: string
+          enum: [active, revoked]
+    EventMemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMember"
+    EventInvite:
+      type: object
+      required: [id, expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+    TicketType:
+      type: object
+      required: [id, event_id, name, price_cents, currency, capacity, sold_count, reserved_count, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        sold_count:
+          type: integer
+          minimum: 0
+        reserved_count:
+          type: integer
+          minimum: 0
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, on_sale, paused, sold_out, archived]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TicketTypeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketType"
+    PutTicketTypesRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketTypeInput"
+    TicketTypeInput:
+      type: object
+      required: [name, price_cents, capacity]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price_cents:
+          type: integer
+          minimum: 0
+        capacity:
+          type: integer
+          minimum: 1
+        sales_starts_at:
+          type: string
+          format: date-time
+        sales_ends_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [draft, on_sale, paused, sold_out, archived]
+    CreateOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [ticket_type_id, quantity]
+            properties:
+              ticket_type_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 1
+    CheckoutCreated:
+      type: object
+      required: [order_id, status, checkout_url, expires_at, amount_cents, commission_cents, iva_cents, fee_cents, charge_cents, currency]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, paid, failed, expired]
+        checkout_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        amount_cents:
+          type: integer
+          description: Listed ticket subtotal in COP pesos. The promoter keeps this when OAuth is connected.
+        commission_cents:
+          type: integer
+          description: 10% of amount_cents.
+        iva_cents:
+          type: integer
+          description: 19% IVA on commission_cents.
+        fee_cents:
+          type: integer
+          description: commission_cents + iva_cents, charged to the buyer.
+        charge_cents:
+          type: integer
+          description: amount_cents + fee_cents. What Mercado Pago charges the buyer.
+        currency:
+          type: string
+    OrderView:
+      type: object
+      required: [id, event_id, status, amount_cents, commission_cents, iva_cents, fee_cents, charge_cents, currency, items, tickets]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, paid, failed, expired]
+        amount_cents:
+          type: integer
+        commission_cents:
+          type: integer
+        iva_cents:
+          type: integer
+        fee_cents:
+          type: integer
+        charge_cents:
+          type: integer
+        currency:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+            required: [ticket_type_id, quantity, unit_price_cents]
+            properties:
+              ticket_type_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              unit_price_cents:
+                type: integer
+        tickets:
+          type: array
+          items:
+            type: object
+            required: [id, ticket_type_id, status]
+            properties:
+              id:
+                type: string
+                format: uuid
+              ticket_type_id:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [reserved, valid, used, transferred, cancelled]
+    MyTickets:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyTicket"
+    MyTicket:
+      type: object
+      required: [ticket_id, event, status, qr_token, barcode]
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+        event:
+          type: object
+          required: [id, title, starts_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+            starts_at:
+              type: string
+              format: date-time
+        status:
+          type: string
+          enum: [valid, used]
+        qr_token:
+          type: string
+          description: Compact JWS kept for paste/debug. Door scans barcode.
+        barcode:
+          type: string
+          description: Code 128 payload (ticket jti without dashes). Never log.
+    CheckInRequest:
+      type: object
+      required: [qr_token]
+      properties:
+        qr_token:
+          type: string
+          description: Code 128 barcode payload or legacy JWS from GET /v1/me/tickets. Do not persist.
+    CheckInResult:
+      type: object
+      required: [result, ticket_id, scanned_at]
+      properties:
+        result:
+          type: string
+          enum: [approved, duplicate, invalid, wrong_event, expired, forbidden]
+        ticket_id:
+          type: string
+          format: uuid
+          nullable: true
+        scanned_at:
+          type: string
+          format: date-time
+    DoorLive:
+      type: object
+      required: [sold, used, inside, capacity, recent]
+      properties:
+        sold:
+          type: integer
+        used:
+          type: integer
+        inside:
+          type: integer
+        capacity:
+          type: integer
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/DoorRecent"
+    DoorRecent:
+      type: object
+      required: [ts, scanner_user_id, result]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        scanner_user_id:
+          type: string
+          format: uuid
+        result:
+          type: string
+        guest_name:
+          type: string
+          description: Only when include=guest_name and caller has event.metrics.read
+    EventMetrics:
+      type: object
+      required: [by_type, gross_cents, currency, checkins, sold_valid_used, no_show_rate, by_scanner, hourly]
+      properties:
+        by_type:
+          type: array
+          items:
+            $ref: "#/components/schemas/TypeMetrics"
+        gross_cents:
+          type: integer
+        currency:
+          type: string
+        checkins:
+          type: integer
+        sold_valid_used:
+          $ref: "#/components/schemas/TicketStatusSplit"
+        no_show_rate:
+          type: number
+          format: double
+        by_scanner:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScannerMetrics"
+        hourly:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyApproved"
+    TypeMetrics:
+      type: object
+      required: [ticket_type_id, name, sold, reserved, capacity, gross_cents]
+      properties:
+        ticket_type_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sold:
+          type: integer
+        reserved:
+          type: integer
+        capacity:
+          type: integer
+        gross_cents:
+          type: integer
+    TicketStatusSplit:
+      type: object
+      required: [valid, used, cancelled]
+      properties:
+        valid:
+          type: integer
+        used:
+          type: integer
+        cancelled:
+          type: integer
+    ScannerMetrics:
+      type: object
+      required: [user_id, display_name, approved, duplicate]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        approved:
+          type: integer
+        duplicate:
+          type: integer
+    HourlyApproved:
+      type: object
+      required: [hour, approved]
+      properties:
+        hour:
+          type: string
+          format: date-time
+        approved:
+          type: integer
+    TenantMetrics:
+      type: object
+      required: [from, to, gross_cents, orders_paid, tickets_sold, events_published, by_event]
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        gross_cents:
+          type: integer
+        orders_paid:
+          type: integer
+        tickets_sold:
+          type: integer
+        events_published:
+          type: integer
+        by_event:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantEventMetrics"
+    TenantEventMetrics:
+      type: object
+      required: [event_id, title, gross_cents, sold]
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        gross_cents:
+          type: integer
+        sold:
+          type: integer
+    MetricsOrder:
+      type: object
+      required: [id, amount_cents, status, created_at, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        email:
+          type: string
+    TransferTicketRequest:
+      type: object
+      description: Exactly one of to_email or to_user_id. Destination account receives the ticket immediately; unknown email gets a 48h ticket_claim.
+      properties:
+        to_email:
+          type: string
+          format: email
+        to_user_id:
+          type: string
+          format: uuid
+    PaymentWebhook:
+      type: object
+      required: [provider_event_id, order_id, status]
+      properties:
+        provider_event_id:
+          type: string
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, failed]
+    InviteEventMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        email:
+          type: string
+          format: email
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [manager, door, metrics]
+    PatchEventMemberRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [manager, door, metrics]
+    TransferOwnershipRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+    SessionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, created_at, user_agent, current]
+            properties:
+              id:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+              user_agent:
+                type: string
+              current:
+                type: boolean
+    TenantView:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff]
+    Tenant:
+      type: object
+      required: [id, slug, name, currency, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+          example: COP
+        status:
+          type: string
+          enum: [active]
+    CreateTenantRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    PatchTenantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        currency:
+          type: string
+    AddTenantMemberRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    TenantMember:
+      type: object
+      required: [user_id, email, display_name, role]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+          enum: [owner, staff]
+    TenantMemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TenantMember"
+    UploadRequest:
+      type: object
+      required: [kind, content_type, byte_size]
+      properties:
+        kind:
+          type: string
+          enum: [flyer, gallery, avatar, audio, cover]
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          format: int64
+        event_id:
+          type: string
+          format: uuid
+          nullable: true
+        artist_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: With kind=avatar, artist photo (F12). Omit event_id and artist_id for the caller's avatar (F14)
+        post_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required with kind=cover (F23). platform_admin only.
+    PatchMeRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+        bio:
+          type: string
+          maxLength: 280
+        phone:
+          type: string
+    ChangeEmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ConfirmEmailRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    PublicProfile:
+      type: object
+      required: [id, display_name, bio]
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        bio:
+          type: string
+        phone:
+          type: string
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar_url:
+          type: string
+    ConfirmUserAvatarRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [avatar]
+    ConfirmArtistAssetRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [avatar]
+    AddEventArtistRequest:
+      type: object
+      required: [artist_id]
+      properties:
+        artist_id:
+          type: string
+          format: uuid
+        billing_order:
+          type: integer
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+    EventLineupSlot:
+      type: object
+      required: [artist_id, name, billing_order]
+      properties:
+        artist_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        billing_order:
+          type: integer
+        starts_at:
+          type: string
+          format: date-time
+        avatar:
+          $ref: "#/components/schemas/EventImage"
+    CreateArtistRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+        tenant_id:
+          type: string
+          format: uuid
+          description: Required when a promoter creates an unclaimed act
+    PatchArtistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+    ArtistLinks:
+      type: object
+      properties:
+        instagram:
+          type: string
+        soundcloud:
+          type: string
+    Artist:
+      type: object
+      required: [id, name, links, upcoming, followers_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        bio:
+          type: string
+        links:
+          $ref: "#/components/schemas/ArtistLinks"
+        avatar_asset_id:
+          type: string
+          format: uuid
+        avatar:
+          $ref: "#/components/schemas/EventImage"
+        upcoming:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventMapItem"
+        followers_count:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ArtistList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Artist"
+        next_cursor:
+          type: string
+          nullable: true
+    ConfirmEventAssetRequest:
+      type: object
+      required: [key, kind]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [flyer, gallery]
+    ConfirmEventAudioRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+    EventAudioAsset:
+      type: object
+      required: [id, kind, transcode_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [audio]
+        mime:
+          type: string
+        bytes:
+          type: integer
+          format: int64
+        duration_ms:
+          type: integer
+        transcode_status:
+          type: string
+          enum: [pending, ready, failed]
+    PutEventTracksRequest:
+      type: object
+      required: [tracks]
+      properties:
+        tracks:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [asset_id, title, position]
+            properties:
+              asset_id:
+                type: string
+                format: uuid
+              title:
+                type: string
+              position:
+                type: integer
+                minimum: 0
+    EventTracksResponse:
+      type: object
+      required: [tracks]
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventTrack"
+    EventTrack:
+      type: object
+      required: [id, title, position]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        position:
+          type: integer
+        duration_ms:
+          type: integer
+        preview_url:
+          type: string
+        preview_expires_at:
+          type: string
+          format: date-time
+    TrackMasterResponse:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+    EventImage:
+      type: object
+      required: [id, kind, public_url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [flyer, gallery, avatar, cover]
+        public_url:
+          type: string
+        thumb_url:
+          type: string
+    Post:
+      type: object
+      required: [id, slug, title, body_md, body_html, author_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        body_md:
+          type: string
+        body_html:
+          type: string
+          description: Generated from body_md with an HTML tag allowlist
+        cover_asset_id:
+          type: string
+          format: uuid
+        cover:
+          $ref: "#/components/schemas/EventImage"
+        status:
+          type: string
+          enum: [draft, published]
+          description: Present on admin responses only
+        author_id:
+          type: string
+          format: uuid
+        published_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PostList:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        next_cursor:
+          type: string
+          nullable: true
+    CreatePostRequest:
+      type: object
+      required: [title]
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+          maxLength: 120
+        body_md:
+          type: string
+          maxLength: 50000
+    PatchPostRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+        title:
+          type: string
+          maxLength: 120
+        body_md:
+          type: string
+          maxLength: 50000
+    ConfirmPostCoverRequest:
+      type: object
+      required: [key]
+      properties:
+        key:
+          type: string
+        kind:
+          type: string
+          enum: [cover]
+    UploadResponse:
+      type: object
+      required: [key, upload]
+      properties:
+        key:
+          type: string
+        upload:
+          type: object
+          required: [method, url, headers, expires_at]
+          properties:
+            method:
+              type: string
+              example: PUT
+            url:
+              type: string
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            expires_at:
+              type: string
+              format: date-time
+  responses:
+    Error:
+      description: Standard product error
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            notFound:
+              value:
+                code: NOT_FOUND
+                message: No encontrado
+                request_id: "0199a0c0-0000-7000-8000-000000000001"
+            validation:
+              value:
+                code: VALIDATION_ERROR
+                message: La fecha de fin debe ser posterior al inicio
+                request_id: "0199a0c0-0000-7000-8000-000000000001"
+                details:
+                  - field: ends_at
+                    issue: order
+    Unauthorized:
+      description: Missing, expired, or invalid access token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: UNAUTHORIZED
+            message: No autenticado
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    Forbidden:
+      description: Authenticated but insufficient permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: FORBIDDEN
+            message: No tienes permiso
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    NotFound:
+      description: Missing resource, or hidden draft
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: NOT_FOUND
+            message: No encontrado
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    Gone:
+      description: Reset, invite, or QR token expired or already used
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: GONE
+            message: El recurso ya no está disponible
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    NotReady:
+      description: A runtime dependency failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: NOT_READY
+            message: El servicio no está listo
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            code: RATE_LIMITED
+            message: Demasiadas solicitudes
+            request_id: "0199a0c0-0000-7000-8000-000000000001"
+security:
+  - bearerAuth: []

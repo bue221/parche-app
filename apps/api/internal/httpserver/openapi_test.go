@@ -1,0 +1,116 @@
+package httpserver
+
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+)
+
+func TestOpenAPIContractFile(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("caller")
+	}
+	path := filepath.Join(filepath.Dir(file), "..", "..", "openapi.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(raw)
+	for _, needle := range []string{
+		"openapi: 3",
+		"/health",
+		"/ready",
+		"/v1/auth/login",
+		"/v1/auth/register",
+		"/v1/auth/refresh",
+		"/v1/auth/logout",
+		"/v1/auth/password/forgot",
+		"/v1/auth/password/reset",
+		"/v1/me",
+		"/v1/me/avatar",
+		"/v1/me/email/change",
+		"/v1/me/email/confirm",
+		"/v1/users/{id}",
+		"/v1/me/profiles/artist",
+		"/v1/me/profiles/promoter",
+		"/v1/me/sessions",
+		"/v1/tenants",
+		"/v1/venues",
+		"/v1/clubs",
+		"/v1/clubs/{id}",
+		"/v1/events/{id}/assets",
+		"/v1/events/{id}/audio",
+		"/v1/events/{id}/tracks",
+		"/v1/events/{id}/tracks/{trackId}/master",
+		"/v1/events/{id}/submit",
+		"/v1/events/{id}/cancel",
+		"/v1/events/{id}/members",
+		"/v1/events/{id}/artists",
+		"/v1/events/{id}/ticket-types",
+		"/v1/events/{id}/orders",
+		"/v1/orders/{id}",
+		"/v1/payments/webhook",
+		"/v1/tenants/{id}/mercadopago",
+		"/v1/tenants/{id}/mercadopago/connect",
+		"/v1/payments/mercadopago/oauth/callback",
+		"/v1/me/tickets",
+		"/v1/tickets/{id}/transfer",
+		"/v1/tickets/claims/{token}/accept",
+		"/v1/dev/payments/simulate",
+		"/v1/artists/{id}",
+		"/v1/artists/{id}/events",
+		"/v1/artists/{id}/assets",
+		"/v1/artists/{id}/follow",
+		"/v1/me/following",
+		"/v1/events/{id}/transfer-ownership",
+		"/v1/invites/{token}/accept",
+		"/v1/me/memberships",
+		"min_lat",
+		"geojson",
+		"user_pin",
+		"/v1/uploads",
+		"/v1/events/{eventId}/check-in",
+		"/v1/events/{eventId}/door/live",
+		"/v1/events/{id}/metrics",
+		"/v1/events/{id}/metrics/orders",
+		"/v1/events/{id}/metrics/export",
+		"/v1/tenants/{id}/metrics",
+		"/v1/admin/events",
+		"/v1/admin/events/{id}/approve",
+		"/v1/admin/events/{id}/reject",
+		"/v1/admin/users",
+		"/v1/admin/users/{id}",
+		"/v1/admin/users/{id}/disable",
+		"/v1/admin/users/{id}/enable",
+		"/v1/admin/users/{id}/profiles",
+		"/v1/admin/metrics",
+		"/v1/admin/broadcasts",
+		"/v1/me/email/opt-out",
+		"artist_id",
+		"/v1/posts",
+		"/v1/posts/{slug}",
+		"/v1/admin/posts",
+		"/v1/admin/posts/{id}",
+		"/v1/admin/posts/{id}/publish",
+		"/v1/admin/posts/{id}/assets",
+		"/v1/me/recommendations",
+		"/v1/events/{id}/similar",
+		"charge_cents",
+		"payout_required",
+		"VALIDATION_ERROR",
+		"UNAUTHORIZED",
+		"FORBIDDEN",
+		"NOT_FOUND",
+		"GONE",
+		"RATE_LIMITED",
+		"Retry-After",
+		"X-Request-Id",
+	} {
+		if !strings.Contains(doc, needle) {
+			t.Errorf("openapi.yaml missing %q", needle)
+		}
+	}
+}

@@ -1,0 +1,150 @@
+# Dev stack. Host publishes only the API (8080).
+# Usage: cp .env.example .env && COMPOSE_PARALLEL_LIMIT=1 docker compose up --build
+# See README.md if the build dies with no space left on device or signal: killed.
+name: parche
+
+x-app-env: &app-env
+  DATABASE_URL: ${DATABASE_URL:-postgres://parche:parche@postgres:5432/parche?sslmode=disable}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  BROKER_URL: ${BROKER_URL:-nats://broker:4222}
+  HTTP_ADDR: ${HTTP_ADDR:-:8080}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-parche-dev-jwt-access-secret-32b}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-parche-dev-jwt-refresh-secret-32}
+  TICKET_SIGNING_KEY: ${TICKET_SIGNING_KEY:-change-me-ticket-dev-only-32chars!}
+  TICKET_SIGNING_KEYS: ${TICKET_SIGNING_KEYS:-}
+  OBJECT_STORE_DRIVER: ${OBJECT_STORE_DRIVER:-minio}
+  OBJECT_STORE_ENDPOINT: ${OBJECT_STORE_ENDPOINT:-minio:9000}
+  OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-parche}
+  OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-parcheminio}
+  OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-parcheminio}
+  OBJECT_STORE_REGION: ${OBJECT_STORE_REGION:-us-east-1}
+  OBJECT_STORE_USE_SSL: ${OBJECT_STORE_USE_SSL:-false}
+  OBJECT_STORE_PATH: ${OBJECT_STORE_PATH:-./data/media}
+  OBJECT_STORE_PUBLIC_BASE_URL: ${OBJECT_STORE_PUBLIC_BASE_URL:-http://localhost:9000/parche}
+  PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-change-me-webhook-dev-only}
+  SMTP_HOST: ${SMTP_HOST:-mailhog}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-parche@localhost}
+  EMAIL_DRIVER: ${EMAIL_DRIVER:-log}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8081,http://127.0.0.1:8081}
+  APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8081}
+  APP_ENV: ${APP_ENV:-dev}
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-fake}
+  PAYMENT_CHECKOUT_BASE_URL: ${PAYMENT_CHECKOUT_BASE_URL:-}
+  API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8080}
+  MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+  MP_PUBLIC_KEY: ${MP_PUBLIC_KEY:-}
+  MP_CLIENT_ID: ${MP_CLIENT_ID:-}
+  MP_APPLICATION_ID: ${MP_APPLICATION_ID:-}
+  MP_CLIENT_SECRET: ${MP_CLIENT_SECRET:-}
+  MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+  MP_OAUTH_REDIRECT_URL: ${MP_OAUTH_REDIRECT_URL:-}
+  MP_NOTIFICATION_URL: ${MP_NOTIFICATION_URL:-}
+  MP_BACK_URL_BASE: ${MP_BACK_URL_BASE:-}
+  MP_TOKEN_KEY: ${MP_TOKEN_KEY:-}
+  MP_MARKETPLACE_FEE: ${MP_MARKETPLACE_FEE:-0}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@parche.test}
+
+services:
+  api:
+    build: .
+    command: ["serve"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      SERVICE: api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["worker"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *app-env
+      SERVICE: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: parche
+      POSTGRES_PASSWORD: parche
+      POSTGRES_DB: parche
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parche -d parche"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  broker:
+    image: nats:2-alpine
+    command: ["-js", "-m", "8222"]
+    volumes:
+      - nats_data:/data
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: parcheminio
+      MINIO_ROOT_PASSWORD: parcheminio
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    ports:
+      - "9000:9000"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  # Local SMTP catcher. Host still publishes only 8080. Set EMAIL_DRIVER=mailhog to use it.
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
+  minio_data:

@@ -1,0 +1,287 @@
+package objectstore
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/parche-app/backend/internal/config"
+)
+
+type s3Store struct {
+	client     *minio.Client
+	bucket     string
+	endpoint   string
+	useSSL     bool
+	publicBase string
+	secret     []byte
+	now        func() time.Time
+}
+
+// NewS3 talks to MinIO or AWS S3 with the same client.
+func NewS3(cfg config.Config) (Store, error) {
+	endpoint := strings.TrimSpace(cfg.ObjectStoreEndpoint)
+	if endpoint == "" {
+		return nil, fmt.Errorf("OBJECT_STORE_ENDPOINT is required for %s driver", cfg.ObjectStoreDriver)
+	}
+	if strings.TrimSpace(cfg.ObjectStoreAccessKey) == "" || strings.TrimSpace(cfg.ObjectStoreSecretKey) == "" {
+		return nil, fmt.Errorf("OBJECT_STORE_ACCESS_KEY and OBJECT_STORE_SECRET_KEY are required")
+	}
+
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.ObjectStoreAccessKey, cfg.ObjectStoreSecretKey, ""),
+		Secure: cfg.ObjectStoreUseSSL,
+		Region: cfg.ObjectStoreRegion,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("object store client: %w", err)
+	}
+	sum := sha256.Sum256([]byte(cfg.ObjectStoreAccessKey + "\n" + cfg.ObjectStoreSecretKey))
+	return &s3Store{
+		client:     client,
+		bucket:     cfg.ObjectStoreBucket,
+		endpoint:   endpoint,
+		useSSL:     cfg.ObjectStoreUseSSL,
+		publicBase: strings.TrimRight(strings.TrimSpace(cfg.ObjectStorePublicBaseURL), "/"),
+		secret:     sum[:],
+		now:        time.Now,
+	}, nil
+}
+
+func (s *s3Store) Ping(ctx context.Context) error {
+	ok, err := s.client.BucketExists(ctx, s.bucket)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return s.client.MakeBucket(ctx, s.bucket, minio.MakeBucketOptions{})
+}
+
+func (s *s3Store) Exists(ctx context.Context, key string) (bool, error) {
+	if err := validObjectKey(key); err != nil {
+		return false, err
+	}
+	_, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
+	if err == nil {
+		return true, nil
+	}
+	if minio.ToErrorResponse(err).StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	return false, err
+}
+
+func (s *s3Store) Delete(ctx context.Context, key string) error {
+	if err := validObjectKey(key); err != nil {
+		return err
+	}
+	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
+}
+
+func (s *s3Store) Head(ctx context.Context, key string) (Info, error) {
+	if err := validObjectKey(key); err != nil {
+		return Info{}, err
+	}
+	st, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).StatusCode == http.StatusNotFound {
+			return Info{}, ErrNotFound
+		}
+		return Info{}, err
+	}
+	ct := st.ContentType
+	if ct == "" {
+		ct = MIMEFromKey(key)
+	}
+	return Info{Size: st.Size, ContentType: ct}, nil
+}
+
+func (s *s3Store) Get(ctx context.Context, key string) (io.ReadCloser, Info, error) {
+	info, err := s.Head(ctx, key)
+	if err != nil {
+		return nil, Info{}, err
+	}
+	obj, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, Info{}, err
+	}
+	return obj, info, nil
+}
+
+func (s *s3Store) Put(ctx context.Context, key, contentType string, r io.Reader, size int64) error {
+	if err := validObjectKey(key); err != nil {
+		return err
+	}
+	if contentType == "" {
+		contentType = MIMEFromKey(key)
+	}
+	_, err := s.client.PutObject(ctx, s.bucket, key, r, size, minio.PutObjectOptions{ContentType: contentType})
+	return err
+}
+
+func (s *s3Store) PutPresign(ctx context.Context, key, contentType string, maxBytes int64, ttl time.Duration) (Presign, error) {
+	if err := validObjectKey(key); err != nil {
+		return Presign{}, err
+	}
+	if ttl < time.Second {
+		ttl = time.Second
+	}
+	if !clientReachableObjectHost(s.endpoint) {
+		return s.directPutGrant(key, contentType, maxBytes, ttl)
+	}
+	_ = maxBytes // public S3 PUT presign has no content-length condition
+	hdr := http.Header{}
+	hdr.Set("Content-Type", contentType)
+	u, err := s.client.PresignHeader(ctx, http.MethodPut, s.bucket, key, ttl, nil, hdr)
+	if err != nil {
+		return Presign{}, err
+	}
+	return Presign{
+		Method:    http.MethodPut,
+		URL:       u.String(),
+		Headers:   map[string]string{"Content-Type": contentType},
+		ExpiresAt: s.clock().UTC().Add(ttl),
+	}, nil
+}
+
+func (s *s3Store) directPutGrant(key, contentType string, maxBytes int64, ttl time.Duration) (Presign, error) {
+	exp := s.clock().Add(ttl)
+	token, err := signDirectTicket(s.secret, directTicket{
+		V:   1,
+		Op:  "put",
+		Key: key,
+		CT:  contentType,
+		Max: maxBytes,
+		Exp: exp.Unix(),
+	})
+	if err != nil {
+		return Presign{}, err
+	}
+	return Presign{
+		Method:    http.MethodPut,
+		URL:       DirectPutPrefix + token,
+		Headers:   map[string]string{"Content-Type": contentType},
+		ExpiresAt: exp.UTC(),
+	}, nil
+}
+
+func (s *s3Store) ConsumePut(ctx context.Context, token, contentType string, body io.Reader, contentLength int64) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	t, err := parseDirectTicket(s.secret, token)
+	if err != nil {
+		return err
+	}
+	if t.Op != "put" {
+		return ErrPresignToken
+	}
+	if s.clock().Unix() > t.Exp {
+		return ErrPresignExpired
+	}
+	if contentType != t.CT {
+		return ErrContentTypeMismatch
+	}
+	if t.Max > 0 && contentLength > t.Max {
+		return ErrTooLarge
+	}
+	limited := io.LimitReader(body, t.Max+1)
+	if t.Max <= 0 {
+		limited = body
+	}
+	var buf bytes.Buffer
+	n, err := io.Copy(&buf, limited)
+	if err != nil {
+		return err
+	}
+	if t.Max > 0 && n > t.Max {
+		return ErrTooLarge
+	}
+	return s.Put(ctx, t.Key, contentType, &buf, n)
+}
+
+func (s *s3Store) OpenGet(ctx context.Context, token string) (io.ReadCloser, string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, "", err
+	}
+	t, err := parseDirectTicket(s.secret, token)
+	if err != nil {
+		return nil, "", err
+	}
+	if t.Op != "get" {
+		return nil, "", ErrPresignToken
+	}
+	if s.clock().Unix() > t.Exp {
+		return nil, "", ErrPresignExpired
+	}
+	body, info, err := s.Get(ctx, t.Key)
+	if err != nil {
+		return nil, "", err
+	}
+	ct := t.CT
+	if ct == "" {
+		ct = info.ContentType
+	}
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	return body, ct, nil
+}
+
+func (s *s3Store) clock() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
+}
+
+func (s *s3Store) GetPresign(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	if err := validObjectKey(key); err != nil {
+		return "", err
+	}
+	if ttl < time.Second {
+		ttl = time.Second
+	}
+	params := url.Values{}
+	params.Set("response-content-disposition", "inline")
+	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, ttl, params)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
+}
+
+// AllowPublicGet opens anonymous s3:GetObject on the bucket (local demo flyers).
+func (s *s3Store) AllowPublicGet(ctx context.Context) error {
+	if err := s.Ping(ctx); err != nil {
+		return err
+	}
+	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, s.bucket)
+	return s.client.SetBucketPolicy(ctx, s.bucket, policy)
+}
+
+func (s *s3Store) GetPublicURL(key string) string {
+	if reachablePublicBase(s.publicBase) {
+		return s.publicBase + "/" + key
+	}
+	return PublicMediaURL(key)
+}
+
+func reachablePublicBase(base string) bool {
+	u, err := url.Parse(base)
+	if err != nil || u.Host == "" {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	return host != "localhost" && host != "127.0.0.1" && host != "minio" && host != "0.0.0.0"
+}
