@@ -1,0 +1,25 @@
+{
+  "name": "parche-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Parche — polyglot folder monorepo (mobile Expo, api Go, web Next.js). Apps are independent; root scripts only cd into each.",
+  "scripts": {
+    "dev": "echo 'Use: pnpm dev:api | pnpm dev:mobile | pnpm dev:web' && exit 1",
+    "dev:mobile": "pnpm --dir apps/mobile start",
+    "dev:web": "pnpm --dir apps/web dev",
+    "dev:api": "COMPOSE_PARALLEL_LIMIT=1 docker compose --project-directory apps/api up --build",
+    "build": "pnpm build:web && pnpm build:api",
+    "build:mobile": "pnpm --dir apps/mobile exec expo export",
+    "build:web": "pnpm --dir apps/web build",
+    "build:api": "cd apps/api && go build -o .bin/parche-api ./cmd/parche-api",
+    "lint": "pnpm lint:mobile && pnpm lint:web && pnpm lint:api",
+    "lint:mobile": "pnpm --dir apps/mobile lint",
+    "lint:web": "pnpm --dir apps/web lint",
+    "lint:api": "cd apps/api && go vet ./...",
+    "test": "pnpm test:mobile && pnpm test:api",
+    "test:mobile": "pnpm --dir apps/mobile test",
+    "test:web": "echo 'No web unit tests yet'",
+    "test:api": "cd apps/api && go test ./...",
+    "wiki:publish": "bash ./scripts/publish-wiki.sh"
+  }
+}

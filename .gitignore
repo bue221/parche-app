@@ -1,0 +1,58 @@
+# OS / editor
+.DS_Store
+*.pem
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# Dependencies / package managers
+node_modules/
+package-lock.json
+yarn.lock
+bun.lock
+bun.lockb
+
+# Env / secrets (examples are tracked)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+.expo/
+web-build/
+expo-env.d.ts
+*.tsbuildinfo
+apps/api/.bin/
+apps/api/data/
+coverage/
+coverage.out
+
+# Native (Expo prebuild)
+apps/mobile/ios/
+apps/mobile/android/
+.kotlin/
+
+# Logs / debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.pnpm-debug.log*
+.metro-health-check*
+
+# Local tooling
+.atl/
+.mp-integrate-progress.md
+
+# Go
+apps/api/vendor/
+*.exe
+*.test
+
+# Vercel
+.vercel/
