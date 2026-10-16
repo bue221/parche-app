@@ -25,6 +25,8 @@ Workflows en `.github/workflows/` corren lint/test **solo si cambian** archivos 
 
 Nunca commits de `.env`. Usa `.env.example`. No pegues tokens en issues/PRs.
 
-## Wiki
+## Documentación
 
-Edita `docs/*.md` en el repo. Publica con `pnpm wiki:publish` o el workflow `wiki.yml`.
+Edita `docs/*.md` en el repo y haz commit/PR. Eso es la “wiki” del proyecto.
+
+GitHub Wiki no está disponible en repos **privados** con plan Free. Con Pro/Team (o repo público) puedes usar `pnpm wiki:publish` / `scripts/publish-wiki.sh`.

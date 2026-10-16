@@ -20,6 +20,7 @@
     "test:mobile": "pnpm --dir apps/mobile test",
     "test:web": "echo 'No web unit tests yet'",
     "test:api": "cd apps/api && go test ./...",
-    "wiki:publish": "bash ./scripts/publish-wiki.sh"
+    "wiki:publish": "bash ./scripts/publish-wiki.sh",
+    "docs": "echo 'Open docs/Home.md — in-repo docs (no GitHub Wiki on private Free)'"
   }
 }

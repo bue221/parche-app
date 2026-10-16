@@ -19,15 +19,16 @@ pnpm --dir apps/mobile start|lint|test
 pnpm --dir apps/web dev|build|lint
 cd apps/api && go test ./... && go vet ./...
 COMPOSE_PARALLEL_LIMIT=1 docker compose --project-directory apps/api up --build
-pnpm wiki:publish
 ```
+
+Docs del monorepo: `docs/Home.md` (no hay GitHub Wiki en privado Free).
 
 ## Arquitectura
 
 - Mobile → `EXPO_PUBLIC_API_URL` → API `/v1`
 - Web → `API_URL` (server) → API para ISR
 - API módulo Go: `github.com/parche-app/backend` (nombre histórico; no renombrar a la ligera)
-- Producto/UI: `apps/*/docs/` y wiki en `docs/`
+- Producto/UI: `apps/*/docs/` y monorepo en `docs/`
 
 ## Convenciones
 
