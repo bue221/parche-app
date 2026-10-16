@@ -9,3 +9,5 @@ pnpm lint && pnpm build
 ```
 
 Solo pnpm. Lee `AGENTS.md` y `docs/ui/design.md`. Ver monorepo: `../../CLAUDE.md`.
+
+Licencia: PolyForm Noncommercial 1.0.0 (sin uso comercial) — `../../LICENSE`.

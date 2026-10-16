@@ -2,6 +2,7 @@
   "name": "parche-app",
   "version": "0.1.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
   "description": "Parche — polyglot folder monorepo (mobile Expo, api Go, web Next.js). Apps are independent; root scripts only cd into each.",
   "scripts": {
     "dev": "echo 'Use: pnpm dev:api | pnpm dev:mobile | pnpm dev:web' && exit 1",

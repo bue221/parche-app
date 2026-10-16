@@ -2,6 +2,7 @@
   "name": "parche",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "packageManager": "pnpm@12.3.4",
   "engines": {
     "node": ">=22.13.0",

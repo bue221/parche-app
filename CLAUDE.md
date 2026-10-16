@@ -37,12 +37,17 @@ Docs: `docs/Home.md` → Wiki con `pnpm wiki:publish` (repo público).
 - Expo 57 docs versionadas; UI flyer B/N
 - Secretos solo en `.env` local (gitignored)
 
+## Licencia
+
+**PolyForm Noncommercial 1.0.0** (`LICENSE`). Código público, **prohibido uso comercial**. No es licencia OSI Open Source. No sugieras relicenciar a MIT/Apache sin pedírselo al autor.
+
 ## Qué NO tocar
 
 - Convertir esto en un workspace Node único o meter Go en npm
 - Force-push reescribiendo el historial importado
 - Commitear `.env`, tokens MP, JWT
 - Cambiar `nodeLinker: hoisted` en `apps/mobile/pnpm-workspace.yaml` sin probar Metro
+- Quitar o debilitar la restricción no comercial de `LICENSE`
 
 ## Flujo
 

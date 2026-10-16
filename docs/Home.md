@@ -28,6 +28,7 @@ Parche conecta gente con la escena electrónica en vivo: descubrir, comprar, ent
 - [Setup local](Setup-local)
 - [Despliegue](Deployment)
 - [Guía de contribución](Contributing)
+- [Licencia](Licencia) — PolyForm Noncommercial (sin uso comercial)
 
 ## Fuente
 

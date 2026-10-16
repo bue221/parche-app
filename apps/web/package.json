@@ -2,6 +2,7 @@
   "name": "parche-web",
   "version": "0.1.0",
   "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
   "packageManager": "pnpm@12.3.4",
   "engines": {
     "node": ">=22.13.0",

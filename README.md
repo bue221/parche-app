@@ -10,6 +10,15 @@ Monorepo de carpetas de **Parche** — app para eventos en vivo. Tres apps **ind
 
 Repo: [github.com/bue221/parche-app](https://github.com/bue221/parche-app) (público) · Docs: [`docs/`](docs/Home.md) · [Wiki](https://github.com/bue221/parche-app/wiki)
 
+## Licencia
+
+**PolyForm Noncommercial 1.0.0** — código fuente público / source-available.  
+Puedes estudiar, modificar y usarlo **solo con fines no comerciales**. **Queda prohibido cualquier uso comercial** del código (producto, SaaS, reventa, etc.).
+
+Texto: [`LICENSE`](LICENSE) · resumen: [`docs/Licencia.md`](docs/Licencia.md) · [wiki/Licencia](https://github.com/bue221/parche-app/wiki/Licencia)
+
+> No es una licencia “Open Source” OSI (esas permiten uso comercial). Las dependencias de terceros conservan su propia licencia.
+
 ## Arquitectura
 
 ```mermaid
@@ -107,5 +116,6 @@ parche-app/
 2. CI corre lint/test **por paths** (`apps/mobile/**`, etc.).
 3. Nunca commits de `.env`; usa los `.env.example`.
 4. Conventional Commits en inglés: `feat(mobile): …`, `fix(api): …`.
+5. Al contribuir aceptas que tu código se licencia bajo la misma **PolyForm Noncommercial 1.0.0**.
 
 Detalle: [`docs/Contributing.md`](docs/Contributing.md).

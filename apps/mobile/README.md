@@ -29,3 +29,7 @@ Expo Router · NativeWind · React 19 · React Native 0.86 · TypeScript. Depend
 ## Docs para agentes
 
 Índice en [`AGENTS.md`](AGENTS.md). Todo archivo nuevo bajo `docs/` debe indexarse ahí y en [`docs/README.md`](docs/README.md).
+
+## Licencia
+
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**

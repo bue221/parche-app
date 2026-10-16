@@ -19,3 +19,4 @@
 - [Setup local](Setup-local)
 - [Despliegue](Deployment)
 - [Contribuir](Contributing)
+- [Licencia](Licencia)

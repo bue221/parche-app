@@ -26,3 +26,7 @@ Cuentas demo (contraseña `parche1234`): `ata@`, `promoter@`, `door@`, `metrics@
 | `Docker Compose requires buildx plugin` | Aviso. El build clásico sigue funcionando. |
 
 Tras un prune, vuelve a `COMPOSE_PARALLEL_LIMIT=1 docker compose up --build`.
+
+## Licencia
+
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**

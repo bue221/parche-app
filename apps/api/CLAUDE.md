@@ -10,3 +10,5 @@ go build -o .bin/parche-api ./cmd/parche-api
 ```
 
 Lee `AGENTS.md` y `docs/features/` antes de cambiar contratos. Módulo: `github.com/parche-app/backend`. No commits de `.env`.
+
+Licencia: PolyForm Noncommercial 1.0.0 (sin uso comercial) — `../../LICENSE`.

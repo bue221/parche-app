@@ -50,3 +50,7 @@ Copia [`.env.example`](.env.example) a `.env`.
 | `NEXT_PUBLIC_APP_STORE_URL` | App Store (vacío = no se muestra el CTA) |
 | `NEXT_PUBLIC_PLAY_STORE_URL` | Google Play (vacío = no se muestra el CTA) |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Contacto en páginas legales |
+
+## Licencia
+
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**
