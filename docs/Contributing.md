@@ -2,8 +2,7 @@
 
 ## Licencia
 
-Al abrir un PR aceptas que tus aportes se publiquen bajo **PolyForm Noncommercial 1.0.0** (mismas condiciones que el resto del monorepo): código visible, **sin uso comercial**. Ver [Licencia](Licencia).
-
+Al abrir un PR aceptas que tus aportes se publiquen bajo **PolyForm Noncommercial 1.0.0** (mismas condiciones que el resto del monorepo): código visible; **terceros sin uso comercial** (el titular del copyright sí puede). Ver [Licencia](Licencia).
 ## Principios
 
 1. **Una app por PR** cuando sea posible (mobile *o* api *o* web).

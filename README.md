@@ -13,11 +13,13 @@ Repo: [github.com/bue221/parche-app](https://github.com/bue221/parche-app) (púb
 ## Licencia
 
 **PolyForm Noncommercial 1.0.0** — código fuente público / source-available.  
-Puedes estudiar, modificar y usarlo **solo con fines no comerciales**. **Queda prohibido cualquier uso comercial** del código (producto, SaaS, reventa, etc.).
+Terceros pueden estudiar, modificar y usarlo **solo con fines no comerciales**. **Queda prohibido cualquier uso comercial por terceros** (producto, SaaS, reventa, etc.).
+
+**Excepción:** el titular del copyright — **Andrés Camilo Plaza Jiménez** — puede usarlo comercialmente sin límite (y autorizar por escrito a quien quiera).
 
 Texto: [`LICENSE`](LICENSE) · resumen: [`docs/Licencia.md`](docs/Licencia.md) · [wiki/Licencia](https://github.com/bue221/parche-app/wiki/Licencia)
 
-> No es una licencia “Open Source” OSI (esas permiten uso comercial). Las dependencias de terceros conservan su propia licencia.
+> No es una licencia “Open Source” OSI (esas permiten uso comercial a cualquiera). Las dependencias de terceros conservan su propia licencia.
 
 ## Arquitectura
 

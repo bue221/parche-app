@@ -53,4 +53,4 @@ Copia [`.env.example`](.env.example) a `.env`.
 
 ## Licencia
 
-PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial por terceros** (el autor sí puede).

@@ -6,12 +6,10 @@ El código de **Parche** (este monorepo) se publica como **source-available** ba
 
 **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)**
 
-| Permitido (fines no comerciales) | No permitido |
-|----------------------------------|--------------|
-| Ver, estudiar, clonar | Uso comercial de cualquier tipo |
-| Modificar y experimentar (hobby, estudio, investigación personal) | Vender el software o servicios basados en él |
-| Uso por instituciones educativas / sin ánimo de lucro según la licencia | Incorporarlo en un producto o SaaS de pago |
-| Distribuir copias **respetando** los términos y el aviso de copyright | Sublicenciar como si fuera MIT/Apache |
+| Quién | Qué puede hacer |
+|-------|-----------------|
+| **Andrés Camilo Plaza Jiménez** (titular) | Todo: uso comercial, producto, SaaS, relicenciar, autorizar a terceros por escrito. |
+| **Cualquier otra persona** | Ver, estudiar, clonar; modificar y experimentar (hobby, estudio, investigación personal); uso por instituciones educativas / sin ánimo de lucro **según** PolyForm NC. **Sin uso comercial.** |
 
 Texto completo: [`LICENSE`](https://github.com/bue221/parche-app/blob/main/LICENSE) en la raíz del repo.
 
@@ -19,9 +17,9 @@ Texto completo: [`LICENSE`](https://github.com/bue221/parche-app/blob/main/LICEN
 
 ## No es “Open Source” OSI
 
-Las licencias [Open Source Initiative](https://opensource.org/osd) **exigen** permitir uso comercial. PolyForm Noncommercial **no** es OSI-approved: el código es público y legible, pero **prohibido el uso comercial**.
+Las licencias [Open Source Initiative](https://opensource.org/osd) **exigen** permitir uso comercial a todo el mundo. PolyForm Noncommercial **no** es OSI-approved: el código es público y legible, pero **terceros no pueden usarlo comercialmente**.
 
-Si necesitas una licencia comercial, contacta al autor.
+Si eres un tercero y necesitas licencia comercial, contacta al autor.
 
 ## Dependencias de terceros
 

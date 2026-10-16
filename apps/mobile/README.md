@@ -32,4 +32,4 @@ Expo Router · NativeWind · React 19 · React Native 0.86 · TypeScript. Depend
 
 ## Licencia
 
-PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial por terceros** (el autor sí puede).

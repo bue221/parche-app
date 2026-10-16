@@ -39,7 +39,7 @@ Docs: `docs/Home.md` → Wiki con `pnpm wiki:publish` (repo público).
 
 ## Licencia
 
-**PolyForm Noncommercial 1.0.0** (`LICENSE`). Código público, **prohibido uso comercial**. No es licencia OSI Open Source. No sugieras relicenciar a MIT/Apache sin pedírselo al autor.
+**PolyForm Noncommercial 1.0.0** (`LICENSE`). Código público; **terceros sin uso comercial**. El titular (Andrés Camilo Plaza Jiménez) sí puede usarlo comercialmente. No es licencia OSI Open Source. No sugieras relicenciar a MIT/Apache sin pedírselo al autor.
 
 ## Qué NO tocar
 

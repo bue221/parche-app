@@ -29,4 +29,4 @@ Tras un prune, vuelve a `COMPOSE_PARALLEL_LIMIT=1 docker compose up --build`.
 
 ## Licencia
 
-PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial.**
+PolyForm Noncommercial 1.0.0 — ver [`LICENSE`](../../LICENSE) en la raíz del monorepo. **Sin uso comercial por terceros** (el autor sí puede).
