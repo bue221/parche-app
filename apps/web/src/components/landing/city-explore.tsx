@@ -20,12 +20,12 @@ function CityExplore({ events }: { events: readonly PublicEventCard[] }) {
           title="Explora por ciudad"
           description="La música también se vive cerca."
           action={
-            <a
+            <Link
               href="/explorar?v=map"
               className="font-favorit text-body-sm text-muted-foreground outline-none hover:text-aurora focus-visible:ring-2 focus-visible:ring-aurora"
             >
               Ver mapa
-            </a>
+            </Link>
           }
         />
         <ul className="grid gap-ds-16 sm:grid-cols-2 lg:grid-cols-5">
@@ -34,7 +34,7 @@ function CityExplore({ events }: { events: readonly PublicEventCard[] }) {
             return (
               <Reveal as="li" key={city.slug} delayMs={index * 70}>
                 <Link
-                  href={empty ? "/#descarga" : "/explorar"}
+                  href={empty ? "/#descarga" : `/explorar/${city.slug}`}
                   className="group relative flex aspect-4/5 overflow-hidden rounded-cards bg-muted shadow-card outline-none focus-visible:ring-2 focus-visible:ring-aurora"
                 >
                   <Image

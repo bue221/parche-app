@@ -17,8 +17,10 @@ Tokens y reglas visuales: [`docs/ui/design.md`](docs/ui/design.md). Catálogo in
 | Pieza | Dónde |
 |-------|--------|
 | Landing | `src/app/page.tsx` + `src/components/landing/` |
-| Explorar | `src/app/explorar/page.tsx` + `src/components/explore/` |
+| Explorar | `src/app/explorar/` + `src/components/explore/` |
 | Eventos ISR | `src/app/eventos/[id]/page.tsx` + `src/lib/events.ts` |
+| Artistas ISR | `src/app/artistas/[id]/page.tsx` + `src/lib/artists.ts` |
+| Legal | `src/app/legal/` |
 | Tokens | `src/app/globals.css` |
 | Primitivos | `src/components/ui/` |
 | SEO | `src/lib/seo.ts`, `sitemap.ts`, `robots.ts`, JSON-LD, OG image |
@@ -28,11 +30,12 @@ Tokens y reglas visuales: [`docs/ui/design.md`](docs/ui/design.md). Catálogo in
 
 - `metadataBase`, title template, Open Graph, Twitter, canonical y `es-CO`
 - `sitemap.ts` / `robots.ts` / `manifest.ts`
-- JSON-LD: Organization, WebSite, WebPage, SoftwareApplication, FAQPage, **Event** en `/eventos/{id}`, **ItemList** en `/explorar`
+- JSON-LD: Organization, WebSite, WebPage, SoftwareApplication, FAQPage, **Event**, **ItemList**, **Person**
 - Imagen OG generada con Antonio (flyer)
 - `/sistema` queda fuera del índice
 - Eventos publicados se prerenderizan (ISR 120s); cancelados se ven y no se indexan
-- `/explorar` lista + mapa con filtros en URL; `noindex` si hay `q` libre
+- `/explorar` y hubs ciudad/género; `noindex` si hay `q` libre
+- `/artistas/{id}` desde lineups; legal en `/legal/*`
 
 ## Env
 
@@ -44,5 +47,6 @@ Copia [`.env.example`](.env.example) a `.env`.
 | `API_URL` | Backend para ISR (`GET /v1/events`) |
 | `MEDIA_HOSTS` | Hosts de flyers para `next/image` (p. ej. `localhost:9000`) |
 | `NEXT_PUBLIC_APP_WEB_URL` | App Expo en web (`app-frontend`, `pnpm web`) |
-| `NEXT_PUBLIC_APP_STORE_URL` | Listado de App Store (vacío = próximamente) |
-| `NEXT_PUBLIC_PLAY_STORE_URL` | Listado de Google Play (vacío = próximamente) |
+| `NEXT_PUBLIC_APP_STORE_URL` | App Store (vacío = no se muestra el CTA) |
+| `NEXT_PUBLIC_PLAY_STORE_URL` | Google Play (vacío = no se muestra el CTA) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Contacto en páginas legales |

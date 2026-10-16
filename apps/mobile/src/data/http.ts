@@ -6,7 +6,8 @@ import { API_URL, rewriteMediaUrl } from '@/data/env';
 import { useInterestStore } from '@/data/interest-store';
 import { useRecentStore } from '@/data/recent-store';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens, usesCookieRefresh } from '@/data/token-store';
-import { clearSessionQueries } from '@/lib/query';
+import { hasOptionalAuth } from '@/lib/session-query';
+import { clearSessionQueries, invalidateOptionalAuthQueries } from '@/lib/query';
 
 type Json = Record<string, unknown> | unknown[] | null;
 
@@ -56,6 +57,10 @@ function toError(res: Response, body: Json): ApiError {
   return new ApiError(safe, message, Object.keys(fieldErrors).length ? fieldErrors : undefined);
 }
 
+export function optionalAuth(): boolean {
+  return hasOptionalAuth(getAccessToken());
+}
+
 export async function revokeLocalSession(): Promise<void> {
   await clearTokens();
   useAuthStore.getState().setMe(null);
@@ -63,6 +68,7 @@ export async function revokeLocalSession(): Promise<void> {
   useInterestStore.getState().clearAccount();
   useRecentStore.getState().adoptOwner(null);
   clearSessionQueries();
+  invalidateOptionalAuthQueries();
 }
 
 function fetchCredentials(): RequestCredentials | undefined {

@@ -35,7 +35,7 @@ CTAs nunca mezclan “escanear” y “comprar” en el mismo botón. Editar, pu
 
 ## Flujo
 
-`GET /v1/events/{id}`. 404/GONE: pantalla “Este evento ya no está”.
+`GET /v1/events/{id}`. 404/GONE: pantalla “Este evento ya no está”. Auth opcional: el detalle espera la hidratación de sesión para mandar Bearer en el primer GET (etapas y acciones de staff no deben llegar en un segundo fetch).
 
 ## Estados
 

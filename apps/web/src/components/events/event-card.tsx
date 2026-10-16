@@ -69,7 +69,7 @@ function EventCard({
   return (
     <Reveal as="article" delayMs={delayMs} className={cn("group h-full", className)}>
       <Link
-        href={eventPath(event.id)}
+        href={eventPath(event)}
         className={cn(
           "relative flex aspect-4/5 h-full flex-col overflow-hidden rounded-cards bg-surface shadow-card outline-none",
           "focus-visible:ring-2 focus-visible:ring-aurora",
@@ -154,11 +154,15 @@ function ListingCard({
   return (
     <Reveal as="article" delayMs={delayMs} className={cn("group", className)}>
       <Link
-        href={eventPath(event.id)}
-        onMouseEnter={() => onHover?.(event.id)}
-        onMouseLeave={() => onHover?.(null)}
-        onFocus={() => onHover?.(event.id)}
-        onBlur={() => onHover?.(null)}
+        href={eventPath(event)}
+        {...(onHover
+          ? {
+              onMouseEnter: () => onHover(event.id),
+              onMouseLeave: () => onHover(null),
+              onFocus: () => onHover(event.id),
+              onBlur: () => onHover(null),
+            }
+          : {})}
         className={cn(
           "flex flex-col gap-ds-12 outline-none",
           "focus-visible:rounded-cards focus-visible:ring-2 focus-visible:ring-aurora",

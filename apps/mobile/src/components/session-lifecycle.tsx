@@ -17,6 +17,8 @@ import { getAccessExpiresAt, hasPersistedSession, hydrateRefresh } from '@/data/
 
 const REFRESH_SKEW_MS = 90 * 1000;
 
+let bootPromise: Promise<void> | null = null;
+
 function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'UNAUTHORIZED';
 }
@@ -44,50 +46,53 @@ async function refreshAccess(reason: string): Promise<'ok' | 'unauthorized' | 'u
   }
 }
 
+async function bootSession(): Promise<void> {
+  try {
+    await hydratePrintSeen();
+    await useInterestStore.getState().hydrate();
+    await useRecentStore.getState().hydrate();
+    const refresh = await hydrateRefresh();
+    if (!refresh) {
+      useInterestStore.getState().dropSynced();
+      useRecentStore.getState().adoptOwner(null);
+      return;
+    }
+    const ok = await refreshSession();
+    if (!ok) {
+      useInterestStore.getState().dropSynced();
+      useRecentStore.getState().adoptOwner(null);
+      return;
+    }
+    try {
+      await api.auth.me();
+      useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
+      void reconcileInterest();
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        await revokeLocalSession();
+      }
+    }
+  } catch (err) {
+    debugLog('auth', isUnauthorized(err) ? 'boot session revoked' : 'boot refresh unavailable');
+  } finally {
+    useAuthStore.getState().setHydrated(true);
+  }
+}
+
+function ensureBootSession(): Promise<void> {
+  if (!bootPromise) {
+    bootPromise = bootSession();
+  }
+  return bootPromise;
+}
+
 export function SessionLifecycle() {
   const accessExpiresAt = useAuthStore((s) => s.accessExpiresAt);
   const [revoked, setRevoked] = useState(false);
   const retrying = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        await hydratePrintSeen();
-        await useInterestStore.getState().hydrate();
-        await useRecentStore.getState().hydrate();
-        const refresh = await hydrateRefresh();
-        if (!refresh) {
-          useInterestStore.getState().dropSynced();
-          useRecentStore.getState().adoptOwner(null);
-          return;
-        }
-        const ok = await refreshSession();
-        if (!ok) {
-          useInterestStore.getState().dropSynced();
-          useRecentStore.getState().adoptOwner(null);
-          return;
-        }
-        try {
-          await api.auth.me();
-          useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
-          void reconcileInterest();
-        } catch (err) {
-          if (isUnauthorized(err)) {
-            await revokeLocalSession();
-          }
-        }
-      } catch (err) {
-        debugLog('auth', isUnauthorized(err) ? 'boot session revoked' : 'boot refresh unavailable');
-      } finally {
-        if (!cancelled) {
-          useAuthStore.getState().setHydrated(true);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void ensureBootSession();
   }, []);
 
   useEffect(() => {

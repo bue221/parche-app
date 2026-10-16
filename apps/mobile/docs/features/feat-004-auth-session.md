@@ -23,6 +23,7 @@ No hay pantalla de “sesión”. El botón Salir vive en [FEAT-012](feat-012-pr
 
 | Evento | Acción |
 |--------|--------|
+| App boot | Hidratar refresh → access → `/me`. `hydrated` queda true al terminar. El splash no se quita antes. Las lecturas públicas con Bearer opcional esperan este flag para no ir primero anónimas y luego con sesión |
 | App foreground | Refresh si el access está por vencer |
 | Refresh OK | Nuevo par; el usado no se reenvía |
 | Refresh fail / reuse | Limpiar store; login |
@@ -45,6 +46,7 @@ Meter permisos de todos los eventos en el JWT. Ticket QR ([FEAT-023](feat-023-ti
 - [x] Access no se persiste como único secreto en AsyncStorage en claro.
 - [x] Logout deja de mostrar Tiquetes/Operar.
 - [x] Reuso de refresh = sesión muerta.
+- [x] El catálogo no pide dos veces (anónimo y luego con Bearer) al arrancar con sesión.
 
 ## Relacionadas
 

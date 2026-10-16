@@ -5,6 +5,7 @@ export type CityExploreItem = LandingCity & { count: number };
 
 export type TrendingArtist = {
   key: string;
+  artistId?: string;
   name: string;
   avatarUrl?: string;
   eventTitle: string;
@@ -38,6 +39,7 @@ export function trendingArtists(
       seen.add(key);
       artists.push({
         key,
+        artistId: slot.artistId || undefined,
         name: slot.name,
         avatarUrl: slot.avatar?.thumbUrl ?? slot.avatar?.publicUrl,
         eventTitle: event.title,

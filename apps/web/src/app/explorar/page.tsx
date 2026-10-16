@@ -46,7 +46,7 @@ export default async function ExplorarPage({ searchParams }: ExplorePageProps) {
         <ul>
           {events.map((event) => (
             <li key={event.id}>
-              <a href={eventPath(event.id)}>
+              <a href={eventPath(event)}>
                 {event.title}
                 {event.venueName ? ` — ${event.venueName}` : ""}
               </a>

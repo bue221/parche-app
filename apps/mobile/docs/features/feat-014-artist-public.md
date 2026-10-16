@@ -21,7 +21,7 @@ Hero B/N. Lista de eventos reutiliza card de Explorar. Dueño ve CTA “editar�
 
 ## Flujo
 
-`GET /v1/artists/{id}`. 404: “No encontramos a este artista”.
+`GET /v1/artists/{id}`. 404: “No encontramos a este artista”. Auth opcional: el GET espera hidratación de sesión para no pedir dos veces.
 
 ## Estados
 

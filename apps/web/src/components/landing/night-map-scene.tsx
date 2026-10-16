@@ -86,7 +86,7 @@ export function NightMapScene({ events }: { events: readonly LocatedEvent[] }) {
       })}
       {active ? (
         <Link
-          href={eventPath(active.id)}
+          href={eventPath(active)}
           className="absolute right-ds-16 bottom-ds-16 z-20 rounded-buttons bg-aurora px-ds-16 py-ds-8 font-favorit text-caption font-bold tracking-favorit text-pitch-black uppercase outline-none focus-visible:ring-2 focus-visible:ring-paper-white"
         >
           Ver fecha

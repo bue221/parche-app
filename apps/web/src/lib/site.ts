@@ -3,6 +3,11 @@ function optionalUrl(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function optionalEmail(value: string | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed || "hola@parche.app";
+}
+
 export const siteConfig = {
   name: "Parche",
   shortName: "Parche",
@@ -15,8 +20,8 @@ export const siteConfig = {
   appWebUrl: optionalUrl(process.env.NEXT_PUBLIC_APP_WEB_URL),
   appStoreUrl: optionalUrl(process.env.NEXT_PUBLIC_APP_STORE_URL),
   playStoreUrl: optionalUrl(process.env.NEXT_PUBLIC_PLAY_STORE_URL),
+  email: optionalEmail(process.env.NEXT_PUBLIC_CONTACT_EMAIL),
   creator: "@parche",
-  email: "hola@parche.app",
   keywords: [
     "parche",
     "eventos en vivo",

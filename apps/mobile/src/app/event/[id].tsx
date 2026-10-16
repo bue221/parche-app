@@ -51,6 +51,7 @@ import { shareEvent } from '@/lib/share';
 import { stickyBuyLead } from '@/lib/event-detail-copy';
 import { eventDetailImages } from '@/lib/event-images';
 import { eventDetailSheetLayout } from '@/lib/event-detail-layout';
+import { afterAuthHydration } from '@/lib/session-query';
 import {
   buyCtaLabel,
   buyPriceCaption,
@@ -190,7 +191,7 @@ export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
-  const { isLoggedIn, user } = useAuthSnapshot();
+  const { isLoggedIn, user, hydrated } = useAuthSnapshot();
   const saved = useInterestStore((s) => (id ? s.eventIds.includes(id) : false));
   const followedArtists = useInterestStore((s) => s.artistIds);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -200,12 +201,12 @@ export default function EventDetailScreen() {
   const { data: event, error, refetch, isLoading } = useQuery({
     queryKey: ['event', id],
     queryFn: () => api.events.get(id),
-    enabled: Boolean(id),
+    enabled: afterAuthHydration(hydrated, Boolean(id)),
   });
   const similarQuery = useQuery({
     queryKey: ['event', id, 'similar'],
     queryFn: () => api.events.similar(id),
-    enabled: Boolean(id),
+    enabled: afterAuthHydration(hydrated, Boolean(id)),
   });
 
   useEffect(() => {
@@ -234,7 +235,7 @@ export default function EventDetailScreen() {
       </Screen>
     );
   }
-  if (!event || isLoading) {
+  if (!hydrated || !event || isLoading) {
     return (
       <Screen back headTitle="Evento">
         <View className={wide ? 'flex-row items-start gap-ds-48' : 'gap-ds-16'}>

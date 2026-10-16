@@ -42,6 +42,7 @@ export type EventTrack = {
 
 export type PublicEventCard = {
   id: string;
+  slug?: string;
   title: string;
   startsAt: string;
   endsAt?: string;
@@ -85,8 +86,41 @@ export function isEventId(value: string): boolean {
   return UUID_RE.test(value);
 }
 
-export function eventPath(id: string): string {
-  return `/eventos/${id}`;
+export function eventPath(
+  eventOrId: string | { id: string; slug?: string },
+): string {
+  if (typeof eventOrId === "string") return `/eventos/${eventOrId}`;
+  const slug = eventOrId.slug?.trim();
+  return `/eventos/${slug || eventOrId.id}`;
+}
+
+/**
+ * Next may pass dynamic segments still percent-encoded (e.g. `r%C3%ADo`).
+ * Normalize to NFC so API slugs and URL params compare equal.
+ */
+export function normalizeEventParam(param: string): string {
+  let value = param.trim();
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // Already decoded or malformed — keep trimmed input.
+  }
+  return value.normalize("NFC");
+}
+
+/** Resolve UUID or public slug to a full event (slug via published list scan). */
+export async function resolveEvent(
+  param: string,
+): Promise<PublicEvent | null> {
+  const key = normalizeEventParam(param);
+  if (isEventId(key)) return getEvent(key);
+  const published = await listPublishedEvents();
+  const match = published.find(
+    (event) =>
+      Boolean(event.slug) && normalizeEventParam(event.slug!) === key,
+  );
+  if (!match) return null;
+  return getEvent(match.id);
 }
 
 export function googleMapsHref(lat: number, lng: number): string {
@@ -265,6 +299,7 @@ function mapEventCard(raw: unknown): PublicEventCard | null {
 
   return {
     id,
+    slug: optionalStr(rec.slug),
     title,
     startsAt,
     endsAt: optionalStr(rec.ends_at),

@@ -3,12 +3,12 @@ import { API_URL, rewriteUploadUrl } from '@/data/env';
 import { ApiError } from '@/data/errors';
 import { useInterestStore } from '@/data/interest-store';
 import { useRecentStore } from '@/data/recent-store';
-import { apiFetch, asRecord, mediaUrl, num, refreshSession, revokeLocalSession, str } from '@/data/http';
+import { apiFetch, asRecord, mediaUrl, num, optionalAuth, refreshSession, revokeLocalSession, str } from '@/data/http';
 import { createId } from '@/data/ids';
 import { mapEvent, mapEventDetail, mapMembership, mapTicketType, mapWalletTicket } from '@/data/mappers';
 import type { EventWithExtras, Me, ParcheApi } from '@/data/mock/api';
 import { markPrintSeen as persistPrintSeen } from '@/data/print-seen';
-import { clearSessionQueries } from '@/lib/query';
+import { clearSessionQueries, invalidateOptionalAuthQueries } from '@/lib/query';
 import {
   getWalletTickets,
   hydratePrintSeen,
@@ -109,6 +109,9 @@ function mapMe(raw: unknown): Me {
   }
   useAuthStore.getState().setMe(me);
   useRecentStore.getState().adoptOwner(me.id);
+  if (useAuthStore.getState().hydrated && previousId !== me.id) {
+    invalidateOptionalAuthQueries();
+  }
   return me;
 }
 
@@ -124,11 +127,11 @@ async function applyTokens(body: unknown): Promise<void> {
 }
 
 async function hydrateEvent(id: string): Promise<EventWithExtras> {
-  const detail = mapEventDetail(await apiFetch(`/v1/events/${id}`, { auth: Boolean(useAuthStore.getState().me) }));
+  const detail = mapEventDetail(await apiFetch(`/v1/events/${id}`, { auth: optionalAuth() }));
   if (detail.ticketTypes.length === 0) {
     try {
       const types = await apiFetch(`/v1/events/${id}/ticket-types`, {
-        auth: Boolean(useAuthStore.getState().me),
+        auth: optionalAuth(),
       });
       detail.ticketTypes = itemsOf(types).map(mapTicketType);
     } catch {
@@ -488,7 +491,7 @@ export const httpApi: ParcheApi = {
       if (filters?.maxLat != null) q.set('max_lat', String(filters.maxLat));
       if (filters?.maxLng != null) q.set('max_lng', String(filters.maxLng));
       q.set('limit', '50');
-      const body = await apiFetch(`/v1/events?${q.toString()}`);
+      const body = await apiFetch(`/v1/events?${q.toString()}`, { auth: optionalAuth() });
       return itemsOf(body)
         .map(mapEvent)
         .filter((event) => !eventHasEnded(event));
@@ -508,7 +511,7 @@ export const httpApi: ParcheApi = {
     },
     async similar(id: string) {
       try {
-        const body = await apiFetch(`/v1/events/${id}/similar`);
+        const body = await apiFetch(`/v1/events/${id}/similar`, { auth: optionalAuth() });
         const rec = asRecord(body);
         const events = Array.isArray(rec.events) ? rec.events : itemsOf(body);
         return events.map(mapEvent).filter((event) => !eventHasEnded(event));
@@ -584,10 +587,10 @@ export const httpApi: ParcheApi = {
 
   artists: {
     async get(id: string) {
-      const artist = mapArtist(await apiFetch(`/v1/artists/${id}`));
+      const artist = mapArtist(await apiFetch(`/v1/artists/${id}`, { auth: optionalAuth() }));
       let upcoming: ParcheEvent[] = [];
       try {
-        const ev = await apiFetch(`/v1/artists/${id}/events`);
+        const ev = await apiFetch(`/v1/artists/${id}/events`, { auth: optionalAuth() });
         upcoming = itemsOf(ev).map(mapEvent);
       } catch {
         upcoming = [];

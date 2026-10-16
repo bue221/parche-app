@@ -5,11 +5,13 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { useAuthStore } from '@/data/auth-store';
 import { useResolvedColorScheme, useTheme } from '@/hooks/use-theme';
 
 const DURATION = 600;
 
 export function AnimatedSplashOverlay() {
+  const hydrated = useAuthStore((s) => s.hydrated);
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
   const theme = useTheme();
@@ -29,6 +31,14 @@ export function AnimatedSplashOverlay() {
       : require('@/assets/images/icon-light.png');
 
   const image = <Image style={styles.image} source={mark} />;
+
+  if (!hydrated) {
+    return (
+      <View style={[styles.splashOverlay, { backgroundColor: theme.background }]}>
+        {image}
+      </View>
+    );
+  }
 
   return animate ? (
     <Animated.View

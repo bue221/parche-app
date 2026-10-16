@@ -14,14 +14,16 @@ import { userMessage } from '@/data/errors';
 import { toggleFollow } from '@/data/interest-sync';
 import { useInterestStore } from '@/data/interest-store';
 import { useAuthSnapshot } from '@/data/session';
+import { afterAuthHydration } from '@/lib/session-query';
 
 export default function ArtistPublicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { isLoggedIn, user } = useAuthSnapshot();
+  const { isLoggedIn, user, hydrated } = useAuthSnapshot();
   const queryClient = useQueryClient();
   const { data: artist, error, refetch, isLoading } = useQuery({
     queryKey: ['artist', id],
     queryFn: () => api.artists.get(id),
+    enabled: afterAuthHydration(hydrated, Boolean(id)),
   });
   const localFollowing = useInterestStore((s) => s.artistIds.includes(id));
   const following = api.artists.isFollowing(id) || localFollowing;
@@ -33,7 +35,7 @@ export default function ArtistPublicScreen() {
       </Screen>
     );
   }
-  if (!artist || isLoading) {
+  if (!hydrated || !artist || isLoading) {
     return (
       <Screen back headTitle="Artista">
         <Skeleton className="size-24 rounded-full" />

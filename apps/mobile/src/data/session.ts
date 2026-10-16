@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-
-import { api } from '@/data/client';
-import { isSameLocalDay, startOfDayISO, endOfDayISO } from '@/lib/format';
-import { useAuthStore } from '@/data/auth-store';
-import type { Membership, User } from '@/data/types';
-import { primaryProfile, operateDensity } from '@/lib/profiles';
 import { useMemo } from 'react';
+
+import { useAuthStore } from '@/data/auth-store';
+import { api } from '@/data/client';
+import type { Membership, User } from '@/data/types';
+import { isSameLocalDay, startOfDayISO, endOfDayISO } from '@/lib/format';
+import { primaryProfile, operateDensity } from '@/lib/profiles';
+import { afterAuthHydration } from '@/lib/session-query';
 
 export function useAuthSnapshot() {
   const me = useAuthStore((s) => s.me);
@@ -42,12 +43,12 @@ export function useTabVisibility() {
   const invitesQuery = useQuery({
     queryKey: ['invites', auth.user?.id],
     queryFn: () => api.auth.invites(),
-    enabled: auth.isLoggedIn && Boolean(auth.user?.id),
+    enabled: afterAuthHydration(auth.hydrated, auth.isLoggedIn && Boolean(auth.user?.id)),
   });
   const tonightQuery = useQuery({
     queryKey: ['events', 'tonight-badge'],
     queryFn: () => api.events.list({ from: startOfDayISO(), to: endOfDayISO() }),
-    enabled: auth.hasOperate,
+    enabled: afterAuthHydration(auth.hydrated, auth.hasOperate),
   });
   const inviteCount = (invitesQuery.data ?? []).length;
   const tonightCount = (tonightQuery.data ?? []).filter((event) =>

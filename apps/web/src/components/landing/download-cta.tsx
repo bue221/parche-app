@@ -7,6 +7,7 @@ function DownloadCta() {
   const appStore = siteConfig.appStoreUrl;
   const playStore = siteConfig.playStoreUrl;
   const appWeb = appWebHref("/");
+  const hasStores = Boolean(appStore || playStore);
 
   return (
     <Section id="descarga" aria-labelledby="descarga-heading">
@@ -31,7 +32,7 @@ function DownloadCta() {
           </Stack>
           <Stack className="items-start justify-center gap-ds-16 bg-aurora p-ds-24 text-pitch-black sm:p-ds-32 md:min-h-full md:p-ds-60">
             <Text variant="caption" className="text-pitch-black">
-              {appWeb ? "Listo para comprar" : "Próximamente"}
+              {appWeb || hasStores ? "Listo para comprar" : "Próximamente"}
             </Text>
             <Text as="p" variant="heading" className="text-pitch-black">
               Tu boleta, en el bolsillo
@@ -45,25 +46,29 @@ function DownloadCta() {
                   Comprar en la app
                 </Button>
               ) : null}
-              <Button
-                href={appStore || "#descarga"}
-                variant="outline"
-                className="border-pitch-black text-pitch-black hover:bg-pitch-black/10"
-              >
-                App Store
-              </Button>
-              <Button
-                href={playStore || "#descarga"}
-                variant="outline"
-                className="border-pitch-black text-pitch-black hover:bg-pitch-black/10"
-              >
-                Google Play
-              </Button>
+              {appStore ? (
+                <Button
+                  href={appStore}
+                  variant="outline"
+                  className="border-pitch-black text-pitch-black hover:bg-pitch-black/10"
+                >
+                  App Store
+                </Button>
+              ) : null}
+              {playStore ? (
+                <Button
+                  href={playStore}
+                  variant="outline"
+                  className="border-pitch-black text-pitch-black hover:bg-pitch-black/10"
+                >
+                  Google Play
+                </Button>
+              ) : null}
             </div>
-            {!appStore && !playStore ? (
+            {!hasStores ? (
               <Text variant="helper" className="normal-case text-pitch-black/70">
                 {appWeb
-                  ? "La app web ya vende. iOS y Android, próximamente."
+                  ? "La app web ya vende. iOS y Android, cuando configures las URLs de tienda."
                   : "Próximamente en iOS y Android."}
               </Text>
             ) : null}

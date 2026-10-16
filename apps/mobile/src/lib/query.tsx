@@ -4,7 +4,8 @@ import { useState, type PropsWithChildren } from 'react';
 import { ApiError, userMessage } from '@/data/errors';
 import { toast } from '@/data/toast-store';
 
-const SESSION_QUERY_KEYS = [['saved-events'], ['following'], ['wallet'], ['invites'], ['artist', 'mine']] as const;
+const SESSION_QUERY_KEYS = [['saved-events'], ['following'], ['wallet'], ['invites'], ['artist', 'mine'], ['recs']] as const;
+const OPTIONAL_AUTH_QUERY_KEYS = [['events'], ['event'], ['artist']] as const;
 
 let queryClient: QueryClient | null = null;
 
@@ -30,6 +31,13 @@ export function clearSessionQueries(): void {
   const client = getQueryClient();
   for (const queryKey of SESSION_QUERY_KEYS) {
     client.removeQueries({ queryKey: [...queryKey] });
+  }
+}
+
+export function invalidateOptionalAuthQueries(): void {
+  const client = getQueryClient();
+  for (const queryKey of OPTIONAL_AUTH_QUERY_KEYS) {
+    client.invalidateQueries({ queryKey: [...queryKey] });
   }
 }
 

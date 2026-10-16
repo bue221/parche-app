@@ -119,9 +119,11 @@ Hay dos familias. No mezclar meta debajo de la foto en listing foto-primero.
 
 ### 1. Poster / evento (foto-primero)
 
-`EventCard` en `events/event-card.tsx` (landing, explorar, similares) y tiles en `city-explore.tsx`:
+`EventCard` en `events/event-card.tsx` y tiles en `city-explore.tsx`:
 
-- Contenedor: `aspect-4/5`, `rounded-cards`, `bg-surface`, `shadow-card`, overflow hidden.
+- Poster 4:5: landing y city-explore. El flyer principal de la ficha también es 4:5.
+- Listing (foto + meta debajo): explorar, próximas fechas de artista y **similares en la ficha**. En el detalle no se usan posters a 3 columnas: le restan protagonismo al evento.
+- Contenedor poster: `aspect-4/5`, `rounded-cards`, `bg-surface`, `shadow-card`, overflow hidden.
 - Foto full-bleed; hover scale `1.05` con `motion-safe` + `ease-parche`.
 - Scrim: clase `.card-photo-scrim` (gradiente vertical a `pitch-black` @ ~55–78%, transparente hasta ~42% para que el flyer se lea en card).
 - Meta **sobre** la foto (abajo): título `subheading` bold `paper-white`, venue caption @ 75%, tags `tone="glass"`.

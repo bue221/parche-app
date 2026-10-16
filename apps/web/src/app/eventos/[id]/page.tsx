@@ -1,11 +1,14 @@
-import { notFound } from "next/navigation";
+import { permanentRedirect, notFound } from "next/navigation";
 
 import { EventDetail } from "@/components/events/event-detail";
 import {
-  getEvent,
+  eventPath,
   getSimilarEvents,
+  isEventId,
   isPublicEvent,
   listPublishedEvents,
+  normalizeEventParam,
+  resolveEvent,
 } from "@/lib/events";
 import { eventJsonLd, eventMetadata } from "@/lib/seo";
 import { serializeJsonLd } from "@/lib/utils";
@@ -15,7 +18,9 @@ export const dynamicParams = true;
 
 export async function generateStaticParams() {
   const events = await listPublishedEvents();
-  return events.map((event) => ({ id: event.id }));
+  return events.map((event) => ({
+    id: normalizeEventParam(event.slug?.trim() || event.id),
+  }));
 }
 
 export async function generateMetadata({
@@ -23,7 +28,7 @@ export async function generateMetadata({
 }: PageProps<"/eventos/[id]">) {
   const { id } = await params;
   try {
-    const event = await getEvent(id);
+    const event = await resolveEvent(id);
     if (!event || !isPublicEvent(event)) {
       return { title: "Esta fecha ya no está", robots: { index: false } };
     }
@@ -38,10 +43,11 @@ export default async function EventPage({
   params,
 }: PageProps<"/eventos/[id]">) {
   const { id } = await params;
+  const key = normalizeEventParam(id);
   let event;
 
   try {
-    event = await getEvent(id);
+    event = await resolveEvent(key);
   } catch (error) {
     console.error("[eventos] load failed", { id, error });
     throw error;
@@ -51,7 +57,13 @@ export default async function EventPage({
     notFound();
   }
 
-  const similar = await getSimilarEvents(id);
+  const pretty = eventPath(event);
+  if (isEventId(key) && event.slug && pretty !== `/eventos/${key}`) {
+    // encodeURI keeps `/` and fixes accented Location headers (í, ñ, …).
+    permanentRedirect(encodeURI(pretty));
+  }
+
+  const similar = await getSimilarEvents(event.id);
 
   return (
     <main id="contenido" className="flex flex-1 flex-col">

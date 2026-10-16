@@ -40,6 +40,7 @@ import {
 } from '@/lib/explore-rails';
 import { countdownTo, eventVenueParts, formatListingDate, isSameLocalDay } from '@/lib/format';
 import { hasActiveFilters } from '@/lib/genres';
+import { afterAuthHydration } from '@/lib/session-query';
 
 const TONIGHT_EMPTY = {
   title: 'Nada esta noche',
@@ -304,7 +305,7 @@ function ExploreFeed({
 
 export default function ExplorarScreen() {
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, isPromoter } = useAuthSnapshot();
+  const { isLoggedIn, isPromoter, hydrated } = useAuthSnapshot();
   const requestCreate = useRequestCreateEvent();
   const { filters, setFilters } = useFilters('agenda');
   const { height: windowH } = useWindowDimensions();
@@ -319,11 +320,12 @@ export default function ExplorarScreen() {
   const eventsQuery = useQuery({
     queryKey: ['events', 'agenda', filters],
     queryFn: () => api.events.list(filters),
+    enabled: afterAuthHydration(hydrated),
   });
   const recsQuery = useQuery({
     queryKey: ['recs'],
     queryFn: () => api.feed.recommendations(),
-    enabled: isLoggedIn,
+    enabled: afterAuthHydration(hydrated, isLoggedIn),
   });
 
   const events = Array.isArray(eventsQuery.data) ? eventsQuery.data : [];
@@ -353,7 +355,7 @@ export default function ExplorarScreen() {
       railsByGenre={railsByGenre}
       events={events}
       error={error}
-      loading={eventsQuery.isLoading}
+      loading={!hydrated || eventsQuery.isLoading}
       recsLoading={recsQuery.isLoading}
       filtered={filtered}
       isLoggedIn={isLoggedIn}
@@ -487,7 +489,7 @@ export default function ExplorarScreen() {
               <MapSheet
                 events={events}
                 selectedId={selected?.id}
-                loading={eventsQuery.isLoading}
+                loading={!hydrated || eventsQuery.isLoading}
                 error={Boolean(eventsQuery.error)}
                 topInset={overlayTop}
                 onHeightChange={setSheetPad}

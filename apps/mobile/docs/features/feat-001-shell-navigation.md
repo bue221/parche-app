@@ -39,6 +39,7 @@ La app usa un chrome de producto: Explorar combina listado y mapa (estilo Airbnb
 
 | Estado | UI |
 |--------|-----|
+| Boot de sesión | Splash de marca hasta `hydrated`; tabs públicas debajo, sin fetch de catálogo todavía |
 | Cargando membresías | Tabs públicas; Operar aparece al resolver |
 | Sin membresías | Operar no existe |
 | Revocación | Operar desaparece al refrescar; stacks de puerta se cierran |

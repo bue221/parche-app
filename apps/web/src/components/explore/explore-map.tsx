@@ -161,7 +161,7 @@ function ExploreMap({
             {placeLine(selected) || formatPinDay(selected.startsAt)}
           </p>
           <Link
-            href={eventPath(selected.id)}
+            href={eventPath(selected)}
             className="mt-ds-12 inline-flex font-favorit text-caption font-bold tracking-favorit text-aurora uppercase outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-aurora"
           >
             Ver detalles

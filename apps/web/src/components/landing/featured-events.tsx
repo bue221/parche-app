@@ -47,7 +47,7 @@ function EventCard({
   return (
     <Reveal as="article" delayMs={delayMs} className="group h-full">
       <Link
-        href={eventPath(event.id)}
+        href={eventPath(event)}
         className={cn(
           "relative flex aspect-4/5 h-full flex-col overflow-hidden rounded-cards bg-surface shadow-card outline-none",
           "focus-visible:ring-2 focus-visible:ring-aurora",
@@ -110,7 +110,7 @@ function SpotlightEvent({
   const genre = firstGenre(event);
   const lineup = lineupNames(event.lineup);
   const lowest = lowestOnSale(tickets);
-  const detailHref = eventPath(event.id);
+  const detailHref = eventPath(event);
   const buyHref = appWebHref(`/event/${event.id}`) ?? detailHref;
 
   return (

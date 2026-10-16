@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Calendar, MapPin, Users } from "lucide-react";
 
 import { EventAudioPlayer } from "@/components/events/event-audio-player";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/layout";
 import { Tag } from "@/components/ui/tag";
 import { Text } from "@/components/ui/text";
+import { artistPath, isArtistId } from "@/lib/artists";
 import {
   googleMapsHref,
   lowestOnSale,
@@ -208,11 +210,12 @@ function EventDetail({
                 {event.lineup.map((slot) => {
                   const avatar = slot.avatar?.thumbUrl ?? slot.avatar?.publicUrl;
                   const initials = slot.name.slice(0, 2).toUpperCase();
-                  return (
-                    <li
-                      key={`${slot.artistId}-${slot.billingOrder}`}
-                      className="flex min-h-11 items-center gap-ds-12"
-                    >
+                  const href =
+                    slot.artistId && isArtistId(slot.artistId)
+                      ? artistPath(slot.artistId)
+                      : undefined;
+                  const row = (
+                    <>
                       {avatar ? (
                         <Image
                           src={avatar}
@@ -236,6 +239,22 @@ function EventDetail({
                           </Text>
                         ) : null}
                       </span>
+                    </>
+                  );
+                  return (
+                    <li key={`${slot.artistId}-${slot.billingOrder}`}>
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="flex min-h-11 items-center gap-ds-12 rounded-cards outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-aurora"
+                        >
+                          {row}
+                        </Link>
+                      ) : (
+                        <div className="flex min-h-11 items-center gap-ds-12">
+                          {row}
+                        </div>
+                      )}
                     </li>
                   );
                 })}
@@ -251,13 +270,19 @@ function EventDetail({
 
       {similar.length > 0 ? (
         <Container className="pb-ds-48">
-          <div className="flex flex-col gap-ds-16">
-            <Text as="h2" variant="headingSm">
+          <div className="flex flex-col gap-ds-12">
+            <Text as="h2" variant="subheading">
               Sigue el parche
             </Text>
-            <div className="grid gap-ds-24 sm:grid-cols-2 md:grid-cols-3">
-              {similar.slice(0, 6).map((card, index) => (
-                <EventCard key={card.id} event={card} delayMs={index * 90} />
+            <div className="grid grid-cols-2 gap-x-ds-12 gap-y-ds-16 lg:grid-cols-4">
+              {similar.slice(0, 4).map((card, index) => (
+                <EventCard
+                  key={card.id}
+                  event={card}
+                  variant="listing"
+                  delayMs={index * 40}
+                  sizes="(min-width: 1024px) 16vw, 45vw"
+                />
               ))}
             </div>
           </div>

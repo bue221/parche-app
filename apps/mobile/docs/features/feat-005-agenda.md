@@ -34,7 +34,7 @@ Rail **Esta noche**: same-day, badge “Esta noche”, countdown a `startsAt` (a
 
 ## Flujo
 
-`GET /v1/events` cursor + `limit` ≤ 50. Filtros vivos en [FEAT-032](feat-032-search-filters.md).
+`GET /v1/events` cursor + `limit` ≤ 50. Filtros vivos en [FEAT-032](feat-032-search-filters.md). El primer fetch espera a que [FEAT-004](feat-004-auth-session.md) marque `hydrated` y manda Bearer si ya hay access: una sola pintura, no invitado y luego sesión.
 
 ## Estados
 

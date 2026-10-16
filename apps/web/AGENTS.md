@@ -24,10 +24,11 @@ Treat `docs/` as the source of truth for product, UI, and architecture rules. Re
 | [docs/ui/design.md](docs/ui/design.md) | Visual system: light/dark tokens, type, components |
 | [docs/features/feat-001-event-detail-seo.md](docs/features/feat-001-event-detail-seo.md) | Public event pages (ISR, metadata, CTA to the app) |
 | [docs/features/feat-002-explore-seo.md](docs/features/feat-002-explore-seo.md) | Public explore list + map (URL filters, ItemList, Leaflet) |
+| [docs/features/feat-003-artists-legal.md](docs/features/feat-003-artists-legal.md) | Artists SEO, legal pages, env store CTAs, 404 |
 
 ## Stack
 
-Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript. Visual tokens match `app-frontend`. Indexed routes: landing, `/explorar`, and `/eventos/{id}` (published). Do not index `/sistema`.
+Next.js 16 App Router · React 19 · Tailwind v4 · TypeScript. Visual tokens match `app-frontend`. Indexed routes: landing, `/explorar`, `/explorar/{hub}`, `/eventos/{slug}`, `/artistas/{id}`, `/legal/*` (published). Do not index `/sistema`.
 
 ## Do
 

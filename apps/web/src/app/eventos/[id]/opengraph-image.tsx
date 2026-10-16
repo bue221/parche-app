@@ -2,7 +2,8 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { getEvent } from "@/lib/events";
+import { resolveEvent } from "@/lib/events";
+import { formatEventWhen } from "@/lib/format";
 import { siteConfig } from "@/lib/site";
 
 export const alt = "Evento en Parche";
@@ -20,9 +21,18 @@ export default async function EventOpenGraphImage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const event = await getEvent(id).catch(() => null);
+  const event = await resolveEvent(id).catch((error) => {
+    console.error("[eventos] og image failed", { id, error });
+    return null;
+  });
   const title = event?.title ?? siteConfig.name;
-  const place = event?.venueName || event?.addressText || siteConfig.tagline;
+  const place =
+    event?.venueName?.trim() ||
+    event?.addressText?.trim() ||
+    siteConfig.tagline;
+  const when = event ? formatEventWhen(event.startsAt) : undefined;
+  const flyer = event?.flyer?.publicUrl ?? event?.flyer?.thumbUrl;
+  const titleSize = title.length > 42 ? 42 : title.length > 28 ? 52 : 64;
 
   return new ImageResponse(
     (
@@ -31,46 +41,74 @@ export default async function EventOpenGraphImage({
           width: "100%",
           height: "100%",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
           background: "#07070C",
           color: "#F5F5F8",
-          padding: 64,
+          padding: 48,
         }}
       >
+        {flyer ? (
+          <img
+            src={flyer}
+            alt=""
+            width={400}
+            height={500}
+            style={{
+              width: 400,
+              height: 500,
+              objectFit: "cover",
+              borderRadius: 20,
+            }}
+          />
+        ) : null}
         <div
           style={{
             display: "flex",
-            fontFamily: "Inter",
-            fontSize: 22,
-            fontWeight: 700,
-            color: "#B8A4FF",
-          }}
-        >
-          Parche
-        </div>
-        <div
-          style={{
-            display: "flex",
+            flex: 1,
             flexDirection: "column",
-            fontFamily: "Inter",
-            fontSize: title.length > 28 ? 52 : 68,
-            lineHeight: 1.05,
-            letterSpacing: "-2px",
-            fontWeight: 700,
+            justifyContent: "space-between",
+            marginLeft: flyer ? 48 : 16,
+            paddingTop: 8,
+            paddingBottom: 8,
           }}
         >
-          {title}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontFamily: "Inter",
-            fontSize: 22,
-            color: "#9A9AAB",
-          }}
-        >
-          {place}
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Inter",
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#B8A4FF",
+            }}
+          >
+            Parche
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: "Inter",
+              fontSize: titleSize,
+              lineHeight: 1.05,
+              letterSpacing: "-2px",
+              fontWeight: 700,
+            }}
+          >
+            {title}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              fontFamily: "Inter",
+              fontSize: 22,
+              color: "#9A9AAB",
+            }}
+          >
+            {when ? <div style={{ display: "flex" }}>{when}</div> : null}
+            <div style={{ display: "flex", marginTop: when ? 8 : 0 }}>
+              {place}
+            </div>
+          </div>
         </div>
       </div>
     ),

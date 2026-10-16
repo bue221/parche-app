@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { artistPath, type PublicArtist } from "@/lib/artists";
 import { FAQS } from "@/constants/faqs";
 import {
   eventPath,
@@ -10,6 +11,8 @@ import {
   type PublicEventCard,
   type PublicTicketType,
 } from "@/lib/events";
+import type { ExploreHub } from "@/lib/explore-hubs";
+import { exploreHubPath } from "@/lib/explore-hubs";
 import { formatEventWhen } from "@/lib/format";
 import { absoluteUrl, siteConfig } from "@/lib/site";
 
@@ -67,21 +70,30 @@ export const defaultMetadata: Metadata = {
 
 export function eventMetadata(event: {
   id: string;
+  slug?: string;
   title: string;
   description?: string;
   startsAt: string;
   venueName?: string;
   addressText?: string;
   flyer?: { publicUrl: string };
+  genres?: string[];
   status: string;
 }): Metadata {
-  const url = eventPath(event.id);
+  const url = eventPath(event);
   const description = eventDescription(event);
   const index = event.status === "published";
+  const keywords = [
+    ...(event.genres ?? []),
+    "evento",
+    "boletas",
+    siteConfig.name,
+  ];
 
   return {
     title: event.title,
     description,
+    keywords,
     alternates: {
       canonical: url,
       languages: {
@@ -96,9 +108,6 @@ export function eventMetadata(event: {
       siteName: siteConfig.name,
       title: event.title,
       description,
-      images: event.flyer
-        ? [{ url: event.flyer.publicUrl, alt: event.title }]
-        : undefined,
     },
     twitter: {
       card: "summary_large_image",
@@ -124,6 +133,7 @@ export function eventMetadata(event: {
 
 export function eventJsonLd(event: {
   id: string;
+  slug?: string;
   title: string;
   description?: string;
   startsAt: string;
@@ -136,7 +146,7 @@ export function eventJsonLd(event: {
   lng?: number;
   ticketTypes?: PublicTicketType[];
 }) {
-  const url = absoluteUrl(eventPath(event.id));
+  const url = absoluteUrl(eventPath(event));
   const cancelled = event.status === "cancelled";
   const onSale = (event.ticketTypes ?? []).filter(ticketOnSale);
   const lowest = lowestOnSale(onSale);
@@ -261,7 +271,7 @@ export function exploreJsonLd(
   const items = events.slice(0, 50).map((event, index) => ({
     "@type": "ListItem",
     position: index + 1,
-    url: absoluteUrl(eventPath(event.id)),
+    url: absoluteUrl(eventPath(event)),
     name: event.title,
   }));
 
@@ -385,5 +395,103 @@ export function landingJsonLd() {
         })),
       },
     ],
+  };
+}
+
+export function artistMetadata(artist: PublicArtist): Metadata {
+  const url = artistPath(artist.id);
+  const description =
+    artist.bio?.slice(0, 160) ||
+    `${artist.name} en Parche. Mira fechas próximas y abre la app para seguir.`;
+
+  return {
+    title: artist.name,
+    description,
+    alternates: {
+      canonical: url,
+      languages: { "es-CO": url, es: url },
+    },
+    openGraph: {
+      type: "profile",
+      locale: siteConfig.locale,
+      url: absoluteUrl(url),
+      siteName: siteConfig.name,
+      title: artist.name,
+      description,
+      images: artist.avatar
+        ? [{ url: artist.avatar.publicUrl, alt: artist.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: artist.name,
+      description,
+      creator: siteConfig.creator,
+    },
+  };
+}
+
+export function artistJsonLd(artist: PublicArtist) {
+  const url = absoluteUrl(artistPath(artist.id));
+  return {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "@id": `${url}#person`,
+    name: artist.name,
+    description: artist.bio,
+    url,
+    image: artist.avatar?.publicUrl,
+    sameAs: [artist.links.instagram, artist.links.soundcloud].filter(Boolean),
+  };
+}
+
+export function exploreHubMetadata(hub: ExploreHub): Metadata {
+  const path = exploreHubPath(hub);
+  const title =
+    hub.kind === "city"
+      ? `Eventos en ${hub.label}`
+      : `${hub.label} en Colombia`;
+  const description =
+    hub.kind === "city"
+      ? `Agenda de eventos en vivo en ${hub.label}. Explora fechas y mapa en Parche.`
+      : `Agenda de ${hub.label}: flyers, fechas y mapa. Descubre en Parche.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: path,
+      languages: { "es-CO": path, es: path },
+    },
+    openGraph: {
+      type: "website",
+      locale: siteConfig.locale,
+      url: absoluteUrl(path),
+      siteName: siteConfig.name,
+      title: `${title} — ${siteConfig.name}`,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} — ${siteConfig.name}`,
+      description,
+      creator: siteConfig.creator,
+    },
+  };
+}
+
+export function legalMetadata(input: {
+  path: string;
+  title: string;
+  description: string;
+}): Metadata {
+  return {
+    title: input.title,
+    description: input.description,
+    alternates: {
+      canonical: input.path,
+      languages: { "es-CO": input.path, es: input.path },
+    },
+    robots: { index: true, follow: true },
   };
 }
