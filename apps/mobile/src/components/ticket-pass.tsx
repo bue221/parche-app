@@ -89,10 +89,14 @@ export function TicketPassPager({
     tickets.findIndex((ticket) => ticket.id === currentId)
   );
   const [index, setIndex] = useState(currentIndex);
+  const [prevCurrentIndex, setPrevCurrentIndex] = useState(currentIndex);
+  if (prevCurrentIndex !== currentIndex) {
+    setPrevCurrentIndex(currentIndex);
+    setIndex(currentIndex);
+  }
   const paged = count > 1 && width > 0;
 
   useLayoutEffect(() => {
-    setIndex(currentIndex);
     if (width <= 0 || count <= 1) return;
     listRef.current?.scrollTo({ x: currentIndex * width, animated: false });
   }, [currentIndex, width, count]);

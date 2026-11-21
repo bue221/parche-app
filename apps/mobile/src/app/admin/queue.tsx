@@ -29,7 +29,21 @@ export default function AdminQueueScreen() {
   }
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void api.admin
+      .queue()
+      .then((rows) => {
+        if (!cancelled) {
+          setQueue(rows);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(userMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!ok) {

@@ -216,9 +216,11 @@ export default function EventDetailScreen() {
   }, [event?.id, isLoggedIn]);
 
   const mapEvents = useMemo(() => (event ? [event] : []), [event]);
+  const eventLat = event?.lat;
+  const eventLng = event?.lng;
   const mapPin = useMemo(
-    () => (event?.lat != null && event?.lng != null ? { lat: event.lat, lng: event.lng } : undefined),
-    [event?.lat, event?.lng]
+    () => (eventLat != null && eventLng != null ? { lat: eventLat, lng: eventLng } : undefined),
+    [eventLat, eventLng]
   );
   const genres = event?.genres?.length ? event.genres : event?.genre ? [event.genre] : [];
   const similar = similarQuery.data ?? [];

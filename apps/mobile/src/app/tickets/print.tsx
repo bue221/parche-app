@@ -50,9 +50,15 @@ export default function TicketPrintScreen() {
     enabled: Boolean(ticket?.eventId),
   });
 
-  useEffect(() => {
+  const [prevCycleKey, setPrevCycleKey] = useState(`${ticket?.id ?? ''}:${reduce ? 1 : 0}:${cycle}`);
+  const cycleKey = `${ticket?.id ?? ''}:${reduce ? 1 : 0}:${cycle}`;
+  if (prevCycleKey !== cycleKey) {
+    setPrevCycleKey(cycleKey);
     setPrinting(true);
     setBusy(!reduce);
+  }
+
+  useEffect(() => {
     const timer = setTimeout(() => setBusy(false), reduce ? 0 : 2200);
     return () => clearTimeout(timer);
   }, [ticket?.id, reduce, cycle]);

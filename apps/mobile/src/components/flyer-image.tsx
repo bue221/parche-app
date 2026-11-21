@@ -1,5 +1,5 @@
 import { Image as ExpoImage } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Platform, Image as RNImage, View, type ImageStyle, type StyleProp } from 'react-native';
 
 import { debugLog } from '@/data/log';
@@ -26,16 +26,17 @@ export function FlyerImage({
   contentFit?: 'cover' | 'contain';
 }) {
   const [failed, setFailed] = useState(false);
+  const [prevUri, setPrevUri] = useState(uri);
+  if (prevUri !== uri) {
+    setPrevUri(uri);
+    setFailed(false);
+  }
   const fill: ImageStyle = { width: '100%', ...(aspectRatio != null ? { aspectRatio } : { height: '100%' }) };
   const mutedStyle: ImageStyle | undefined = muted
     ? Platform.OS === 'web'
       ? ({ opacity: 0.62, filter: 'grayscale(1)' } as ImageStyle)
       : { opacity: 0.5 }
     : undefined;
-
-  useEffect(() => {
-    setFailed(false);
-  }, [uri]);
 
   if (failed || !uri) {
     return <View className={cn('bg-muted', className)} style={fill} />;

@@ -26,10 +26,12 @@ function EventTrackPlayer({
   const activeIdRef = useRef(activeId);
   const playingRef = useRef(status.playing);
   const playNonceRef = useRef(0);
-  tracksRef.current = tracks;
-  onRefreshRef.current = onRefresh;
-  activeIdRef.current = activeId;
-  playingRef.current = status.playing;
+  useEffect(() => {
+    tracksRef.current = tracks;
+    onRefreshRef.current = onRefresh;
+    activeIdRef.current = activeId;
+    playingRef.current = status.playing;
+  });
 
   useEffect(() => {
     void setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch((error) => {
@@ -37,11 +39,13 @@ function EventTrackPlayer({
     });
   }, []);
 
-  useEffect(() => {
+  const [prevDidJustFinish, setPrevDidJustFinish] = useState(status.didJustFinish);
+  if (prevDidJustFinish !== status.didJustFinish) {
+    setPrevDidJustFinish(status.didJustFinish);
     if (status.didJustFinish) {
       setActiveId(null);
     }
-  }, [status.didJustFinish]);
+  }
 
   async function toggle(track: EventTrack) {
     if (activeIdRef.current === track.id && playingRef.current) {

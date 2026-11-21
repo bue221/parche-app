@@ -51,16 +51,17 @@ export function ExploreDesktopHero({
   const { filters, setFilters } = useFilters('agenda');
   const storeQ = filters.q ?? '';
   const [draftQ, setDraftQ] = useState(storeQ);
+  const [prevStoreQ, setPrevStoreQ] = useState(storeQ);
+  if (prevStoreQ !== storeQ) {
+    setPrevStoreQ(storeQ);
+    setDraftQ(storeQ);
+  }
   const [calendarOpen, setCalendarOpen] = useState(false);
   const calendarRef = useRef<View>(null);
   const hasDates = Boolean(filters.from || filters.to);
   const dateLabel = formatDateRangeLabel(filters.from, filters.to);
   const allSelected = !filters.genre;
   const countLabel = resultCount === 1 ? '1 evento' : `${resultCount} eventos`;
-
-  useEffect(() => {
-    setDraftQ(storeQ);
-  }, [storeQ]);
 
   useEffect(() => {
     const q = draftQ.trim() || undefined;

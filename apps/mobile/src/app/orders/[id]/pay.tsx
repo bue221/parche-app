@@ -47,11 +47,29 @@ export default function PayScreen() {
   }, [id]);
 
   useEffect(() => {
-    void load().catch((err) => {
-      setError(userMessage(err));
-      setLoaded(true);
-    });
-  }, [load]);
+    let cancelled = false;
+    void api.tickets
+      .getOrder(id)
+      .then((next) => {
+        if (cancelled) return;
+        setOrder(next);
+        setLoaded(true);
+        if (next.checkoutUrl) {
+          rememberCheckout(next.id, next.checkoutUrl);
+        }
+        if (next.status !== 'pending') {
+          router.replace(`/orders/${id}` as Href);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(userMessage(err));
+        setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   useEffect(() => {
     const sub = Linking.addEventListener('url', (event) => {
@@ -99,7 +117,10 @@ export default function PayScreen() {
     if (Platform.OS === 'web' || !claimCheckoutAutoOpen(id)) {
       return;
     }
-    void openCheckout();
+    const timer = setTimeout(() => {
+      void openCheckout();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [checkoutUrl, id, loaded, openCheckout, order?.status]);
 
   if (!ok) {

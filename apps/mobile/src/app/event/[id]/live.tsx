@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 
 import { BackBar } from '@/components/back-bar';
@@ -38,8 +38,7 @@ export default function DoorLiveScreen() {
   const [resultFilter, setResultFilter] = useState<ResultFilter>('all');
   const [scannerFilter, setScannerFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const namesRef = useRef<Record<string, string>>({});
-  const [namesTick, setNamesTick] = useState(0);
+  const [names, setNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const tick = () => {
@@ -59,13 +58,10 @@ export default function DoorLiveScreen() {
   useEffect(() => {
     if (!live) return;
     const missing = [...new Set(live.recent.map((row) => row.scannerUserId).filter(Boolean))].filter(
-      (scannerId) => !namesRef.current[scannerId]
+      (scannerId) =>
+        !names[scannerId] &&
+        !live.recent.some((row) => row.scannerUserId === scannerId && Boolean(row.scannerDisplayName))
     );
-    for (const row of live.recent) {
-      if (row.scannerUserId && row.scannerDisplayName && !namesRef.current[row.scannerUserId]) {
-        namesRef.current[row.scannerUserId] = row.scannerDisplayName;
-      }
-    }
     if (missing.length === 0) return;
     let cancelled = false;
     void Promise.all(
@@ -75,19 +71,18 @@ export default function DoorLiveScreen() {
       })
     ).then((rows) => {
       if (cancelled) return;
-      let changed = false;
+      const fetched: Record<string, string> = {};
       rows.forEach(([scannerId, name]) => {
-        if (name && !namesRef.current[scannerId]) {
-          namesRef.current[scannerId] = name;
-          changed = true;
-        }
+        if (name) fetched[scannerId] = name;
       });
-      if (changed) setNamesTick((n) => n + 1);
+      if (Object.keys(fetched).length > 0) {
+        setNames((prev) => ({ ...prev, ...fetched }));
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [live]);
+  }, [live, names]);
 
   const scanners = useMemo(() => {
     if (!live) return [];
@@ -96,11 +91,11 @@ export default function DoorLiveScreen() {
       if (!row.scannerUserId || seen.has(row.scannerUserId)) return;
       seen.set(
         row.scannerUserId,
-        namesRef.current[row.scannerUserId] || row.scannerDisplayName || scannerFallback(row.scannerUserId)
+        names[row.scannerUserId] || row.scannerDisplayName || scannerFallback(row.scannerUserId)
       );
     });
     return [...seen.entries()].map(([userId, name]) => ({ userId, name }));
-  }, [live, namesTick]);
+  }, [live, names]);
 
   const counts = useMemo(() => {
     const rows = live?.recent ?? [];
@@ -121,14 +116,14 @@ export default function DoorLiveScreen() {
       if (scannerFilter && row.scannerUserId !== scannerFilter) return false;
       if (!needle) return true;
       const scanner =
-        namesRef.current[row.scannerUserId] || row.scannerDisplayName || scannerFallback(row.scannerUserId);
+        names[row.scannerUserId] || row.scannerDisplayName || scannerFallback(row.scannerUserId);
       return (
         CHECK_IN_LABEL[row.result].toLowerCase().includes(needle) ||
         scanner.toLowerCase().includes(needle) ||
         (row.guestName ?? '').toLowerCase().includes(needle)
       );
     });
-  }, [live, namesTick, query, resultFilter, scannerFilter]);
+  }, [live, names, query, resultFilter, scannerFilter]);
 
   if (!ok) {
     return <PendingAuth />;
@@ -225,7 +220,7 @@ export default function DoorLiveScreen() {
             style={{ flex: 1, minHeight: 0 }}
             data={filtered}
             keyExtractor={(item) => item.id}
-            extraData={namesTick}
+            extraData={names}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             initialNumToRender={20}
@@ -244,7 +239,7 @@ export default function DoorLiveScreen() {
                 scan={item}
                 divided={index < filtered.length - 1}
                 scannerName={
-                  namesRef.current[item.scannerUserId] || item.scannerDisplayName || scannerFallback(item.scannerUserId)
+                  names[item.scannerUserId] || item.scannerDisplayName || scannerFallback(item.scannerUserId)
                 }
               />
             )}

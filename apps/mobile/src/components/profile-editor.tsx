@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { Field } from '@/components/field';
@@ -25,10 +25,13 @@ export function ProfileEditor({
   const [error, setError] = useState<string | null>(null);
   const phoneFieldRef = useRef<PhoneFieldHandle>(null);
 
-  useEffect(() => {
+  const userKey = `${user?.displayName ?? ''}\0${user?.phone ?? ''}`;
+  const [prevUserKey, setPrevUserKey] = useState(userKey);
+  if (prevUserKey !== userKey) {
+    setPrevUserKey(userKey);
     setName(user?.displayName ?? '');
     setPhone(user?.phone ?? '');
-  }, [user?.displayName, user?.phone]);
+  }
 
   async function save() {
     if (busy) return;

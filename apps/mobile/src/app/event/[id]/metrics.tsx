@@ -50,8 +50,22 @@ export default function EventMetricsScreen() {
   }, [id]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void api.door
+      .metrics(id)
+      .then((res) => {
+        if (!cancelled) {
+          setData(res);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(userMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   async function refresh() {
     setRefreshing(true);

@@ -37,14 +37,16 @@ export function OsmMap({
   const dark = useResolvedColorScheme() === 'dark';
   const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill, padTop, padBottom);
   const pinsRef = useRef(pins);
-  pinsRef.current = pins;
   const webRef = useRef<MapWebView | null>(null);
   const onPressEventRef = useRef(onPressEvent);
-  onPressEventRef.current = onPressEvent;
   const onPressMapRef = useRef(onPressMap);
-  onPressMapRef.current = onPressMap;
   const onClearRef = useRef(onClear);
-  onClearRef.current = onClear;
+  useEffect(() => {
+    pinsRef.current = pins;
+    onPressEventRef.current = onPressEvent;
+    onPressMapRef.current = onPressMap;
+    onClearRef.current = onClear;
+  });
 
   useEffect(() => {
     const id = JSON.stringify(selectedId ?? null);

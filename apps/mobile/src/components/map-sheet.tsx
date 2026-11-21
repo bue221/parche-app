@@ -79,10 +79,12 @@ export function MapSheet({
   const reduceSv = useSharedValue(reduce);
   const [snap, setSnap] = useState<MapSheetSnap>('collapsed');
   const snapRef = useRef(snap);
-  snapRef.current = snap;
   const listRef = useRef<FlatList<ParcheEvent>>(null);
   const onHeightChangeRef = useRef(onHeightChange);
-  onHeightChangeRef.current = onHeightChange;
+  useEffect(() => {
+    snapRef.current = snap;
+    onHeightChangeRef.current = onHeightChange;
+  });
 
   function reportHeight(next: number) {
     onHeightChangeRef.current?.(next);
@@ -128,16 +130,18 @@ export function MapSheet({
 
   function commitSnap(nextH: number) {
     const collapsed = collapsedH;
-    const peek = peekH;
     const expanded = expandedH;
     const next: MapSheetSnap =
       nextH >= expanded - 8 ? 'expanded' : nextH <= collapsed + 8 ? 'collapsed' : 'peek';
     setSnap(next);
-    reportHeight(nextH);
-    if (next === 'collapsed') {
+    onHeightChange?.(nextH);
+  }
+
+  useEffect(() => {
+    if (snap === 'collapsed') {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
-  }
+  }, [snap]);
 
   const pan = Gesture.Pan()
     .activeOffsetY([-16, 16])

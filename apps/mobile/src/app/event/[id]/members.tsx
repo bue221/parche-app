@@ -89,24 +89,51 @@ export default function EventMembersScreen() {
   }, [id]);
 
   useEffect(() => {
-    void api.events.get(id).then(setEvent).catch((err) => setError(userMessage(err)));
-    void load();
-  }, [id, load]);
+    let cancelled = false;
+    void api.events
+      .get(id)
+      .then((ev) => {
+        if (!cancelled) setEvent(ev);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(userMessage(err));
+      });
+    void api.members
+      .list(id)
+      .then((list) => {
+        if (!cancelled) {
+          setRows(list);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(userMessage(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   useEffect(() => {
     if (selected) {
-      setHits([]);
-      setSearching(false);
-      return;
+      const t = setTimeout(() => {
+        setHits([]);
+        setSearching(false);
+      }, 0);
+      return () => clearTimeout(t);
     }
     const needle = email.trim();
     if (needle.length < 2) {
-      setHits([]);
-      setSearching(false);
-      return;
+      const t = setTimeout(() => {
+        setHits([]);
+        setSearching(false);
+      }, 0);
+      return () => clearTimeout(t);
     }
     let cancelled = false;
-    setSearching(true);
+    const startTimer = setTimeout(() => {
+      if (!cancelled) setSearching(true);
+    }, 0);
     const timer = setTimeout(() => {
       void api.users
         .search(email)
@@ -130,6 +157,7 @@ export default function EventMembersScreen() {
     }, 180);
     return () => {
       cancelled = true;
+      clearTimeout(startTimer);
       clearTimeout(timer);
     };
   }, [email, rows, selected]);

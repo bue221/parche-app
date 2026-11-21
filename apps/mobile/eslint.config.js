@@ -7,4 +7,10 @@ module.exports = defineConfig([
   {
     ignores: ['dist/*'],
   },
+  {
+    rules: {
+      // Reanimated SharedValue mutations (`sv.value = ...`) trigger false positives
+      'react-hooks/immutability': 'off',
+    },
+  },
 ]);

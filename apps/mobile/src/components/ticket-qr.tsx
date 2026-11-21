@@ -11,12 +11,9 @@ export function TicketQr({ token, revealed, size = 220 }: { token: string; revea
 
   useEffect(() => {
     if (!revealed || !token) {
-      setXml(null);
-      setFailed(false);
       return;
     }
     let cancelled = false;
-    setFailed(false);
     void QRCode.toString(token, {
       type: 'svg',
       margin: 2,
@@ -25,7 +22,10 @@ export function TicketQr({ token, revealed, size = 220 }: { token: string; revea
       color: { dark: '#000000', light: '#ffffff' },
     })
       .then((svg) => {
-        if (!cancelled) setXml(svg);
+        if (!cancelled) {
+          setFailed(false);
+          setXml(svg);
+        }
       })
       .catch(() => {
         if (!cancelled) {

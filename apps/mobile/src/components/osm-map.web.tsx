@@ -37,17 +37,11 @@ function OsmMapInner({
   const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill, padTop, padBottom);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const pinsRef = useRef(pins);
-  pinsRef.current = pins;
   const selectedIdRef = useRef(selectedId);
-  selectedIdRef.current = selectedId;
   const padRef = useRef({ top: padTop, bottom: padBottom });
-  padRef.current = { top: padTop, bottom: padBottom };
   const onPressEventRef = useRef(onPressEvent);
-  onPressEventRef.current = onPressEvent;
   const onPressMapRef = useRef(onPressMap);
-  onPressMapRef.current = onPressMap;
   const onClearRef = useRef(onClear);
-  onClearRef.current = onClear;
 
   const onRaw = useCallback((raw: string) => {
     const msg = parseMapMessage(raw);
@@ -65,7 +59,15 @@ function OsmMapInner({
     }
   }, []);
   const onRawRef = useRef(onRaw);
-  onRawRef.current = onRaw;
+  useEffect(() => {
+    pinsRef.current = pins;
+    selectedIdRef.current = selectedId;
+    padRef.current = { top: padTop, bottom: padBottom };
+    onPressEventRef.current = onPressEvent;
+    onPressMapRef.current = onPressMap;
+    onClearRef.current = onClear;
+    onRawRef.current = onRaw;
+  });
 
   useEffect(() => {
     const frame = iframeRef.current?.contentWindow as MapWindow | null;

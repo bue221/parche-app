@@ -42,13 +42,18 @@ export function EventImageLightbox({
   const count = images.length;
   const start = Math.max(0, Math.min(count - 1, initialIndex));
   const [index, setIndex] = useState(start);
+  const [prevKey, setPrevKey] = useState(`${visible ? 1 : 0}:${start}`);
+  const currentKey = `${visible ? 1 : 0}:${start}`;
+  if (prevKey !== currentKey) {
+    setPrevKey(currentKey);
+    if (visible) setIndex(start);
+  }
   const [page, setPage] = useState({ width: 0, height: 0 });
   const paged = lightboxCanPage(count, page);
   const current = images[index] ?? images[start] ?? images[0];
 
   useLayoutEffect(() => {
     if (!visible) return;
-    setIndex(start);
     if (page.width <= 0 || count <= 1) return;
     listRef.current?.scrollTo({ x: start * page.width, animated: false });
   }, [visible, start, page.width, count]);
