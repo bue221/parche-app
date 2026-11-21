@@ -306,6 +306,37 @@ func TestUploadsAvatarWithAccessJWT(t *testing.T) {
 	}
 }
 
+func TestRefreshCookieNotSecureOnLoopbackHTTPSForward(t *testing.T) {
+	mux, _ := testAuthStack(t)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", strings.NewReader(`{"email":"loop@example.com","password":"correct-horse"}`))
+	// Register first
+	reg := httptest.NewRecorder()
+	mux.ServeHTTP(reg, httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"loop@example.com","password":"correct-horse","display_name":"L","profile":"attendee"}`)))
+	if reg.Code != http.StatusCreated {
+		t.Fatalf("register=%d %s", reg.Code, reg.Body.String())
+	}
+	req.Header.Set("Origin", "http://localhost:8081")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Host = "localhost:8080"
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("login=%d %s", rr.Code, rr.Body.String())
+	}
+	var refresh *http.Cookie
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == refreshCookie {
+			refresh = c
+		}
+	}
+	if refresh == nil {
+		t.Fatal("expected refresh cookie")
+	}
+	if refresh.Secure {
+		t.Fatal("loopback refresh cookie must not be Secure or browsers drop it on http://")
+	}
+}
+
 func TestRefreshCookieRoundTrip(t *testing.T) {
 	mux, _ := testAuthStack(t)
 	rr := httptest.NewRecorder()
@@ -314,8 +345,9 @@ func TestRefreshCookieRoundTrip(t *testing.T) {
 	mux.ServeHTTP(rr, req)
 	var sess sessionBody
 	_ = json.Unmarshal(rr.Body.Bytes(), &sess)
-	if sess.RefreshToken != "" {
-		t.Fatal("browser origin must not receive refresh_token in JSON")
+	// Loopback Origins also get refresh in JSON as a cross-port SPA fallback.
+	if sess.RefreshToken == "" {
+		t.Fatal("loopback origin should receive refresh_token in JSON")
 	}
 	cookie := rr.Result().Cookies()
 	var refresh *http.Cookie
@@ -356,11 +388,36 @@ func TestRefreshCookieRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &rotated); err != nil {
 		t.Fatal(err)
 	}
-	if rotated.RefreshToken != "" {
-		t.Fatal("browser origin must not receive refresh_token in JSON")
+	if rotated.RefreshToken == "" {
+		t.Fatal("loopback origin should receive rotated refresh_token in JSON")
 	}
 	if rotated.AccessToken == "" {
 		t.Fatal("expected access token")
+	}
+}
+
+func TestWriteSessionOmitsRefreshForNonLoopbackOrigin(t *testing.T) {
+	mux, _ := testAuthStack(t)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(`{"email":"prod@example.com","password":"correct-horse","display_name":"P","profile":"attendee"}`))
+	req.Header.Set("Origin", "https://parche.example")
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("register=%d %s", rr.Code, rr.Body.String())
+	}
+	var sess sessionBody
+	_ = json.Unmarshal(rr.Body.Bytes(), &sess)
+	if sess.RefreshToken != "" {
+		t.Fatal("non-loopback browser origin must not receive refresh_token in JSON")
+	}
+	found := false
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == refreshCookie {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected refresh cookie")
 	}
 }
 

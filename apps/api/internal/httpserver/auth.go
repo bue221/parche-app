@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -341,10 +342,26 @@ func (h authHandler) writeSession(w http.ResponseWriter, r *http.Request, status
 		RefreshExpiresAt: sess.RefreshExpiresAt,
 		User:             sess.User,
 	}
-	if strings.TrimSpace(r.Header.Get("Origin")) != "" {
+	// Browsers normally get refresh only via httpOnly cookie. Omit it from JSON when
+	// Origin is present — except loopback Origins, where cross-port cookies are fragile
+	// (localhost:8081 → :8080 / remote API) and the SPA would lose the session on tab changes.
+	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" && !loopbackOrigin(origin) {
 		body.RefreshToken = ""
 	}
 	apierr.WriteJSON(w, status, body)
+}
+
+func loopbackOrigin(origin string) bool {
+	u, err := parseHTTPOrigin(origin)
+	if err != nil {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
+func parseHTTPOrigin(origin string) (*url.URL, error) {
+	return url.Parse(origin)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
@@ -399,7 +416,7 @@ func setRefreshCookie(w http.ResponseWriter, r *http.Request, raw string, exp ti
 		Expires:  exp,
 		MaxAge:   int(time.Until(exp).Seconds()),
 		HttpOnly: true,
-		Secure:   isHTTPS(r),
+		Secure:   cookieSecure(r),
 		SameSite: http.SameSiteLaxMode,
 	})
 }
@@ -412,7 +429,7 @@ func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
 			Path:     path,
 			MaxAge:   -1,
 			HttpOnly: true,
-			Secure:   isHTTPS(r),
+			Secure:   cookieSecure(r),
 			SameSite: http.SameSiteLaxMode,
 		})
 	}
@@ -423,6 +440,27 @@ func isHTTPS(r *http.Request) bool {
 		return true
 	}
 	return strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+}
+
+// cookieSecure mirrors HTTPS only when the cookie can actually be stored.
+// Browsers drop Secure cookies on http://localhost; a proxied X-Forwarded-Proto
+// of "https" on loopback would otherwise wipe web sessions after reload.
+func cookieSecure(r *http.Request) bool {
+	if !isHTTPS(r) {
+		return false
+	}
+	host := strings.TrimSpace(r.Host)
+	if host == "" {
+		host = strings.TrimSpace(r.URL.Host)
+	}
+	if i := strings.IndexByte(host, ':'); i >= 0 {
+		host = host[:i]
+	}
+	host = strings.ToLower(host)
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "0.0.0.0" {
+		return false
+	}
+	return true
 }
 
 func writeAuthErr(w http.ResponseWriter, r *http.Request, err error) {
