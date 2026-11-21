@@ -32,17 +32,18 @@ import {
 } from '@/lib/format';
 import { buyCtaLabel, lowestPriced, ticketRemaining } from '@/lib/ticket-offer';
 
-const desktopColumns: ViewStyle = {
+// Web-only CSS grid values; RN ViewStyle types omit them.
+const desktopColumns = {
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 26rem) minmax(0, 1fr)',
   columnGap: 48,
   alignItems: 'start',
-};
-const factGrid: ViewStyle = {
+} as unknown as ViewStyle;
+const factGrid = {
   display: 'grid',
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   gap: 12,
-};
+} as unknown as ViewStyle;
 
 export function EventDetailDesktop({
   event,

@@ -1,6 +1,6 @@
 # Expo HAS CHANGED
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
+Read the exact versioned docs at https://docs.expo.dev/versions/v58.0.0/ before writing any code.
 
 This project uses **pnpm only**. Do not run `npm`, `yarn`, or `bun` for installs or scripts. Use `pnpm install`, `pnpm add`, and `pnpm <script>`.
 

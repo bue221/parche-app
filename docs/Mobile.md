@@ -4,7 +4,7 @@ Código: [`apps/mobile`](../apps/mobile).
 
 ## Stack
 
-Expo 57 · Expo Router · React Native 0.86 · NativeWind · TypeScript · pnpm.
+Expo 58 · Expo Router · React Native 0.88 · NativeWind · TypeScript · pnpm.
 
 ## Comandos
 

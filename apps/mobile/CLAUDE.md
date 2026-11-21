@@ -1,6 +1,6 @@
 # CLAUDE.md — apps/mobile
 
-Expo 57 app. Trabaja **solo aquí** (`cd apps/mobile`).
+Expo 58 app. Trabaja **solo aquí** (`cd apps/mobile`).
 
 ```bash
 pnpm install

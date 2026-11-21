@@ -4,7 +4,7 @@ Monorepo de carpetas de **Parche** — app para eventos en vivo. Tres apps **ind
 
 | App | Path | Stack | Instalar / correr |
 |-----|------|--------|-------------------|
-| Móvil | [`apps/mobile`](apps/mobile) | Expo 57 · NativeWind | `cd apps/mobile && pnpm install && pnpm start` |
+| Móvil | [`apps/mobile`](apps/mobile) | Expo 58 · NativeWind | `cd apps/mobile && pnpm install && pnpm start` |
 | API | [`apps/api`](apps/api) | Go 1.26 · Compose | `cd apps/api && cp .env.example .env && COMPOSE_PARALLEL_LIMIT=1 docker compose up --build` |
 | Web | [`apps/web`](apps/web) | Next.js 16 | `cd apps/web && pnpm install && pnpm dev` |
 

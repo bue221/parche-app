@@ -1,6 +1,6 @@
 # Parche
 
-Parche es una app **Expo 57** (iOS, Android y web) para eventos en vivo. La UI es un flyer de concierto en blanco y negro: tinta sobre papel en claro, invertido en oscuro. El verde de confirmación no forma parte del chrome.
+Parche es una app **Expo 58** (iOS, Android y web) para eventos en vivo. La UI es un flyer de concierto en blanco y negro: tinta sobre papel en claro, invertido en oscuro. El verde de confirmación no forma parte del chrome.
 
 El código vive en [`bue221/parche-app`](https://github.com/bue221/parche-app). Las reglas de producto están en `docs/` del repo; esta wiki es la guía humana para arrancar, entender la forma y no romper el sistema visual.
 

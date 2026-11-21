@@ -40,11 +40,20 @@ function webLinkHost(): string | null {
 export default ({ config }: ConfigContext): ExpoConfig => {
   const production = isProductionBuild();
   const host = webLinkHost();
+  const plugins = [...(config.plugins ?? [])];
+  // SDK 58: cleartext belongs on expo-build-properties, not android.usesCleartextTraffic.
+  if (!production) {
+    plugins.push([
+      'expo-build-properties',
+      { android: { usesCleartextTraffic: true } },
+    ]);
+  }
 
   return {
     ...config,
     name: config.name ?? 'Parche',
     slug: config.slug ?? 'parche',
+    plugins,
     ios: {
       ...config.ios,
       bundleIdentifier: BUNDLE_ID,
@@ -57,7 +66,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       ...config.android,
       package: BUNDLE_ID,
-      ...(production ? {} : { usesCleartextTraffic: true }),
       ...(host
         ? {
             intentFilters: [

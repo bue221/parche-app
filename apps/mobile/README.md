@@ -1,6 +1,6 @@
 # Parche
 
-App [Expo 57](https://docs.expo.dev/versions/v57.0.0/) para eventos en vivo. UI de flyer: blanco y negro, claro/oscuro del sistema, verde solo en confirmación.
+App [Expo 58](https://docs.expo.dev/versions/v58.0.0/) para eventos en vivo. UI de flyer: blanco y negro, claro/oscuro del sistema, verde solo en confirmación.
 
 Repo: [github.com/bue221/parche-app](https://github.com/bue221/parche-app) · Wiki (fuente en [`wiki/`](wiki/Home.md)): [github.com/bue221/parche-app/wiki](https://github.com/bue221/parche-app/wiki)
 
@@ -20,7 +20,7 @@ Edita pantallas en `src/app/`. Tokens y reglas visuales: [`docs/ui/design.md`](d
 | [Getting started](wiki/Getting-Started.md) | Clone, install, scripts |
 | [Architecture](wiki/Architecture.md) | Capas y decisiones |
 | [Visual system](wiki/Visual-System.md) | Tokens, pills, assets |
-| [Agent conventions](wiki/Agent-Conventions.md) | Expo 57, pnpm, índice de `docs/` |
+| [Agent conventions](wiki/Agent-Conventions.md) | Expo 58, pnpm, índice de `docs/` |
 
 ## Stack
 

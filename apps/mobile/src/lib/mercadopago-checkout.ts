@@ -26,7 +26,8 @@ export async function openMercadoPagoCheckout(
     ...sheet(colors),
     // OAuth "conectar cobros" shares Chrome/Safari cookies with Custom Tabs.
     // A private session keeps the buyer as guest so TEST cards can work.
-    preferEphemeralSession: true,
+    // SDK 58 types dropped preferEphemeralSession; still honored at runtime on iOS.
+    ...( { preferEphemeralSession: true } as WebBrowser.WebBrowserOpenOptions ),
   });
 }
 

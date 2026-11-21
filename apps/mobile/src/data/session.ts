@@ -7,6 +7,7 @@ import type { Membership, User } from '@/data/types';
 import { isSameLocalDay, startOfDayISO, endOfDayISO } from '@/lib/format';
 import { primaryProfile, operateDensity } from '@/lib/profiles';
 import { afterAuthHydration } from '@/lib/session-query';
+import { hasPersistedSession } from '@/data/token-store';
 
 export function useAuthSnapshot() {
   const me = useAuthStore((s) => s.me);
@@ -25,15 +26,19 @@ export function useAuthSnapshot() {
           platformAdmin: me.platformAdmin,
         } satisfies Omit<User, 'password'>)
       : null;
+    const isLoggedIn = Boolean(user);
     const isPromoter = Boolean(user?.profiles.includes('promoter'));
+    // Cookie/body refresh in flight or mid tab restore — do not treat as guest yet.
+    const sessionPending = !isLoggedIn && hasPersistedSession();
     return {
-      isLoggedIn: Boolean(user),
+      isLoggedIn,
       user,
       memberships: memberships as Membership[],
       isPromoter,
       isAdmin: Boolean(user?.platformAdmin),
       hasOperate: isPromoter || memberships.length > 0,
       hydrated,
+      sessionPending,
     };
   }, [me, memberships, hydrated]);
 }

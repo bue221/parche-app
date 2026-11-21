@@ -34,7 +34,7 @@ Docs: `docs/Home.md` → Wiki con `pnpm wiki:publish` (repo público).
 
 - Commits Conventional Commits en **inglés**, scope = `mobile` | `api` | `web` | `docs` | `ci`
 - Solo pnpm dentro de mobile/web (cada uno con su `pnpm-lock.yaml`)
-- Expo 57 docs versionadas; UI flyer B/N
+- Expo 58 docs versionadas; UI flyer B/N
 - Secretos solo en `.env` local (gitignored)
 
 ## Licencia

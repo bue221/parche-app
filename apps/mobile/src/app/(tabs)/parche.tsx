@@ -16,6 +16,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 
+import { Skeleton } from '@/components/feedback';
 import { FlyerImage } from '@/components/flyer-image';
 import { GuestPanel } from '@/components/guest-panel';
 import { MercadoPagoMark } from '@/components/mercadopago-mark';
@@ -44,7 +45,7 @@ import { cn } from '@/lib/utils';
 const THEME_ACTION = <ThemeToggle className="border border-border bg-surface" />;
 
 export default function ParcheScreen() {
-  const { isLoggedIn, user, memberships, isAdmin, isPromoter } = useAuthSnapshot();
+  const { isLoggedIn, user, memberships, isAdmin, isPromoter, hydrated, sessionPending } = useAuthSnapshot();
   const requestCreate = useRequestCreateEvent();
   const { primary, density } = usePrimaryProfile();
   const openAuth = useAuthSheet((s) => s.open);
@@ -83,6 +84,16 @@ export default function ParcheScreen() {
       enabled: isLoggedIn,
     })),
   });
+
+  if (!hydrated || sessionPending) {
+    return (
+      <Screen title="Parche" lead="Guarda boletas y sigue artistas." headerAction={themeAction}>
+        <View className="mt-ds-24">
+          <Skeleton className="h-32 w-full" />
+        </View>
+      </Screen>
+    );
+  }
 
   if (!isLoggedIn || !user) {
     return (

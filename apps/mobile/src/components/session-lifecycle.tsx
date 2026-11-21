@@ -1,6 +1,6 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, type AppStateStatus, Modal, View } from 'react-native';
+import { AppState, Platform, type AppStateStatus, Modal, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -23,10 +23,19 @@ function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && err.code === 'UNAUTHORIZED';
 }
 
+async function loadMe(): Promise<void> {
+  await api.auth.me();
+  useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
+  void reconcileInterest();
+}
+
 async function refreshAccess(reason: string): Promise<'ok' | 'unauthorized' | 'unavailable'> {
   try {
     await api.auth.refresh();
     debugLog('auth', `access refreshed (${reason})`);
+    if (!useAuthStore.getState().me) {
+      await loadMe();
+    }
     return 'ok';
   } catch (err) {
     if (isUnauthorized(err)) {
@@ -36,6 +45,9 @@ async function refreshAccess(reason: string): Promise<'ok' | 'unauthorized' | 'u
     try {
       await api.auth.refresh();
       debugLog('auth', `access refreshed after retry (${reason})`);
+      if (!useAuthStore.getState().me) {
+        await loadMe();
+      }
       return 'ok';
     } catch (err2) {
       if (isUnauthorized(err2)) {
@@ -64,9 +76,7 @@ async function bootSession(): Promise<void> {
       return;
     }
     try {
-      await api.auth.me();
-      useAuthStore.getState().setAccessExpiresAt(getAccessExpiresAt());
-      void reconcileInterest();
+      await loadMe();
     } catch (err) {
       if (isUnauthorized(err)) {
         await revokeLocalSession();
@@ -83,6 +93,42 @@ function ensureBootSession(): Promise<void> {
   if (!bootPromise) {
     bootPromise = bootSession();
   }
+  return bootPromise;
+}
+
+/** Re-run boot when the store was wiped but a persisted session flag/cookie remains. */
+function ensureSessionPresent(): Promise<void> {
+  const { me, hydrated } = useAuthStore.getState();
+  if (me || !hasPersistedSession()) {
+    return ensureBootSession();
+  }
+  if (!hydrated && bootPromise) {
+    return bootPromise;
+  }
+  // Soft restore after tab/visibility: keep in-memory refresh; do not treat as cold boot.
+  bootPromise = (async () => {
+    try {
+      const refresh = await hydrateRefresh();
+      if (!refresh) {
+        return;
+      }
+      const ok = await refreshSession();
+      if (!ok) {
+        return;
+      }
+      if (!useAuthStore.getState().me) {
+        await loadMe();
+      }
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        await revokeLocalSession();
+      } else {
+        debugLog('auth', 'soft session restore unavailable');
+      }
+    } finally {
+      useAuthStore.getState().setHydrated(true);
+    }
+  })();
   return bootPromise;
 }
 
@@ -120,10 +166,7 @@ export function SessionLifecycle() {
   }, [accessExpiresAt]);
 
   useEffect(() => {
-    const onChange = (state: AppStateStatus) => {
-      if (state !== 'active') {
-        return;
-      }
+    const resume = (reason: string) => {
       if (!hasPersistedSession()) {
         return;
       }
@@ -139,7 +182,17 @@ export function SessionLifecycle() {
       retrying.current = true;
       void (async () => {
         try {
-          const result = await refreshAccess('foreground');
+          if (!me) {
+            await ensureSessionPresent();
+            if (!useAuthStore.getState().me && hasPersistedSession()) {
+              const result = await refreshAccess(reason);
+              if (result === 'unauthorized') {
+                setRevoked(true);
+              }
+            }
+            return;
+          }
+          const result = await refreshAccess(reason);
           if (result === 'unauthorized') {
             setRevoked(true);
           }
@@ -148,8 +201,29 @@ export function SessionLifecycle() {
         }
       })();
     };
+
+    const onChange = (state: AppStateStatus) => {
+      if (state === 'active') {
+        resume('foreground');
+      }
+    };
     const sub = AppState.addEventListener('change', onChange);
-    return () => sub.remove();
+
+    const onVisible = () => {
+      if (Platform.OS === 'web' && globalThis.document?.visibilityState === 'visible') {
+        resume('visibility');
+      }
+    };
+    if (Platform.OS === 'web' && typeof globalThis.document !== 'undefined') {
+      globalThis.document.addEventListener('visibilitychange', onVisible);
+    }
+
+    return () => {
+      sub.remove();
+      if (Platform.OS === 'web' && typeof globalThis.document !== 'undefined') {
+        globalThis.document.removeEventListener('visibilitychange', onVisible);
+      }
+    };
   }, []);
 
   return (

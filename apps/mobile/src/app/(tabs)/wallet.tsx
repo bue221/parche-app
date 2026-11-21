@@ -20,7 +20,7 @@ import { useCompactLayout } from '@/hooks/use-compact-layout';
 import { groupWalletEvents, walletCountLabel, walletEventCounts } from '@/lib/ticket-label';
 
 export default function WalletScreen() {
-  const { isLoggedIn, user, hydrated } = useAuthSnapshot();
+  const { isLoggedIn, user, hydrated, sessionPending } = useAuthSnapshot();
   const openAuth = useAuthSheet((s) => s.open);
   const compact = useCompactLayout();
   const bleed = Platform.OS !== 'web' || compact ? Spacing.three : 40;
@@ -56,7 +56,7 @@ export default function WalletScreen() {
     }
   }, [isLoggedIn, user, tickets, isLoading]);
 
-  if (!hydrated) {
+  if (!hydrated || sessionPending) {
     return (
       <Screen title="Boletas" lead="Muéstralos en puerta.">
         <View className="mt-ds-24">

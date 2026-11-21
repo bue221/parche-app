@@ -73,7 +73,9 @@ export async function setTokens(next: {
   accessToken = next.accessToken;
   accessExpiresAt = next.accessExpiresAt;
   if (usesCookieRefresh()) {
-    refreshToken = null;
+    // Prefer httpOnly cookie; keep a body refresh in memory when the API sends one
+    // (loopback Origins) so tab switches still work if the cookie is not sent.
+    refreshToken = next.refreshToken?.trim() ? next.refreshToken : refreshToken;
     setWebFlag(true);
     return;
   }
@@ -104,7 +106,12 @@ export async function hydrateRefresh(): Promise<string | null> {
     } catch {
       /* ignore */
     }
-    refreshToken = null;
+    // Keep an in-memory body refresh across soft restores (tab/visibility).
+    // Clearing it forced cookie-only refresh and dropped SPA sessions when the
+    // httpOnly cookie was missing (cross-port / Secure mishap).
+    if (refreshToken) {
+      return refreshToken;
+    }
     return webFlag() ? 'cookie' : null;
   }
   const stored = await storageGet(REFRESH_KEY);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { parseMapMessage, useMapHtml } from '@/components/osm-map-html';
 import type { ParcheEvent } from '@/data/types';
@@ -20,6 +20,8 @@ type OsmMapProps = {
   className?: string;
 };
 
+type MapWebView = WebView & { injectJavaScript: (script: string) => void };
+
 export function OsmMap({
   events,
   pin,
@@ -36,7 +38,7 @@ export function OsmMap({
   const { html, pins } = useMapHtml(events, pin, Boolean(onPressMap), dark, !fill, padTop, padBottom);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
-  const webRef = useRef<WebView>(null);
+  const webRef = useRef<MapWebView | null>(null);
   const onPressEventRef = useRef(onPressEvent);
   onPressEventRef.current = onPressEvent;
   const onPressMapRef = useRef(onPressMap);
@@ -69,15 +71,28 @@ export function OsmMap({
     }
   }, []);
 
+  // react-native-webview 14 + RN 0.88 strict types currently resolve WebView props to `never`.
+  const MapWebViewComponent = WebView as unknown as React.ComponentType<{
+    ref?: React.Ref<MapWebView | null>;
+    originWhitelist?: string[];
+    source?: { html: string };
+    onMessage?: (e: WebViewMessageEvent) => void;
+    onLoadEnd?: () => void;
+    bounces?: boolean;
+    scrollEnabled?: boolean;
+    setSupportMultipleWindows?: boolean;
+    style?: object;
+  }>;
+
   return (
     <View
       className={cn('overflow-hidden', fill ? 'min-h-0 flex-1 rounded-[24px]' : 'h-80 rounded-cards border border-border', className)}
       style={fill ? { flex: 1, borderRadius: 24, overflow: 'hidden' } : undefined}>
-      <WebView
+      <MapWebViewComponent
         ref={webRef}
         originWhitelist={['*']}
         source={{ html }}
-        onMessage={(e) => onRaw(e.nativeEvent.data)}
+        onMessage={(e: WebViewMessageEvent) => onRaw(e.nativeEvent.data)}
         onLoadEnd={() => {
           const id = JSON.stringify(selectedId ?? null);
           webRef.current?.injectJavaScript(

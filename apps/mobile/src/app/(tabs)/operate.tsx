@@ -8,7 +8,7 @@ import { Chip, ChipRow } from '@/components/chip-row';
 import { CreateEventFab } from '@/components/create-event-fab';
 import { EventCard, EventFeed } from '@/components/event-card';
 import { eventOperateHref } from '@/components/event-staff-actions';
-import { EmptyState, ListingSkeleton } from '@/components/feedback';
+import { EmptyState, ListingSkeleton, Skeleton } from '@/components/feedback';
 import { GuestPanel } from '@/components/guest-panel';
 import { FadeSlideIn } from '@/components/motion';
 import { PageHeader } from '@/components/page-header';
@@ -48,7 +48,7 @@ const BUCKETS: {
 ];
 
 export default function OperateHubScreen() {
-  const { user, memberships, isPromoter, isAdmin } = useAuthSnapshot();
+  const { user, memberships, isPromoter, isAdmin, hydrated, sessionPending } = useAuthSnapshot();
   const requestCreate = useRequestCreateEvent();
   const openAuth = useAuthSheet((s) => s.open);
   const { density } = usePrimaryProfile();
@@ -82,6 +82,16 @@ export default function OperateHubScreen() {
       (sum, bucket) => sum + grouped[bucket.key].length,
       0
     ) + (filter === 'all' || filter === 'drafts' ? loadingRows.length : 0);
+
+  if (!hydrated || sessionPending) {
+    return (
+      <Screen title="Operar" lead="Entra para ver tus eventos.">
+        <View className="mt-ds-24">
+          <Skeleton className="h-24 w-full" />
+        </View>
+      </Screen>
+    );
+  }
 
   if (!user) {
     return (

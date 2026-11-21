@@ -4,7 +4,7 @@ Parche es la plataforma que unifica la escena techno (Bogotá primero): eventos,
 
 **Decisiones:**
 
-- Canal principal: **Expo 57** (iOS, Android; web solo para desarrollo, no sustituye a `web-frontend`).
+- Canal principal: **Expo 58** (iOS, Android; web solo para desarrollo, no sustituye a `web-frontend`).
 - La web Next.js cubre landing/SEO y lectura pública; **compra, QR, puerta y métricas viven en la app**.
 - UI: consumer foto-first sobre escenario tinta/papel, con pigmento de señal ([sistema visual](../ui/design.md)). Neon en CTA y selección; volt/`confirm` en éxito (pago, check-in aprobado).
 - Mapas: **MapLibre + OSM**. Sin Google Maps, Places ni Mapbox como dependencia de producto.

@@ -31,7 +31,7 @@ La escena está dispersa: eventos viven en Facebook, hay poca visibilidad para t
 
 | Cliente | Repo | Uso de la API |
 |---------|------|----------------|
-| App móvil | `app-frontend` (Expo 57) | Cuenta, agenda, mapa, perfiles, compra, QR, puerta, métricas |
+| App móvil | `apps/mobile` (Expo 58) | Cuenta, agenda, mapa, perfiles, compra, QR, puerta, métricas |
 | Web | `web-frontend` (Next.js) | Landing/SEO; lectura pública; no tiquetería completa |
 | Workers | `backend` | Check-in persistido, webhooks, jobs de media |
 

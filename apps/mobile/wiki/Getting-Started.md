@@ -14,7 +14,7 @@ Necesitas **Node ≥ 22.13**, **pnpm ≥ 10** y el CLI de Expo. El paquete se ll
 | Tema | Decisión |
 |------|----------|
 | Gestor de paquetes | Solo pnpm. `preinstall` rechaza npm/yarn/bun. Lockfile: `pnpm-lock.yaml`. |
-| Docs de Expo | Usar [docs versionadas de SDK 57](https://docs.expo.dev/versions/v57.0.0/), no la home sin versión. |
+| Docs de Expo | Usar [docs versionadas de SDK 58](https://docs.expo.dev/versions/v58.0.0/), no la home sin versión. |
 | Routing | Expo Router, archivos en `src/app/` (`index`, `explore`, `_layout`). |
 | Estilos | NativeWind + tokens semánticos (`bg-background`, `text-foreground`). |
 | Apariencia | `userInterfaceStyle: automatic` — el SO elige claro/oscuro. |
